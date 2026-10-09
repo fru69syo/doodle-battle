@@ -1,0 +1,16 @@
+.DS_Store
+.idea/
+.vscode/
+*.iml
+node_modules/
+firebase/functions/lib/
+firebase/.firebase/
+*-debug.log
+# secrets
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+.env
