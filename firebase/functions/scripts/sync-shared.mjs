@@ -3,6 +3,7 @@
 // functions/ directory). Runs automatically before build, lint and test.
 //
 //   shared/ng_words/*.json            -> src/vendor/ng_words/
+//   shared/names/*.json               -> src/vendor/names/        (display-name words; the app bundles a copy)
 //   shared/battle_spec/*.json         -> src/vendor/battle_spec/      (if present)
 //   shared/battle_engine_ts/src/**    -> src/vendor/battle_engine/    (if present)
 //
@@ -34,6 +35,7 @@ function copyJsonDir(from, to, required) {
 }
 
 copyJsonDir("shared/ng_words", join(vendor, "ng_words"), true);
+copyJsonDir("shared/names", join(vendor, "names"), true);
 copyJsonDir("shared/battle_spec", join(vendor, "battle_spec"), false);
 
 const engineSrc = join(repoRoot, "shared", "battle_engine_ts", "src");

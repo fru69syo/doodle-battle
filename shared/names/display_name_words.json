@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Preset vocabulary for online display names (adjective + noun). Players can only choose ids from these lists; no free text is ever accepted. The app may bundle a copy of this file to show choices; the server stores the composed text.",
+  "description": "Preset vocabulary for online display names (adjective + noun). Players can only choose ids from these lists; no free text is ever accepted. Single source of truth: the server vendors it via firebase/functions/scripts/sync-shared.mjs and the app bundles a byte-identical copy (app/assets/names/, `dart run tool/sync_shared_names.dart`; a test fails on drift). Never reuse or renumber an id: stored display names reference them.",
   "adjectives": [
     {
       "id": "a01",

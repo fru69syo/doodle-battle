@@ -1,4 +1,4 @@
-import words from "./display_name_words.json";
+import words from "../vendor/names/display_name_words.json";
 
 export interface Word {
   id: string;
