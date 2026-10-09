@@ -1,0 +1,106 @@
+# Manual deploy of Cloud Functions and/or Firestore + Storage rules. Never runs on push.
+# See docs/RELEASE.md §Firebase and docs/BACKEND.md §14.
+name: Deploy Firebase (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "Firebase project id to deploy to"
+        required: true
+        type: string
+      targets:
+        description: "What to deploy"
+        required: true
+        type: choice
+        options:
+          - functions,firestore,storage
+          - firestore,storage
+          - functions
+        default: functions,firestore,storage
+      confirm:
+        description: "Type the project id again to confirm"
+        required: true
+        type: string
+      force:
+        description: "Pass --force (deletes functions that are no longer in the source)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-deploy-${{ inputs.project_id }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.targets }} to ${{ inputs.project_id }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Holds FIREBASE_SERVICE_ACCOUNT_JSON (secret) and CLAUDE_MODEL (variable); add required reviewers.
+    environment: firebase-production
+    env:
+      PROJECT_ID: ${{ inputs.project_id }}
+      CONFIRM: ${{ inputs.confirm }}
+      TARGETS: ${{ inputs.targets }}
+      FORCE: ${{ inputs.force }}
+    defaults:
+      run:
+        working-directory: firebase/functions
+    steps:
+      - name: Confirm target project
+        working-directory: .
+        run: |
+          if [[ "$PROJECT_ID" != "$CONFIRM" ]]; then
+            echo "::error::confirmation does not match project id"; exit 1
+          fi
+          if [[ ! "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]] || [[ "$PROJECT_ID" == demo-* ]]; then
+            echo "::error::'$PROJECT_ID' is not a deployable project id"; exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: firebase/functions/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:unit
+
+      - name: Functions params (.env.<project>)
+        if: contains(inputs.targets, 'functions')
+        env:
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+        run: |
+          if [[ -z "$CLAUDE_MODEL" ]]; then
+            echo "::error::Set the environment variable CLAUDE_MODEL (latest Haiku-class model id) in environment firebase-production"
+            exit 1
+          fi
+          printf 'CLAUDE_MODEL=%s\n' "$CLAUDE_MODEL" > ".env.${PROJECT_ID}"
+
+      - name: Deploy
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "::error::Missing secret FIREBASE_SERVICE_ACCOUNT_JSON in environment firebase-production"; exit 1
+          fi
+          umask 077
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          extra=()
+          [[ "$FORCE" == "true" ]] && extra+=(--force)
+          npx firebase deploy --config ../firebase.json --project "$PROJECT_ID" \
+            --only "$TARGETS" --non-interactive "${extra[@]}"
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-sa.json"
