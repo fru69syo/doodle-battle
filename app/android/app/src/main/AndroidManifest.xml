@@ -1,4 +1,30 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- ===== AR team (features/ar): camera, ARCore "AR Optional" ===== -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Saving photos to the gallery needs this only on Android 9 and below. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- Otherwise implied without maxSdkVersion by the camera plugin's WRITE. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- Merged in by plugins but unused (kids app: keep permissions minimal). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.VIBRATE" tools:node="remove" />
+    <!-- Nothing is required: the app must install on devices without AR/camera. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false"
+        tools:node="replace" />
+    <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+    <uses-feature
+        android:glEsVersion="0x00030000"
+        android:required="false"
+        tools:replace="android:required" />
+    <!-- ===== /AR team ===== -->
     <application
         android:label="doodle_battle"
         android:name="${applicationName}"
@@ -30,6 +56,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- AR team: ARCore is optional; installs on non-AR devices
+             (かんたん AR fallback is used there). -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="optional"
+            tools:replace="android:value" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

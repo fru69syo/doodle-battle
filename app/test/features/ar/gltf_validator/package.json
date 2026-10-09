@@ -1,0 +1,9 @@
+{
+  "name": "doodle-battle-ar-gltf-validation",
+  "private": true,
+  "description": "Validates generated standee GLBs with the Khronos glTF validator",
+  "type": "module",
+  "dependencies": {
+    "gltf-validator": "2.0.0-dev.3.10"
+  }
+}
