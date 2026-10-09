@@ -1,0 +1,7 @@
+# Test configuration for `flutter test`.
+tags:
+  # Store screenshots render the real fonts and write PNGs to
+  # store/screenshots/raw. Skipped in normal runs (CI stays fast and
+  # font-independent); regenerate with `tool/screenshots.sh`.
+  screenshots:
+    skip: "store screenshots: run tool/screenshots.sh"
