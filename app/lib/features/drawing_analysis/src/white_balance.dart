@@ -117,7 +117,9 @@ WhiteBalanced whiteBalance(RgbImage src) {
     paper = [refL.round(), refL.round(), refL.round()];
   }
   final paperL = math.max(
-      1.0, (paper[0] * 77 + paper[1] * 150 + paper[2] * 29) / 256.0);
+    1.0,
+    (paper[0] * 77 + paper[1] * 150 + paper[2] * 29) / 256.0,
+  );
 
   // Per-cell illumination gain; unknown cells diffuse from known ones.
   final gain = Float64List(gw * gh);

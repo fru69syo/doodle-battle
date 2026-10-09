@@ -7,7 +7,7 @@ import 'dart:typed_data';
 /// accessors because it is several times faster and fully deterministic.
 class RgbImage {
   RgbImage(this.width, this.height, [Uint8List? data])
-      : data = data ?? Uint8List(width * height * 3) {
+    : data = data ?? Uint8List(width * height * 3) {
     assert(this.data.length == width * height * 3);
   }
 
@@ -56,7 +56,7 @@ class RgbImage {
 /// Binary mask (values 0 or 1), row-major.
 class Mask {
   Mask(this.width, this.height, [Uint8List? bits])
-      : bits = bits ?? Uint8List(width * height) {
+    : bits = bits ?? Uint8List(width * height) {
     assert(this.bits.length == width * height);
   }
 
@@ -211,7 +211,8 @@ Uint8List boxBlur(Uint8List src, int width, int height, int radius) {
     for (var x = 0; x < width; x++) {
       final x0 = math.max(0, x - radius);
       final x1 = math.min(width - 1, x + radius) + 1;
-      final sum = integral[y1 * w1 + x1] -
+      final sum =
+          integral[y1 * w1 + x1] -
           integral[y0 * w1 + x1] -
           integral[y1 * w1 + x0] +
           integral[y0 * w1 + x0];

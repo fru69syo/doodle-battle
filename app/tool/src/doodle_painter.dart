@@ -52,12 +52,11 @@ double hashNoise(int x, int y, int seed) {
 
 /// Float RGB canvas that also records where ink was laid down.
 class DoodleCanvas {
-  DoodleCanvas(this.width, this.height,
-      {Rgb paper = Rgb.white, this.seed = 1})
-      : r = Float32List(width * height)..fillRange(0, width * height, paper.r),
-        g = Float32List(width * height)..fillRange(0, width * height, paper.g),
-        b = Float32List(width * height)..fillRange(0, width * height, paper.b),
-        cover = Float32List(width * height);
+  DoodleCanvas(this.width, this.height, {Rgb paper = Rgb.white, this.seed = 1})
+    : r = Float32List(width * height)..fillRange(0, width * height, paper.r),
+      g = Float32List(width * height)..fillRange(0, width * height, paper.g),
+      b = Float32List(width * height)..fillRange(0, width * height, paper.b),
+      cover = Float32List(width * height);
 
   final int width;
   final int height;
@@ -87,8 +86,14 @@ class DoodleCanvas {
   }
 
   /// Draws a polyline with round caps. [texture] in 0..1 adds crayon grain.
-  void stroke(List<Pt> pts, double radius, Rgb color,
-      {double texture = 0, bool closed = false, double opacity = 1}) {
+  void stroke(
+    List<Pt> pts,
+    double radius,
+    Rgb color, {
+    double texture = 0,
+    bool closed = false,
+    double opacity = 1,
+  }) {
     if (pts.isEmpty) return;
     final path = closed ? [...pts, pts.first] : pts;
     var minX = double.infinity, minY = double.infinity;
@@ -139,8 +144,11 @@ class DoodleCanvas {
       for (var x = x0; x <= x1; x++) {
         final c = cov[(y - y0) * bw + (x - x0)];
         if (c <= 0) continue;
-        _composite(y * width + x, color,
-            c * opacity * _grain(x, y, texture, strokeSeed));
+        _composite(
+          y * width + x,
+          color,
+          c * opacity * _grain(x, y, texture, strokeSeed),
+        );
       }
     }
   }
@@ -149,15 +157,22 @@ class DoodleCanvas {
       stroke([c], radius, color, texture: texture);
 
   /// Even-odd scanline fill; [colorAt] allows gradients.
-  void fillPolygon(List<Pt> poly, Rgb Function(double x, double y) colorAt,
-      {double texture = 0}) {
+  void fillPolygon(
+    List<Pt> poly,
+    Rgb Function(double x, double y) colorAt, {
+    double texture = 0,
+  }) {
     var minY = double.infinity, maxY = -double.infinity;
     for (final p in poly) {
       minY = math.min(minY, p.y);
       maxY = math.max(maxY, p.y);
     }
     final strokeSeed = ++_strokeCount * 7919;
-    for (var y = math.max(0, minY.floor()); y <= math.min(height - 1, maxY.ceil()); y++) {
+    for (
+      var y = math.max(0, minY.floor());
+      y <= math.min(height - 1, maxY.ceil());
+      y++
+    ) {
       final sy = y + 0.5;
       final xs = <double>[];
       for (var i = 0; i < poly.length; i++) {
@@ -172,8 +187,11 @@ class DoodleCanvas {
         final xa = math.max(0, xs[k].round());
         final xb = math.min(width - 1, xs[k + 1].round() - 1);
         for (var x = xa; x <= xb; x++) {
-          _composite(y * width + x, colorAt(x + 0.5, sy),
-              _grain(x, y, texture, strokeSeed));
+          _composite(
+            y * width + x,
+            colorAt(x + 0.5, sy),
+            _grain(x, y, texture, strokeSeed),
+          );
         }
       }
     }
@@ -183,8 +201,14 @@ class DoodleCanvas {
       fillPolygon(poly, (_, _) => color, texture: texture);
 
   /// Kid-style colouring-in: zig-zag crayon strokes clipped to [poly].
-  void scribbleFill(List<Pt> poly, Rgb color, math.Random rng,
-      {double radius = 5, double spacing = 7, double texture = 0.5}) {
+  void scribbleFill(
+    List<Pt> poly,
+    Rgb color,
+    math.Random rng, {
+    double radius = 5,
+    double spacing = 7,
+    double texture = 0.5,
+  }) {
     var minX = double.infinity, minY = double.infinity;
     var maxX = -double.infinity, maxY = -double.infinity;
     for (final p in poly) {
@@ -206,8 +230,10 @@ class DoodleCanvas {
       final steps = ((maxY - minY) / 3).ceil();
       for (var s = 0; s <= steps; s++) {
         final t = s / steps;
-        final p = Pt(x + spacing * t + (rng.nextDouble() - 0.5) * 3,
-            y0 + (y1 - y0) * t);
+        final p = Pt(
+          x + spacing * t + (rng.nextDouble() - 0.5) * 3,
+          y0 + (y1 - y0) * t,
+        );
         if (pointInPolygon(p, poly)) {
           run.add(p);
         } else {
@@ -224,8 +250,13 @@ class DoodleCanvas {
     for (var y = 0; y < height; y++) {
       for (var x = 0; x < width; x++) {
         final i = y * width + x;
-        out.setPixelRgb(x, y, r[i].round().clamp(0, 255),
-            g[i].round().clamp(0, 255), b[i].round().clamp(0, 255));
+        out.setPixelRgb(
+          x,
+          y,
+          r[i].round().clamp(0, 255),
+          g[i].round().clamp(0, 255),
+          b[i].round().clamp(0, 255),
+        );
       }
     }
     return out;
@@ -257,8 +288,16 @@ bool pointInPolygon(Pt p, List<Pt> poly) {
 
 /// Ellipse outline; [wobble] adds smooth low-frequency radial jitter
 /// (fraction of the radius) like an unsteady hand.
-List<Pt> ellipse(double cx, double cy, double rx, double ry,
-    {int n = 72, double wobble = 0, math.Random? rng, double start = 0}) {
+List<Pt> ellipse(
+  double cx,
+  double cy,
+  double rx,
+  double ry, {
+  int n = 72,
+  double wobble = 0,
+  math.Random? rng,
+  double start = 0,
+}) {
   final phases = [
     for (var k = 0; k < 4; k++) (rng?.nextDouble() ?? 0) * 2 * math.pi,
   ];
@@ -277,8 +316,16 @@ List<Pt> ellipse(double cx, double cy, double rx, double ry,
 }
 
 /// Star / spiky outline.
-List<Pt> star(double cx, double cy, double rOuter, double rInner, int points,
-    {double rotation = -math.pi / 2, double jitter = 0, math.Random? rng}) {
+List<Pt> star(
+  double cx,
+  double cy,
+  double rOuter,
+  double rInner,
+  int points, {
+  double rotation = -math.pi / 2,
+  double jitter = 0,
+  math.Random? rng,
+}) {
   return [
     for (var i = 0; i < points * 2; i++)
       () {
@@ -291,8 +338,12 @@ List<Pt> star(double cx, double cy, double rOuter, double rInner, int points,
 }
 
 /// Adds hand tremor: per-point jitter smoothed along the path.
-List<Pt> tremble(List<Pt> pts, double amplitude, math.Random rng,
-    {int smooth = 2}) {
+List<Pt> tremble(
+  List<Pt> pts,
+  double amplitude,
+  math.Random rng, {
+  int smooth = 2,
+}) {
   final raw = [
     for (final _ in pts)
       Pt((rng.nextDouble() - 0.5) * 2, (rng.nextDouble() - 0.5) * 2),
@@ -344,7 +395,8 @@ img.Image photograph(
   int seed = 7,
 }) {
   final h = SquareToQuad(
-      PaperQuad(corners[0], corners[1], corners[2], corners[3]));
+    PaperQuad(corners[0], corners[1], corners[2], corners[3]),
+  );
   // Invert [a b c; d e f; g h 1].
   final m = [h.a, h.b, h.c, h.d, h.e, h.f, h.g, h.h, 1.0];
   final inv = _invert3(m);
@@ -376,7 +428,8 @@ img.Image photograph(
       }
       final light = 1 - lightFalloff * (x / width * 0.7 + y / height * 0.3);
       double n() =>
-          noise * (rng.nextDouble() + rng.nextDouble() + rng.nextDouble() - 1.5);
+          noise *
+          (rng.nextDouble() + rng.nextDouble() + rng.nextDouble() - 1.5);
       out.setPixelRgb(
         x,
         y,

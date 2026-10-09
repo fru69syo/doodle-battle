@@ -45,27 +45,36 @@ void main(List<String> args) {
       case '--cutouts' when i + 1 < args.length:
         cutoutDir = args[++i];
       case '-h' || '--help':
-        print('usage: dart run tool/analyze_dir.dart <folder> '
-            '[--csv out.csv] [--cutouts dir]');
+        print(
+          'usage: dart run tool/analyze_dir.dart <folder> '
+          '[--csv out.csv] [--cutouts dir]',
+        );
         return;
       default:
         positional.add(args[i]);
     }
   }
   if (positional.length != 1) {
-    stderr.writeln('usage: dart run tool/analyze_dir.dart <folder> '
-        '[--csv out.csv] [--cutouts dir]');
+    stderr.writeln(
+      'usage: dart run tool/analyze_dir.dart <folder> '
+      '[--csv out.csv] [--cutouts dir]',
+    );
     exitCode = 64;
     return;
   }
   final dir = Directory(positional.single);
-  final files = dir
-      .listSync()
-      .whereType<File>()
-      .where((f) => RegExp(r'\.(jpe?g|png|webp|bmp|gif)$', caseSensitive: false)
-          .hasMatch(f.path))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      dir
+          .listSync()
+          .whereType<File>()
+          .where(
+            (f) => RegExp(
+              r'\.(jpe?g|png|webp|bmp|gif)$',
+              caseSensitive: false,
+            ).hasMatch(f.path),
+          )
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
   if (files.isEmpty) {
     stderr.writeln('no images in ${dir.path}');
     exitCode = 1;
@@ -103,31 +112,54 @@ void main(List<String> args) {
     final r = report.result;
     final s = r.baseStats;
     final m = r.features;
-    print([
-      _clip(name, 28).padRight(28),
-      '$ms'.padLeft(5),
-      (report.paperQuad != null ? 'yes' : 'no').padRight(5),
-      r.energy.toStringAsFixed(1).padLeft(6),
-      '${r.skill.toStringAsFixed(1)}${r.isShobo ? '*' : ' '}'.padLeft(6),
-      r.element.name.padRight(8),
-      '${s.hp}/${s.atk}/${s.def}/${s.spd}'.padRight(16),
-      for (final c in _columns) _fmt(m[c]).padLeft(6),
-      report.rejectReason?.name ?? '',
-    ].join(' '));
+    print(
+      [
+        _clip(name, 28).padRight(28),
+        '$ms'.padLeft(5),
+        (report.paperQuad != null ? 'yes' : 'no').padRight(5),
+        r.energy.toStringAsFixed(1).padLeft(6),
+        '${r.skill.toStringAsFixed(1)}${r.isShobo ? '*' : ' '}'.padLeft(6),
+        r.element.name.padRight(8),
+        '${s.hp}/${s.atk}/${s.def}/${s.spd}'.padRight(16),
+        for (final c in _columns) _fmt(m[c]).padLeft(6),
+        report.rejectReason?.name ?? '',
+      ].join(' '),
+    );
 
     if (csvPath != null) {
       featureKeys ??= m.keys.toList();
       if (csv.isEmpty) {
-        csv.writeln([
-          'file', 'ms', 'energy', 'skill', 'element', 'hp', 'atk', 'def',
-          'spd', 'reject', ...featureKeys,
-        ].join(','));
+        csv.writeln(
+          [
+            'file',
+            'ms',
+            'energy',
+            'skill',
+            'element',
+            'hp',
+            'atk',
+            'def',
+            'spd',
+            'reject',
+            ...featureKeys,
+          ].join(','),
+        );
       }
-      csv.writeln([
-        name, ms, r.energy, r.skill, r.element.name, s.hp, s.atk, s.def,
-        s.spd, report.rejectReason?.name ?? '',
-        for (final k in featureKeys) m[k] ?? '',
-      ].join(','));
+      csv.writeln(
+        [
+          name,
+          ms,
+          r.energy,
+          r.skill,
+          r.element.name,
+          s.hp,
+          s.atk,
+          s.def,
+          s.spd,
+          report.rejectReason?.name ?? '',
+          for (final k in featureKeys) m[k] ?? '',
+        ].join(','),
+      );
     }
     if (cutoutDir != null) {
       final base = name.replaceAll(RegExp(r'\.[^.]+$'), '');
@@ -149,4 +181,5 @@ String _fmt(num? v) {
   return v.toStringAsFixed(2);
 }
 
-String _clip(String s, int n) => s.length <= n ? s : '${s.substring(0, n - 1)}…';
+String _clip(String s, int n) =>
+    s.length <= n ? s : '${s.substring(0, n - 1)}…';

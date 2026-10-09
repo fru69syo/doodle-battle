@@ -13,9 +13,11 @@ DrawingAnalysisReport _analyze(String name, Uint8List bytes) {
   final r = analyzeDrawingSync(bytes);
   // Calibration log (see docs/VISION.md).
   // ignore: avoid_print
-  print('[$name] energy=${r.result.energy} skill=${r.result.skill} '
-      'element=${r.result.element.name} stats=${r.result.baseStats} '
-      'reject=${r.rejectReason?.name} ${r.totalMs}ms');
+  print(
+    '[$name] energy=${r.result.energy} skill=${r.result.skill} '
+    'element=${r.result.element.name} stats=${r.result.baseStats} '
+    'reject=${r.rejectReason?.name} ${r.totalMs}ms',
+  );
   return r;
 }
 
@@ -60,16 +62,22 @@ void main() {
         expect(r.result.isShobo, isTrue);
         expect(r.features.photoLikelihood, greaterThan(0.6));
         // Budget is cut to 0.35x.
-        expect(r.result.baseStats.total,
-            lessThan((200 + 2 * r.result.energy) * 0.36));
+        expect(
+          r.result.baseStats.total,
+          lessThan((200 + 2 * r.result.energy) * 0.36),
+        );
       }
     });
 
     test('kid scribble out-powers skilled art and photos', () {
-      expect(kid.result.baseStats.total,
-          greaterThan(skilled.result.baseStats.total * 2));
-      expect(kid.result.baseStats.total,
-          greaterThan(photo.result.baseStats.total * 2));
+      expect(
+        kid.result.baseStats.total,
+        greaterThan(skilled.result.baseStats.total * 2),
+      );
+      expect(
+        kid.result.baseStats.total,
+        greaterThan(photo.result.baseStats.total * 2),
+      );
     });
   });
 
@@ -140,8 +148,10 @@ void main() {
       }
       final iou = sil.iou(gt);
       // ignore: avoid_print
-      print('[photographed on table] mask IoU vs ground truth = '
-          '${iou.toStringAsFixed(3)}');
+      print(
+        '[photographed on table] mask IoU vs ground truth = '
+        '${iou.toStringAsFixed(3)}',
+      );
       expect(iou, greaterThanOrEqualTo(0.8));
 
       // Scores survive the camera: still a strong kid character.
@@ -203,21 +213,29 @@ void main() {
     });
 
     test('rejects undecodable bytes', () {
-      expect(() => analyzeDrawingSync(Uint8List.fromList([1, 2, 3, 4])),
-          throwsA(isA<UndecodableImageException>()));
+      expect(
+        () => analyzeDrawingSync(Uint8List.fromList([1, 2, 3, 4])),
+        throwsA(isA<UndecodableImageException>()),
+      );
     });
 
     test('4000x3000 camera photo is analysed well under 3 s', () {
       final small = img.decodeJpg(photographedOnTable(kidScribble()).jpeg)!;
-      final big = img.copyResize(small,
-          width: 4000, height: 3000, interpolation: img.Interpolation.linear);
+      final big = img.copyResize(
+        small,
+        width: 4000,
+        height: 3000,
+        interpolation: img.Interpolation.linear,
+      );
       final bytes = img.encodeJpg(big, quality: 88);
       final sw = Stopwatch()..start();
       final r = analyzeDrawingSync(bytes);
       final ms = sw.elapsedMilliseconds;
       // ignore: avoid_print
-      print('[4000x3000 JPEG ${bytes.length ~/ 1024} KiB] total ${ms}ms '
-          '${r.timingsMs}');
+      print(
+        '[4000x3000 JPEG ${bytes.length ~/ 1024} KiB] total ${ms}ms '
+        '${r.timingsMs}',
+      );
       expect(r.paperQuad, isNotNull);
       expect(ms, lessThan(3000));
     });
@@ -229,8 +247,10 @@ void main() {
       final blended = applyCloudSkill(r, 100);
       expect(blended.skill, closeTo(0.6 * r.skill + 40, 0.051));
       expect(blended.energy, r.energy);
-      expect(blended.baseStats,
-          computeBaseStatsFromMap(r.features, r.energy, blended.skill));
+      expect(
+        blended.baseStats,
+        computeBaseStatsFromMap(r.features, r.energy, blended.skill),
+      );
       expect(blended.baseStats.total, lessThanOrEqualTo(r.baseStats.total));
     });
   });

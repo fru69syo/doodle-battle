@@ -19,7 +19,9 @@ void main(List<String> args) {
     (jsonDecode(File('assets/cpu/manifest.json').readAsStringSync()) as Map)
         .cast<String, Object?>(),
   );
-  stdout.writeln('--- CPU stages: player = kid at recommendedLevel, seeds spent, ふつう AI ---');
+  stdout.writeln(
+    '--- CPU stages: player = kid at recommendedLevel, seeds spent, ふつう AI ---',
+  );
   for (final st in spec.cpu.stages) {
     stdout.writeln(simulateStage(spec, roster, st, n: n ~/ 4));
   }

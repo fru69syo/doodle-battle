@@ -63,8 +63,8 @@ class Character {
   EvolutionStage get stage => level >= 20
       ? EvolutionStage.densetsu
       : level >= 10
-          ? EvolutionStage.kagayaki
-          : EvolutionStage.normal;
+      ? EvolutionStage.kagayaki
+      : EvolutionStage.normal;
 
   bool get onlineUnlocked => level >= 5;
 
@@ -77,70 +77,70 @@ class Character {
     String? elementMoveName,
     String? specialMoveName,
     String? onlineId,
-  }) =>
-      Character(
-        id: id,
-        name: name ?? this.name,
-        imagePath: imagePath,
-        imageHash: imageHash,
-        element: element,
-        baseStats: baseStats,
-        energy: energy,
-        skill: skill,
-        features: features,
-        createdAt: createdAt,
-        level: level ?? this.level,
-        xp: xp ?? this.xp,
-        seedAllocations: seedAllocations ?? this.seedAllocations,
-        subject: subject ?? this.subject,
-        elementMoveName: elementMoveName ?? this.elementMoveName,
-        specialMoveName: specialMoveName ?? this.specialMoveName,
-        onlineId: onlineId ?? this.onlineId,
-      );
+  }) => Character(
+    id: id,
+    name: name ?? this.name,
+    imagePath: imagePath,
+    imageHash: imageHash,
+    element: element,
+    baseStats: baseStats,
+    energy: energy,
+    skill: skill,
+    features: features,
+    createdAt: createdAt,
+    level: level ?? this.level,
+    xp: xp ?? this.xp,
+    seedAllocations: seedAllocations ?? this.seedAllocations,
+    subject: subject ?? this.subject,
+    elementMoveName: elementMoveName ?? this.elementMoveName,
+    specialMoveName: specialMoveName ?? this.specialMoveName,
+    onlineId: onlineId ?? this.onlineId,
+  );
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'name': name,
-        'imagePath': imagePath,
-        'imageHash': imageHash,
-        'element': element.name,
-        'baseStats': baseStats.toJson(),
-        'energy': energy,
-        'skill': skill,
-        'features': features,
-        'createdAt': createdAt.toIso8601String(),
-        'level': level,
-        'xp': xp,
-        'seedAllocations': {
-          for (final e in seedAllocations.entries) e.key.name: e.value,
-        },
-        'subject': subject,
-        'elementMoveName': elementMoveName,
-        'specialMoveName': specialMoveName,
-        'onlineId': onlineId,
-      };
+    'id': id,
+    'name': name,
+    'imagePath': imagePath,
+    'imageHash': imageHash,
+    'element': element.name,
+    'baseStats': baseStats.toJson(),
+    'energy': energy,
+    'skill': skill,
+    'features': features,
+    'createdAt': createdAt.toIso8601String(),
+    'level': level,
+    'xp': xp,
+    'seedAllocations': {
+      for (final e in seedAllocations.entries) e.key.name: e.value,
+    },
+    'subject': subject,
+    'elementMoveName': elementMoveName,
+    'specialMoveName': specialMoveName,
+    'onlineId': onlineId,
+  };
 
   factory Character.fromJson(Map<String, Object?> json) => Character(
-        id: json['id']! as String,
-        name: json['name']! as String,
-        imagePath: json['imagePath']! as String,
-        imageHash: json['imageHash']! as String,
-        element: ElementType.fromName(json['element']! as String),
-        baseStats:
-            Stats.fromJson((json['baseStats']! as Map).cast<String, Object?>()),
-        energy: (json['energy']! as num).toDouble(),
-        skill: (json['skill']! as num).toDouble(),
-        features: (json['features']! as Map).cast<String, num>(),
-        createdAt: DateTime.parse(json['createdAt']! as String),
-        level: json['level']! as int,
-        xp: json['xp']! as int,
-        seedAllocations: {
-          for (final e in (json['seedAllocations']! as Map).entries)
-            StatKind.values.byName(e.key as String): e.value as int,
-        },
-        subject: json['subject'] as String?,
-        elementMoveName: json['elementMoveName'] as String?,
-        specialMoveName: json['specialMoveName'] as String?,
-        onlineId: json['onlineId'] as String?,
-      );
+    id: json['id']! as String,
+    name: json['name']! as String,
+    imagePath: json['imagePath']! as String,
+    imageHash: json['imageHash']! as String,
+    element: ElementType.fromName(json['element']! as String),
+    baseStats: Stats.fromJson(
+      (json['baseStats']! as Map).cast<String, Object?>(),
+    ),
+    energy: (json['energy']! as num).toDouble(),
+    skill: (json['skill']! as num).toDouble(),
+    features: (json['features']! as Map).cast<String, num>(),
+    createdAt: DateTime.parse(json['createdAt']! as String),
+    level: json['level']! as int,
+    xp: json['xp']! as int,
+    seedAllocations: {
+      for (final e in (json['seedAllocations']! as Map).entries)
+        StatKind.values.byName(e.key as String): e.value as int,
+    },
+    subject: json['subject'] as String?,
+    elementMoveName: json['elementMoveName'] as String?,
+    specialMoveName: json['specialMoveName'] as String?,
+    onlineId: json['onlineId'] as String?,
+  );
 }

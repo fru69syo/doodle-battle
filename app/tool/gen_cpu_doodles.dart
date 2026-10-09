@@ -31,14 +31,31 @@ class _Doodle {
 const _w = 800, _h = 640;
 
 /// Shaky outline helper.
-void _outline(DoodleCanvas c, List<Pt> shape, math.Random rng,
-    {Rgb color = Crayon.black, double radius = 6, double shake = 3}) {
-  c.stroke(tremble(densify(shape, 6, closed: true), shake, rng), radius, color,
-      texture: 0.4, closed: true);
+void _outline(
+  DoodleCanvas c,
+  List<Pt> shape,
+  math.Random rng, {
+  Rgb color = Crayon.black,
+  double radius = 6,
+  double shake = 3,
+}) {
+  c.stroke(
+    tremble(densify(shape, 6, closed: true), shake, rng),
+    radius,
+    color,
+    texture: 0.4,
+    closed: true,
+  );
 }
 
-void _line(DoodleCanvas c, List<Pt> pts, math.Random rng, Rgb color,
-    {double radius = 6, double shake = 3}) {
+void _line(
+  DoodleCanvas c,
+  List<Pt> pts,
+  math.Random rng,
+  Rgb color, {
+  double radius = 6,
+  double shake = 3,
+}) {
   c.stroke(tremble(densify(pts, 6), shake, rng), radius, color, texture: 0.4);
 }
 
@@ -59,20 +76,45 @@ final _doodles = <_Doodle>[
     c.scribbleFill(body, Crayon.red, rng, radius: 7, spacing: 9);
     _outline(c, body, rng);
     _eyes(c, const Pt(330, 320), const Pt(460, 310), r: 26);
-    _line(c, const [Pt(340, 420), Pt(400, 450), Pt(470, 415)], rng,
-        Crayon.black);
-    c.scribbleFill(ellipse(250, 400, 30, 22, rng: rng, wobble: 0.1),
-        Crayon.pink, rng, radius: 5, spacing: 6);
+    _line(
+      c,
+      const [Pt(340, 420), Pt(400, 450), Pt(470, 415)],
+      rng,
+      Crayon.black,
+    );
+    c.scribbleFill(
+      ellipse(250, 400, 30, 22, rng: rng, wobble: 0.1),
+      Crayon.pink,
+      rng,
+      radius: 5,
+      spacing: 6,
+    );
   }),
   _Doodle('cpu_fire_spiky', 'トゲトゲ', ElementType.fire, (c, rng) {
     final body = star(400, 330, 260, 130, 9, jitter: 0.35, rng: rng);
     c.scribbleFill(body, Crayon.orange, rng, radius: 7, spacing: 9);
-    c.scribbleFill(ellipse(400, 330, 100, 90, wobble: 0.1, rng: rng),
-        Crayon.red, rng, radius: 7, spacing: 9);
+    c.scribbleFill(
+      ellipse(400, 330, 100, 90, wobble: 0.1, rng: rng),
+      Crayon.red,
+      rng,
+      radius: 7,
+      spacing: 9,
+    );
     _outline(c, body, rng, radius: 5);
     _eyes(c, const Pt(360, 310), const Pt(440, 305), r: 18);
-    _line(c, const [Pt(360, 370), Pt(380, 355), Pt(400, 372), Pt(420, 355),
-        Pt(440, 370)], rng, Crayon.black, radius: 4);
+    _line(
+      c,
+      const [
+        Pt(360, 370),
+        Pt(380, 355),
+        Pt(400, 372),
+        Pt(420, 355),
+        Pt(440, 370),
+      ],
+      rng,
+      Crayon.black,
+      radius: 4,
+    );
   }),
   _Doodle('cpu_water_snake', 'にょろにょろ', ElementType.water, (c, rng) {
     final path = [
@@ -82,10 +124,23 @@ final _doodles = <_Doodle>[
     c.stroke(tremble(path, 4, rng), 34, Crayon.blue, texture: 0.45);
     c.stroke(tremble(path, 3, rng), 10, Crayon.sky, texture: 0.45);
     c.dot(path.last + const Pt(10, -5), 46, Crayon.blue, texture: 0.4);
-    _eyes(c, path.last + const Pt(0, -18), path.last + const Pt(28, -14),
-        r: 12);
-    _line(c, [path.last + const Pt(40, 20), path.last + const Pt(80, 30),
-        path.last + const Pt(70, 45)], rng, Crayon.red, radius: 4);
+    _eyes(
+      c,
+      path.last + const Pt(0, -18),
+      path.last + const Pt(28, -14),
+      r: 12,
+    );
+    _line(
+      c,
+      [
+        path.last + const Pt(40, 20),
+        path.last + const Pt(80, 30),
+        path.last + const Pt(70, 45),
+      ],
+      rng,
+      Crayon.red,
+      radius: 4,
+    );
   }),
   _Doodle('cpu_water_fish', 'まんまるフィッシュ', ElementType.water, (c, rng) {
     final body = ellipse(370, 320, 200, 170, wobble: 0.12, rng: rng);
@@ -98,8 +153,17 @@ final _doodles = <_Doodle>[
     _ring(c, const Pt(260, 280), 24);
     c.dot(const Pt(265, 284), 11, Crayon.black);
     for (var k = 0; k < 3; k++) {
-      _line(c, [Pt(360 + k * 50.0, 200), Pt(390 + k * 50.0, 320),
-          Pt(360 + k * 50.0, 440)], rng, Crayon.blue, radius: 4);
+      _line(
+        c,
+        [
+          Pt(360 + k * 50.0, 200),
+          Pt(390 + k * 50.0, 320),
+          Pt(360 + k * 50.0, 440),
+        ],
+        rng,
+        Crayon.blue,
+        radius: 4,
+      );
     }
   }),
   _Doodle('cpu_leaf_frog', 'ケロケロ', ElementType.leaf, (c, rng) {
@@ -112,11 +176,21 @@ final _doodles = <_Doodle>[
     }
     _outline(c, body, rng);
     _eyes(c, const Pt(300, 235), const Pt(500, 235), r: 24);
-    _line(c, const [Pt(300, 420), Pt(400, 470), Pt(500, 420)], rng,
-        Crayon.red, radius: 5);
+    _line(
+      c,
+      const [Pt(300, 420), Pt(400, 470), Pt(500, 420)],
+      rng,
+      Crayon.red,
+      radius: 5,
+    );
     for (final x in [220.0, 580.0]) {
-      _line(c, [Pt(x, 500), Pt(x - 40, 580), Pt(x + 40, 585)], rng,
-          Crayon.green, radius: 9);
+      _line(
+        c,
+        [Pt(x, 500), Pt(x - 40, 580), Pt(x + 40, 585)],
+        rng,
+        Crayon.green,
+        radius: 9,
+      );
     }
   }),
   _Doodle('cpu_leaf_caterpillar', 'もりもりイモムシ', ElementType.leaf, (c, rng) {
@@ -124,32 +198,49 @@ final _doodles = <_Doodle>[
       final cx = 140 + k * 100.0;
       final cy = 360 + 40 * math.sin(k * 1.1);
       final seg = ellipse(cx, cy, 70, 75, wobble: 0.12, rng: rng);
-      c.scribbleFill(seg, k.isEven ? Crayon.green : const Rgb(140, 200, 50),
-          rng, radius: 6, spacing: 8);
+      c.scribbleFill(
+        seg,
+        k.isEven ? Crayon.green : const Rgb(140, 200, 50),
+        rng,
+        radius: 6,
+        spacing: 8,
+      );
       _outline(c, seg, rng, radius: 5);
-      _line(c, [Pt(cx, cy + 70), Pt(cx - 10, cy + 110)], rng, Crayon.brown,
-          radius: 5);
+      _line(
+        c,
+        [Pt(cx, cy + 70), Pt(cx - 10, cy + 110)],
+        rng,
+        Crayon.brown,
+        radius: 5,
+      );
     }
     _eyes(c, const Pt(640, 330), const Pt(680, 335), r: 15);
-    _line(c, const [Pt(640, 290), Pt(610, 200)], rng, Crayon.black,
-        radius: 4);
-    _line(c, const [Pt(680, 290), Pt(710, 200)], rng, Crayon.black,
-        radius: 4);
+    _line(c, const [Pt(640, 290), Pt(610, 200)], rng, Crayon.black, radius: 4);
+    _line(c, const [Pt(680, 290), Pt(710, 200)], rng, Crayon.black, radius: 4);
   }),
   _Doodle('cpu_thunder_bird', 'ピヨピカ', ElementType.thunder, (c, rng) {
     final body = ellipse(400, 340, 190, 180, wobble: 0.12, rng: rng);
     c.scribbleFill(body, Crayon.yellow, rng, radius: 7, spacing: 9);
     final wing = ellipse(470, 380, 90, 60, wobble: 0.2, rng: rng);
-    c.scribbleFill(wing, const Rgb(240, 190, 20), rng,
-        radius: 6, spacing: 8);
+    c.scribbleFill(wing, const Rgb(240, 190, 20), rng, radius: 6, spacing: 8);
     _outline(c, body, rng, color: Crayon.orange);
     _outline(c, wing, rng, color: Crayon.orange, radius: 4);
     _eyes(c, const Pt(340, 290), const Pt(420, 285), r: 18);
-    c.scribbleFill(const [Pt(250, 320), Pt(180, 345), Pt(250, 370)],
-        Crayon.orange, rng, radius: 5, spacing: 6);
+    c.scribbleFill(
+      const [Pt(250, 320), Pt(180, 345), Pt(250, 370)],
+      Crayon.orange,
+      rng,
+      radius: 5,
+      spacing: 6,
+    );
     for (final x in [360.0, 450.0]) {
-      _line(c, [Pt(x, 515), Pt(x - 5, 590), Pt(x - 35, 600)], rng,
-          Crayon.orange, radius: 5);
+      _line(
+        c,
+        [Pt(x, 515), Pt(x - 5, 590), Pt(x - 35, 600)],
+        rng,
+        Crayon.orange,
+        radius: 5,
+      );
     }
   }),
   _Doodle('cpu_thunder_star', 'ビリビリスター', ElementType.thunder, (c, rng) {
@@ -157,15 +248,32 @@ final _doodles = <_Doodle>[
     c.scribbleFill(body, Crayon.yellow, rng, radius: 7, spacing: 9);
     _outline(c, body, rng, color: Crayon.orange, radius: 6);
     _eyes(c, const Pt(360, 320), const Pt(440, 320), r: 16);
-    _line(c, const [Pt(370, 380), Pt(400, 395), Pt(430, 380)], rng,
-        Crayon.black, radius: 4);
-    _line(c, const [Pt(80, 120), Pt(130, 180), Pt(100, 190), Pt(150, 260)],
-        rng, Crayon.yellow, radius: 7);
+    _line(
+      c,
+      const [Pt(370, 380), Pt(400, 395), Pt(430, 380)],
+      rng,
+      Crayon.black,
+      radius: 4,
+    );
+    _line(
+      c,
+      const [Pt(80, 120), Pt(130, 180), Pt(100, 190), Pt(150, 260)],
+      rng,
+      Crayon.yellow,
+      radius: 7,
+    );
   }),
   _Doodle('cpu_shadow_ghost', 'おばけのモヤ', ElementType.shadow, (c, rng) {
     final shape = <Pt>[
-      ...ellipse(400, 260, 170, 150, n: 40, start: math.pi, rng: rng)
-          .sublist(0, 21),
+      ...ellipse(
+        400,
+        260,
+        170,
+        150,
+        n: 40,
+        start: math.pi,
+        rng: rng,
+      ).sublist(0, 21),
       for (var k = 0; k <= 8; k++)
         Pt(570 - k * 42.5, 520 + (k.isEven ? 0 : 40)),
     ];
@@ -173,16 +281,31 @@ final _doodles = <_Doodle>[
     _outline(c, shape, rng, radius: 7);
     c.dot(const Pt(350, 250), 22, Crayon.black, texture: 0.3);
     c.dot(const Pt(450, 250), 22, Crayon.black, texture: 0.3);
-    c.scribbleFill(ellipse(400, 340, 40, 30, rng: rng), Crayon.black, rng,
-        radius: 5, spacing: 6);
+    c.scribbleFill(
+      ellipse(400, 340, 40, 30, rng: rng),
+      Crayon.black,
+      rng,
+      radius: 5,
+      spacing: 6,
+    );
   }),
   _Doodle('cpu_shadow_bat', 'コウモリン', ElementType.shadow, (c, rng) {
     final wings = [
-      const Pt(400, 260), const Pt(560, 160), const Pt(740, 220),
-      const Pt(690, 300), const Pt(640, 280), const Pt(600, 360),
-      const Pt(540, 320), const Pt(470, 400), const Pt(400, 360),
-      const Pt(330, 400), const Pt(260, 320), const Pt(200, 360),
-      const Pt(160, 280), const Pt(110, 300), const Pt(60, 220),
+      const Pt(400, 260),
+      const Pt(560, 160),
+      const Pt(740, 220),
+      const Pt(690, 300),
+      const Pt(640, 280),
+      const Pt(600, 360),
+      const Pt(540, 320),
+      const Pt(470, 400),
+      const Pt(400, 360),
+      const Pt(330, 400),
+      const Pt(260, 320),
+      const Pt(200, 360),
+      const Pt(160, 280),
+      const Pt(110, 300),
+      const Pt(60, 220),
       const Pt(240, 160),
     ];
     c.scribbleFill(wings, Crayon.purple, rng, radius: 7, spacing: 9);
@@ -190,10 +313,20 @@ final _doodles = <_Doodle>[
     final body = ellipse(400, 300, 70, 90, wobble: 0.1, rng: rng);
     c.scribbleFill(body, Crayon.black, rng, radius: 6, spacing: 7);
     _eyes(c, const Pt(375, 280), const Pt(425, 280), r: 13);
-    _line(c, const [Pt(380, 210), Pt(365, 160), Pt(395, 205)], rng,
-        Crayon.black, radius: 5);
-    _line(c, const [Pt(405, 205), Pt(435, 160), Pt(420, 210)], rng,
-        Crayon.black, radius: 5);
+    _line(
+      c,
+      const [Pt(380, 210), Pt(365, 160), Pt(395, 205)],
+      rng,
+      Crayon.black,
+      radius: 5,
+    );
+    _line(
+      c,
+      const [Pt(405, 205), Pt(435, 160), Pt(420, 210)],
+      rng,
+      Crayon.black,
+      radius: 5,
+    );
   }),
   _Doodle('cpu_rainbow_cat', 'にじにゃん', ElementType.rainbow, (c, rng) {
     final head = ellipse(400, 340, 210, 180, wobble: 0.1, rng: rng);
@@ -208,14 +341,16 @@ final _doodles = <_Doodle>[
     for (var k = 0; k < colours.length; k++) {
       final top = 160 + k * 62.0;
       final band = <Pt>[
-        for (final p in head)
-          Pt(p.x, p.y.clamp(top, top + 62).toDouble()),
+        for (final p in head) Pt(p.x, p.y.clamp(top, top + 62).toDouble()),
       ];
       c.scribbleFill(band, colours[k], rng, radius: 7, spacing: 8);
     }
     for (final sx in [-1.0, 1.0]) {
-      final ear = [Pt(400 + sx * 80, 190), Pt(400 + sx * 190, 80),
-          Pt(400 + sx * 200, 250)];
+      final ear = [
+        Pt(400 + sx * 80, 190),
+        Pt(400 + sx * 190, 80),
+        Pt(400 + sx * 200, 250),
+      ];
       c.scribbleFill(ear, Crayon.red, rng, radius: 6, spacing: 8);
       _outline(c, ear, rng, radius: 5);
     }
@@ -223,19 +358,30 @@ final _doodles = <_Doodle>[
     _eyes(c, const Pt(330, 310), const Pt(470, 305), r: 22);
     for (final sx in [-1.0, 1.0]) {
       for (var k = -1; k <= 1; k++) {
-        _line(c, [Pt(400 + sx * 60, 380 + k * 12.0),
-            Pt(400 + sx * 190, 370 + k * 30.0)], rng, Crayon.black,
-            radius: 3);
+        _line(
+          c,
+          [
+            Pt(400 + sx * 60, 380 + k * 12.0),
+            Pt(400 + sx * 190, 370 + k * 30.0),
+          ],
+          rng,
+          Crayon.black,
+          radius: 3,
+        );
       }
     }
   }),
   _Doodle('cpu_rainbow_robot', 'カラフルロボ', ElementType.rainbow, (c, rng) {
     void box(double x0, double y0, double x1, double y1, Rgb col) {
       final b = tremble(
-          densify([Pt(x0, y0), Pt(x1, y0), Pt(x1, y1), Pt(x0, y1)], 10,
-              closed: true),
-          3,
-          rng);
+        densify(
+          [Pt(x0, y0), Pt(x1, y0), Pt(x1, y1), Pt(x0, y1)],
+          10,
+          closed: true,
+        ),
+        3,
+        rng,
+      );
       c.scribbleFill(b, col, rng, radius: 7, spacing: 9);
       _outline(c, b, rng, radius: 5, shake: 2);
     }
@@ -266,12 +412,16 @@ Future<void> main(List<String> args) async {
     File('${outDir.path}/${d.id}.png').writeAsBytesSync(r.cutoutPng);
     if (r.element != d.expected || report.rejectReason != null) {
       mismatches++;
-      print('!! ${d.id}: expected ${d.expected.name}, got ${r.element.name} '
-          '(reject: ${report.rejectReason})');
+      print(
+        '!! ${d.id}: expected ${d.expected.name}, got ${r.element.name} '
+        '(reject: ${report.rejectReason})',
+      );
     }
-    print('${d.id.padRight(22)} ${r.element.name.padRight(8)} '
-        'E=${r.energy.toStringAsFixed(1).padLeft(5)} '
-        'S=${r.skill.toStringAsFixed(1).padLeft(5)} ${r.baseStats}');
+    print(
+      '${d.id.padRight(22)} ${r.element.name.padRight(8)} '
+      'E=${r.energy.toStringAsFixed(1).padLeft(5)} '
+      'S=${r.skill.toStringAsFixed(1).padLeft(5)} ${r.baseStats}',
+    );
     entries.add({
       'id': d.id,
       'name': d.name,
@@ -287,12 +437,14 @@ Future<void> main(List<String> args) async {
   final manifest = {
     'version': 1,
     'generatedBy': 'tool/gen_cpu_doodles.dart',
-    'note': 'Lv1 stats from the on-device analyzer; scale by level with the '
+    'note':
+        'Lv1 stats from the on-device analyzer; scale by level with the '
         'battle growth rules.',
     'characters': entries,
   };
   File('${outDir.path}/manifest.json').writeAsStringSync(
-      '${const JsonEncoder.withIndent('  ').convert(manifest)}\n');
+    '${const JsonEncoder.withIndent('  ').convert(manifest)}\n',
+  );
   if (mismatches > 0) {
     stderr.writeln('$mismatches doodle(s) did not get their intended element');
     exitCode = 1;

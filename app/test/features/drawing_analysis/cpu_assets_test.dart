@@ -9,8 +9,8 @@ import 'package:image/image.dart' as img;
 
 void main() {
   final manifest = jsonDecode(
-          File('assets/cpu/manifest.json').readAsStringSync())
-      as Map<String, Object?>;
+    File('assets/cpu/manifest.json').readAsStringSync(),
+  ) as Map<String, Object?>;
   final chars = (manifest['characters']! as List).cast<Map<String, Object?>>();
 
   test('CPU doodles cover every element, twice', () {
@@ -33,8 +33,9 @@ void main() {
       final png = img.decodePng(file.readAsBytesSync())!;
       expect(png.numChannels, 4);
       expect(png.width <= 512 && png.height <= 512, isTrue);
-      final stats =
-          Stats.fromJson((c['baseStats']! as Map).cast<String, Object?>());
+      final stats = Stats.fromJson(
+        (c['baseStats']! as Map).cast<String, Object?>(),
+      );
       final energy = (c['energy']! as num).toDouble();
       final skill = (c['skill']! as num).toDouble();
       expect(stats.total, statBudget(energy, skill).round());

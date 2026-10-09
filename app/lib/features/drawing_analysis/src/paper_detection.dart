@@ -12,8 +12,12 @@ const double kPaperInset = 0.015;
 /// Corners of the paper in working-image coordinates (clockwise from
 /// top-left on screen).
 class PaperQuad {
-  const PaperQuad(this.topLeft, this.topRight, this.bottomRight,
-      this.bottomLeft);
+  const PaperQuad(
+    this.topLeft,
+    this.topRight,
+    this.bottomRight,
+    this.bottomLeft,
+  );
   final Pt topLeft;
   final Pt topRight;
   final Pt bottomRight;
@@ -92,7 +96,8 @@ PaperDetection detectPaper(RgbImage image) {
   // A real sheet rarely touches all four borders; a sky band touching three
   // borders is more likely part of a photo.
   final b = sheet.bounds()!;
-  final touches = (b.left <= 1 ? 1 : 0) +
+  final touches =
+      (b.left <= 1 ? 1 : 0) +
       (b.top <= 1 ? 1 : 0) +
       (b.right >= w - 2 ? 1 : 0) +
       (b.bottom >= h - 2 ? 1 : 0);
@@ -170,10 +175,12 @@ double _paperLikeness(RgbImage image, Uint8List lum, Mask? region) {
   final sat = mx <= 0 ? 1.0 : (mx - mn) / mx;
   final flatness = flat / near;
   final brightness = ramp(p70.toDouble(), 90, 170);
-  return clamp01(brightness *
-      (1 - ramp(sat, 0.12, 0.3)) *
-      ramp(share, 0.2, 0.45) *
-      ramp(flatness, 0.4, 0.75));
+  return clamp01(
+    brightness *
+        (1 - ramp(sat, 0.12, 0.3)) *
+        ramp(share, 0.2, 0.45) *
+        ramp(flatness, 0.4, 0.75),
+  );
 }
 
 /// Largest-area quadrilateral with vertices on the convex hull, found by
@@ -198,8 +205,7 @@ PaperQuad _fitQuad(List<Pt> hull) {
     argBest((p) => p.x + p.y), // bottom-right
     argBest((p) => -p.x + p.y), // bottom-left
   ];
-  double areaOf(List<int> ids) =>
-      polygonArea([for (final i in ids) hull[i]]);
+  double areaOf(List<int> ids) => polygonArea([for (final i in ids) hull[i]]);
 
   final m = hull.length;
   for (var iter = 0; iter < 8; iter++) {
@@ -268,12 +274,28 @@ class SquareToQuad {
     final den = dx1 * dy2 - dx2 * dy1;
     final g = (sx * dy2 - dx2 * sy) / den;
     final h = (dx1 * sy - sx * dy1) / den;
-    return SquareToQuad._(x1 - x0 + g * x1, x3 - x0 + h * x3, x0,
-        y1 - y0 + g * y1, y3 - y0 + h * y3, y0, g, h);
+    return SquareToQuad._(
+      x1 - x0 + g * x1,
+      x3 - x0 + h * x3,
+      x0,
+      y1 - y0 + g * y1,
+      y3 - y0 + h * y3,
+      y0,
+      g,
+      h,
+    );
   }
 
-  SquareToQuad._(this.a, this.b, this.c, this.d, this.e, this.f, this.g,
-      this.h);
+  SquareToQuad._(
+    this.a,
+    this.b,
+    this.c,
+    this.d,
+    this.e,
+    this.f,
+    this.g,
+    this.h,
+  );
 
   final double a, b, c, d, e, f, g, h;
 
@@ -285,8 +307,11 @@ class SquareToQuad {
 
 /// Perspective-corrects the sheet into an upright image whose longest side
 /// is [kWorkingSize]. Sampling uses the high-resolution copy.
-RgbImage warpPaper(NormalizedImage src, PaperQuad quad,
-    {double inset = kPaperInset}) {
+RgbImage warpPaper(
+  NormalizedImage src,
+  PaperQuad quad, {
+  double inset = kPaperInset,
+}) {
   final c = quad.corners;
   final top = c[0].distanceTo(c[1]);
   final bottom = c[3].distanceTo(c[2]);

@@ -81,5 +81,7 @@ Stats computeBaseStats(DrawingFeatures f, double energy, double skill) {
 /// Same as [computeBaseStats] but from a persisted feature map
 /// (`Character.features`).
 Stats computeBaseStatsFromMap(
-        Map<String, num> features, double energy, double skill) =>
-    computeBaseStats(DrawingFeatures.fromMap(features), energy, skill);
+  Map<String, num> features,
+  double energy,
+  double skill,
+) => computeBaseStats(DrawingFeatures.fromMap(features), energy, skill);

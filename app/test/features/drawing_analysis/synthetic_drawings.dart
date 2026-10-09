@@ -14,13 +14,30 @@ DoodleCanvas kidScribble({int seed = 1, int width = 800, int height = 600}) {
   final c = DoodleCanvas(width, height, seed: seed);
   final s = width / 800;
   // Lumpy body coloured in with zig-zags, then a shaky outline.
-  final body = ellipse(370 * s, 330 * s, 190 * s, 140 * s,
-      n: 60, wobble: 0.18, rng: rng);
-  c.scribbleFill(body, Crayon.red, rng,
-      radius: 6 * s, spacing: 9 * s, texture: 0.55);
-  c.stroke(tremble(densify(body, 6 * s, closed: true), 4 * s, rng),
-      7 * s, Crayon.black,
-      texture: 0.45, closed: true);
+  final body = ellipse(
+    370 * s,
+    330 * s,
+    190 * s,
+    140 * s,
+    n: 60,
+    wobble: 0.18,
+    rng: rng,
+  );
+  c.scribbleFill(
+    body,
+    Crayon.red,
+    rng,
+    radius: 6 * s,
+    spacing: 9 * s,
+    texture: 0.55,
+  );
+  c.stroke(
+    tremble(densify(body, 6 * s, closed: true), 4 * s, rng),
+    7 * s,
+    Crayon.black,
+    texture: 0.45,
+    closed: true,
+  );
   // Lopsided eyes.
   c.dot(Pt(300 * s, 290 * s), 22 * s, Rgb.white);
   c.dot(Pt(300 * s, 295 * s), 11 * s, Crayon.black, texture: 0.3);
@@ -29,19 +46,37 @@ DoodleCanvas kidScribble({int seed = 1, int width = 800, int height = 600}) {
   for (final x in [290.0, 380.0, 470.0]) {
     final leg = densify([
       Pt(x * s, 440 * s),
-      Pt((x + rng.nextDouble() * 40 - 20) * s, (520 + rng.nextDouble() * 30) * s),
+      Pt(
+        (x + rng.nextDouble() * 40 - 20) * s,
+        (520 + rng.nextDouble() * 30) * s,
+      ),
     ], 5 * s);
     c.stroke(tremble(leg, 5 * s, rng), 8 * s, Crayon.blue, texture: 0.5);
   }
   c.stroke(
-      tremble(densify([Pt(540 * s, 300 * s), Pt(650 * s, 220 * s),
-            Pt(700 * s, 250 * s)], 5 * s), 5 * s, rng),
-      8 * s, Crayon.green,
-      texture: 0.5);
+    tremble(
+      densify([
+        Pt(540 * s, 300 * s),
+        Pt(650 * s, 220 * s),
+        Pt(700 * s, 250 * s),
+      ], 5 * s),
+      5 * s,
+      rng,
+    ),
+    8 * s,
+    Crayon.green,
+    texture: 0.5,
+  );
   // Yellow sun-ish scribble on one side.
   final sun = ellipse(140 * s, 140 * s, 55 * s, 50 * s, wobble: 0.2, rng: rng);
-  c.scribbleFill(sun, Crayon.yellow, rng,
-      radius: 6 * s, spacing: 8 * s, texture: 0.5);
+  c.scribbleFill(
+    sun,
+    Crayon.yellow,
+    rng,
+    radius: 6 * s,
+    spacing: 8 * s,
+    texture: 0.5,
+  );
   return c;
 }
 
@@ -54,8 +89,9 @@ DoodleCanvas skilledLineArt({int width = 800, int height = 600}) {
   final body = ellipse(cx, cy, 170, 210, n: 240);
   const light = Rgb(175, 205, 245), dark = Rgb(30, 60, 140);
   c.fillPolygon(body, (x, y) {
-    final d = math.sqrt(math.pow((x - cx + 60) / 210, 2) +
-        math.pow((y - cy + 80) / 250, 2));
+    final d = math.sqrt(
+      math.pow((x - cx + 60) / 210, 2) + math.pow((y - cy + 80) / 250, 2),
+    );
     return light.lerp(dark, d.clamp(0.0, 1.0));
   });
   // Belly with its own vertical gradient.
@@ -76,17 +112,28 @@ DoodleCanvas skilledLineArt({int width = 800, int height = 600}) {
     c.fillSolid(ellipse(ex, ey, 18, 18, n: 60), Rgb.black);
     c.dot(Pt(ex - 6, ey - 6), 4, Rgb.white);
     // Ear tufts.
-    c.stroke([
-      Pt(cx + sx * 110, cy - 170),
-      Pt(cx + sx * 150, cy - 245),
-      Pt(cx + sx * 160, cy - 160),
-    ], 1.4, Rgb.black);
+    c.stroke(
+      [
+        Pt(cx + sx * 110, cy - 170),
+        Pt(cx + sx * 150, cy - 245),
+        Pt(cx + sx * 160, cy - 160),
+      ],
+      1.4,
+      Rgb.black,
+    );
   }
   // Beak.
-  c.fillSolid([Pt(cx - 14, cy - 60), Pt(cx + 14, cy - 60), Pt(cx, cy - 30)],
-      const Rgb(240, 170, 40));
-  c.stroke([Pt(cx - 14, cy - 60), Pt(cx + 14, cy - 60), Pt(cx, cy - 30)],
-      0.9, Rgb.black, closed: true);
+  c.fillSolid([
+    Pt(cx - 14, cy - 60),
+    Pt(cx + 14, cy - 60),
+    Pt(cx, cy - 30),
+  ], const Rgb(240, 170, 40));
+  c.stroke(
+    [Pt(cx - 14, cy - 60), Pt(cx + 14, cy - 60), Pt(cx, cy - 30)],
+    0.9,
+    Rgb.black,
+    closed: true,
+  );
   // Feather pattern: rows of small symmetric arcs on the belly.
   for (var row = 0; row < 6; row++) {
     final y = cy + 5 + row * 20.0;
@@ -94,8 +141,10 @@ DoodleCanvas skilledLineArt({int width = 800, int height = 600}) {
     for (var x = -half; x <= half + 0.1; x += 18) {
       final arc = [
         for (var k = 0; k <= 8; k++)
-          Pt(cx + x + 7 * math.cos(math.pi * k / 8),
-              y + 6 * math.sin(math.pi * k / 8)),
+          Pt(
+            cx + x + 7 * math.cos(math.pi * k / 8),
+            y + 6 * math.sin(math.pi * k / 8),
+          ),
       ];
       c.stroke(arc, 0.7, const Rgb(90, 60, 40));
     }
@@ -104,15 +153,21 @@ DoodleCanvas skilledLineArt({int width = 800, int height = 600}) {
   for (final sx in [-1.0, 1.0]) {
     for (var k = 0; k < 9; k++) {
       final y = cy - 20 + k * 16.0;
-      c.stroke([Pt(cx + sx * 120, y), Pt(cx + sx * 155, y + 22)], 0.7,
-          const Rgb(20, 30, 70));
+      c.stroke(
+        [Pt(cx + sx * 120, y), Pt(cx + sx * 155, y + 22)],
+        0.7,
+        const Rgb(20, 30, 70),
+      );
     }
   }
   // Feet.
   for (final sx in [-1.0, 1.0]) {
     for (var t = -1; t <= 1; t++) {
-      c.stroke([Pt(cx + sx * 50, cy + 205), Pt(cx + sx * 50 + t * 10, cy + 228)],
-          1.1, const Rgb(200, 120, 20));
+      c.stroke(
+        [Pt(cx + sx * 50, cy + 205), Pt(cx + sx * 50 + t * 10, cy + 228)],
+        1.1,
+        const Rgb(200, 120, 20),
+      );
     }
   }
   return c;
@@ -159,8 +214,10 @@ Uint8List photoLike({int width = 1200, int height = 900, int seed = 3}) {
       }
       for (final f in fruits) {
         // Soft contact shadow under each fruit.
-        final sd = math.sqrt(math.pow((u - f.u - 0.04) / 1.6, 2) +
-            math.pow((v - f.v - f.r * 0.9) * 3, 2));
+        final sd = math.sqrt(
+          math.pow((u - f.u - 0.04) / 1.6, 2) +
+              math.pow((v - f.v - f.r * 0.9) * 3, 2),
+        );
         if (sd < f.r) {
           final k = 0.55 + 0.45 * sd / f.r;
           r *= k;
@@ -176,11 +233,19 @@ Uint8List photoLike({int width = 1200, int height = 900, int seed = 3}) {
           final lambert =
               (0.35 + 0.65 * (nz * 0.7 - dx / f.r * 0.5 - dy / f.r * 0.5))
                   .clamp(0.15, 1.0);
-          final spec = math.pow(
-                  math.max(0, 1 - math.sqrt(math.pow(dx / f.r + 0.35, 2) +
-                          math.pow(dy / f.r + 0.4, 2)) *
-                      3),
-                  2) *
+          final spec =
+              math.pow(
+                math.max(
+                  0,
+                  1 -
+                      math.sqrt(
+                            math.pow(dx / f.r + 0.35, 2) +
+                                math.pow(dy / f.r + 0.4, 2),
+                          ) *
+                          3,
+                ),
+                2,
+              ) *
               200;
           final pores = valueNoise(x / 3, y / 3, seed + 5) * 18;
           r = f.base.r * lambert + spec + pores;
@@ -189,8 +254,13 @@ Uint8List photoLike({int width = 1200, int height = 900, int seed = 3}) {
         }
       }
       double nz() => 5 * (rng.nextDouble() + rng.nextDouble() - 1);
-      im.setPixelRgb(x, y, (r + nz()).round().clamp(0, 255),
-          (g + nz()).round().clamp(0, 255), (b + nz()).round().clamp(0, 255));
+      im.setPixelRgb(
+        x,
+        y,
+        (r + nz()).round().clamp(0, 255),
+        (g + nz()).round().clamp(0, 255),
+        (b + nz()).round().clamp(0, 255),
+      );
     }
   }
   return img.encodeJpg(im, quality: 90);
@@ -223,7 +293,9 @@ Uint8List photoLandscape({int width = 1200, int height = 900, int seed = 3}) {
         b = 40 + 30 * t;
       }
       // A shaded "ball" in the foreground.
-      final bd = math.sqrt(math.pow(u - 0.3, 2) + math.pow((v - 0.72) * 1.33, 2));
+      final bd = math.sqrt(
+        math.pow(u - 0.3, 2) + math.pow((v - 0.72) * 1.33, 2),
+      );
       if (bd < 0.12) {
         final shade = 1 - bd / 0.12;
         r = 120 + 120 * shade;
@@ -231,8 +303,13 @@ Uint8List photoLandscape({int width = 1200, int height = 900, int seed = 3}) {
         b = 60 + 90 * shade;
       }
       double n() => 6 * (rng.nextDouble() + rng.nextDouble() - 1);
-      im.setPixelRgb(x, y, (r + n()).round().clamp(0, 255),
-          (g + n()).round().clamp(0, 255), (b + n()).round().clamp(0, 255));
+      im.setPixelRgb(
+        x,
+        y,
+        (r + n()).round().clamp(0, 255),
+        (g + n()).round().clamp(0, 255),
+        (b + n()).round().clamp(0, 255),
+      );
     }
   }
   return img.encodeJpg(im, quality: 90);
@@ -243,8 +320,9 @@ DoodleCanvas singleDot() =>
     DoodleCanvas(800, 600)..dot(const Pt(400, 300), 6, Crayon.black);
 
 /// One short thin line.
-DoodleCanvas tinyLine() => DoodleCanvas(800, 600)
-  ..stroke([const Pt(380, 300), const Pt(440, 310)], 1.5, Crayon.blue);
+DoodleCanvas tinyLine() =>
+    DoodleCanvas(800, 600)
+      ..stroke([const Pt(380, 300), const Pt(440, 310)], 1.5, Crayon.blue);
 
 /// A simple kid blob filled with one colour and a few black features.
 DoodleCanvas colourBlob(Rgb colour, {int seed = 5}) {
@@ -252,8 +330,13 @@ DoodleCanvas colourBlob(Rgb colour, {int seed = 5}) {
   final c = DoodleCanvas(800, 600, seed: seed);
   final body = ellipse(400, 300, 200, 160, wobble: 0.15, rng: rng);
   c.scribbleFill(body, colour, rng, radius: 6, spacing: 8, texture: 0.4);
-  c.stroke(tremble(densify(body, 6, closed: true), 3, rng), 5, colour,
-      texture: 0.3, closed: true);
+  c.stroke(
+    tremble(densify(body, 6, closed: true), 3, rng),
+    5,
+    colour,
+    texture: 0.3,
+    closed: true,
+  );
   c.dot(const Pt(340, 260), 10, Crayon.black);
   c.dot(const Pt(450, 255), 10, Crayon.black);
   return c;
@@ -265,8 +348,13 @@ DoodleCanvas monochrome({int seed = 6}) {
   final c = DoodleCanvas(800, 600, seed: seed);
   final body = ellipse(400, 300, 180, 170, wobble: 0.15, rng: rng);
   c.scribbleFill(body, Crayon.grey, rng, radius: 5, spacing: 8, texture: 0.4);
-  c.stroke(tremble(densify(body, 6, closed: true), 3, rng), 6, Crayon.black,
-      texture: 0.3, closed: true);
+  c.stroke(
+    tremble(densify(body, 6, closed: true), 3, rng),
+    6,
+    Crayon.black,
+    texture: 0.3,
+    closed: true,
+  );
   c.dot(const Pt(340, 260), 14, Crayon.black);
   return c;
 }
@@ -297,21 +385,26 @@ DoodleCanvas rainbowBlob({int seed = 8}) {
 
 /// Encodes a canvas photographed on a darker table with mild perspective
 /// and uneven light. Also returns the corners used.
-({Uint8List jpeg, List<Pt> corners}) photographedOnTable(DoodleCanvas paper,
-    {int width = 1600, int height = 1200}) {
+({Uint8List jpeg, List<Pt> corners}) photographedOnTable(
+  DoodleCanvas paper, {
+  int width = 1600,
+  int height = 1200,
+}) {
   final corners = [
     Pt(width * 0.17, height * 0.12),
     Pt(width * 0.86, height * 0.16),
     Pt(width * 0.82, height * 0.90),
     Pt(width * 0.13, height * 0.85),
   ];
-  final photo = photograph(paper,
-      width: width,
-      height: height,
-      corners: corners,
-      lightFalloff: 0.3,
-      noise: 4,
-      seed: 11);
+  final photo = photograph(
+    paper,
+    width: width,
+    height: height,
+    corners: corners,
+    lightFalloff: 0.3,
+    noise: 4,
+    seed: 11,
+  );
   return (jpeg: img.encodeJpg(photo, quality: 90), corners: corners);
 }
 
@@ -321,25 +414,47 @@ DoodleCanvas kidMarker({int seed = 4}) {
   final rng = math.Random(seed);
   final c = DoodleCanvas(800, 600, seed: seed);
   final head = ellipse(380, 250, 120, 105, wobble: 0.2, rng: rng);
-  c.stroke(tremble(densify(head, 5, closed: true), 4, rng, smooth: 3), 2.5,
-      Crayon.black, closed: true);
+  c.stroke(
+    tremble(densify(head, 5, closed: true), 4, rng, smooth: 3),
+    2.5,
+    Crayon.black,
+    closed: true,
+  );
   c.dot(const Pt(340, 230), 8, Crayon.black);
   c.dot(const Pt(425, 220), 6, Crayon.black);
   c.stroke(
-      tremble(densify([const Pt(330, 300), const Pt(380, 320),
-            const Pt(430, 290)], 5), 3, rng),
-      2.5, Crayon.red);
+    tremble(
+      densify([const Pt(330, 300), const Pt(380, 320), const Pt(430, 290)], 5),
+      3,
+      rng,
+    ),
+    2.5,
+    Crayon.red,
+  );
   // Stick body and limbs.
-  c.stroke(tremble(densify([const Pt(380, 355), const Pt(390, 500)], 5), 4, rng),
-      2.5, Crayon.blue);
   c.stroke(
-      tremble(densify([const Pt(300, 400), const Pt(385, 420),
-            const Pt(500, 380)], 5), 4, rng),
-      2.5, Crayon.blue);
+    tremble(densify([const Pt(380, 355), const Pt(390, 500)], 5), 4, rng),
+    2.5,
+    Crayon.blue,
+  );
   c.stroke(
-      tremble(densify([const Pt(330, 570), const Pt(390, 500),
-            const Pt(460, 575)], 5), 4, rng),
-      2.5, Crayon.green);
+    tremble(
+      densify([const Pt(300, 400), const Pt(385, 420), const Pt(500, 380)], 5),
+      4,
+      rng,
+    ),
+    2.5,
+    Crayon.blue,
+  );
+  c.stroke(
+    tremble(
+      densify([const Pt(330, 570), const Pt(390, 500), const Pt(460, 575)], 5),
+      4,
+      rng,
+    ),
+    2.5,
+    Crayon.green,
+  );
   // Hair squiggle.
   final hair = <Pt>[
     for (var k = 0; k <= 40; k++)
