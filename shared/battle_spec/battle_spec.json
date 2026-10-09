@@ -1,0 +1,388 @@
+{
+  "specVersion": 1,
+  "hpMultiplier": 3,
+  "turnCap": 30,
+  "timeoutAction": "tackle",
+  "damage": {
+    "scalePct": 55,
+    "basePower": 50,
+    "defenseWeight": 3,
+    "minDamage": 1,
+    "critChancePct": 10,
+    "critMultiplierPct": 150,
+    "varianceMinPct": 75,
+    "varianceMaxPct": 100
+  },
+  "typeChart": {
+    "advantagePct": 150,
+    "disadvantagePct": 75,
+    "neutralPct": 100,
+    "matrix": {
+      "fire": {
+        "fire": 100,
+        "water": 75,
+        "leaf": 150,
+        "thunder": 100,
+        "shadow": 100,
+        "rainbow": 100
+      },
+      "water": {
+        "fire": 150,
+        "water": 100,
+        "leaf": 100,
+        "thunder": 75,
+        "shadow": 100,
+        "rainbow": 100
+      },
+      "leaf": {
+        "fire": 75,
+        "water": 100,
+        "leaf": 100,
+        "thunder": 150,
+        "shadow": 100,
+        "rainbow": 100
+      },
+      "thunder": {
+        "fire": 100,
+        "water": 150,
+        "leaf": 75,
+        "thunder": 100,
+        "shadow": 100,
+        "rainbow": 100
+      },
+      "shadow": {
+        "fire": 100,
+        "water": 100,
+        "leaf": 100,
+        "thunder": 100,
+        "shadow": 100,
+        "rainbow": 150
+      },
+      "rainbow": {
+        "fire": 100,
+        "water": 100,
+        "leaf": 100,
+        "thunder": 100,
+        "shadow": 150,
+        "rainbow": 100
+      }
+    }
+  },
+  "moves": {
+    "tackle": {
+      "label": "たいあたり",
+      "power": 40,
+      "accuracyPct": 100,
+      "typed": false
+    },
+    "element": {
+      "label": "ぞくせいわざ",
+      "power": 60,
+      "accuracyPct": 90,
+      "typed": true
+    },
+    "guard": {
+      "label": "まもる",
+      "damageTakenPctByStreak": [
+        50,
+        75,
+        100
+      ]
+    },
+    "special": {
+      "label": "ひっさつ",
+      "power": 120,
+      "accuracyPct": 100,
+      "typed": false
+    }
+  },
+  "gauge": {
+    "max": 100,
+    "onHit": 20,
+    "onMiss": 10,
+    "onGuard": 20,
+    "onDamagedFlat": 5,
+    "onDamagedPctOfMaxHp": 50
+  },
+  "growth": {
+    "maxLevel": 30,
+    "levelUpStatPct": 4,
+    "seedStatPct": 3,
+    "seedsPerLevel": 1,
+    "xpToNextBase": 50,
+    "xpToNextPerLevel": 25,
+    "evolutions": [
+      {
+        "level": 10,
+        "stage": "kagayaki",
+        "specialPowerBonus": 0
+      },
+      {
+        "level": 20,
+        "stage": "densetsu",
+        "specialPowerBonus": 20
+      }
+    ]
+  },
+  "xp": {
+    "win": 100,
+    "lose": 40,
+    "shoboBonusPct": 50,
+    "adBoostMultiplier": 2
+  },
+  "ai": {
+    "weak": {
+      "tackleWeight": 40,
+      "elementWeight": 40,
+      "guardWeight": 20,
+      "specialWeight": 40
+    },
+    "normal": {
+      "guardChancePct": 10
+    },
+    "strong": {
+      "guardVsSpecialPct": 80,
+      "opponentGuardRatePct": 40,
+      "opponentGuardMinSamples": 2
+    }
+  },
+  "texts": {
+    "super": "こうかは ばつぐんだ！",
+    "weak": "こうかは いまひとつの ようだ…",
+    "crit": "きゅうしょに あたった！",
+    "miss": "でも はずれた！",
+    "guard": "まもりの たいせい！",
+    "guardWeakened": "まもりが よわく なっている…",
+    "specialNotReady": "ゲージが たりない！ たいあたりに した",
+    "timeout": "じかんぎれ！ たいあたり！",
+    "faint": "たおれた！"
+  },
+  "cpu": {
+    "characterIds": [
+      "cpu_01",
+      "cpu_02",
+      "cpu_03",
+      "cpu_04",
+      "cpu_05",
+      "cpu_06",
+      "cpu_07",
+      "cpu_08",
+      "cpu_09",
+      "cpu_10",
+      "cpu_11",
+      "cpu_12"
+    ],
+    "stages": [
+      {
+        "stage": 1,
+        "cpuId": "cpu_01",
+        "level": 1,
+        "aiTier": "weak",
+        "xpMultiplierPct": 100
+      },
+      {
+        "stage": 2,
+        "cpuId": "cpu_02",
+        "level": 1,
+        "aiTier": "weak",
+        "xpMultiplierPct": 105
+      },
+      {
+        "stage": 3,
+        "cpuId": "cpu_03",
+        "level": 2,
+        "aiTier": "weak",
+        "xpMultiplierPct": 110
+      },
+      {
+        "stage": 4,
+        "cpuId": "cpu_04",
+        "level": 2,
+        "aiTier": "weak",
+        "xpMultiplierPct": 115
+      },
+      {
+        "stage": 5,
+        "cpuId": "cpu_05",
+        "level": 3,
+        "aiTier": "weak",
+        "xpMultiplierPct": 120
+      },
+      {
+        "stage": 6,
+        "cpuId": "cpu_06",
+        "level": 3,
+        "aiTier": "weak",
+        "xpMultiplierPct": 125
+      },
+      {
+        "stage": 7,
+        "cpuId": "cpu_07",
+        "level": 4,
+        "aiTier": "weak",
+        "xpMultiplierPct": 130
+      },
+      {
+        "stage": 8,
+        "cpuId": "cpu_08",
+        "level": 5,
+        "aiTier": "normal",
+        "xpMultiplierPct": 135
+      },
+      {
+        "stage": 9,
+        "cpuId": "cpu_09",
+        "level": 5,
+        "aiTier": "normal",
+        "xpMultiplierPct": 140
+      },
+      {
+        "stage": 10,
+        "cpuId": "cpu_10",
+        "level": 6,
+        "aiTier": "normal",
+        "xpMultiplierPct": 145
+      },
+      {
+        "stage": 11,
+        "cpuId": "cpu_11",
+        "level": 7,
+        "aiTier": "normal",
+        "xpMultiplierPct": 150
+      },
+      {
+        "stage": 12,
+        "cpuId": "cpu_12",
+        "level": 8,
+        "aiTier": "normal",
+        "xpMultiplierPct": 155
+      },
+      {
+        "stage": 13,
+        "cpuId": "cpu_01",
+        "level": 9,
+        "aiTier": "normal",
+        "xpMultiplierPct": 160
+      },
+      {
+        "stage": 14,
+        "cpuId": "cpu_02",
+        "level": 10,
+        "aiTier": "normal",
+        "xpMultiplierPct": 165
+      },
+      {
+        "stage": 15,
+        "cpuId": "cpu_03",
+        "level": 10,
+        "aiTier": "normal",
+        "xpMultiplierPct": 170
+      },
+      {
+        "stage": 16,
+        "cpuId": "cpu_04",
+        "level": 11,
+        "aiTier": "normal",
+        "xpMultiplierPct": 175
+      },
+      {
+        "stage": 17,
+        "cpuId": "cpu_05",
+        "level": 12,
+        "aiTier": "normal",
+        "xpMultiplierPct": 180
+      },
+      {
+        "stage": 18,
+        "cpuId": "cpu_06",
+        "level": 13,
+        "aiTier": "normal",
+        "xpMultiplierPct": 185
+      },
+      {
+        "stage": 19,
+        "cpuId": "cpu_07",
+        "level": 14,
+        "aiTier": "strong",
+        "xpMultiplierPct": 190
+      },
+      {
+        "stage": 20,
+        "cpuId": "cpu_08",
+        "level": 15,
+        "aiTier": "strong",
+        "xpMultiplierPct": 195
+      },
+      {
+        "stage": 21,
+        "cpuId": "cpu_09",
+        "level": 16,
+        "aiTier": "strong",
+        "xpMultiplierPct": 200
+      },
+      {
+        "stage": 22,
+        "cpuId": "cpu_10",
+        "level": 17,
+        "aiTier": "strong",
+        "xpMultiplierPct": 205
+      },
+      {
+        "stage": 23,
+        "cpuId": "cpu_11",
+        "level": 18,
+        "aiTier": "strong",
+        "xpMultiplierPct": 210
+      },
+      {
+        "stage": 24,
+        "cpuId": "cpu_12",
+        "level": 20,
+        "aiTier": "strong",
+        "xpMultiplierPct": 215
+      },
+      {
+        "stage": 25,
+        "cpuId": "cpu_01",
+        "level": 21,
+        "aiTier": "strong",
+        "xpMultiplierPct": 220
+      },
+      {
+        "stage": 26,
+        "cpuId": "cpu_02",
+        "level": 22,
+        "aiTier": "strong",
+        "xpMultiplierPct": 225
+      },
+      {
+        "stage": 27,
+        "cpuId": "cpu_03",
+        "level": 24,
+        "aiTier": "strong",
+        "xpMultiplierPct": 230
+      },
+      {
+        "stage": 28,
+        "cpuId": "cpu_04",
+        "level": 25,
+        "aiTier": "strong",
+        "xpMultiplierPct": 235
+      },
+      {
+        "stage": 29,
+        "cpuId": "cpu_05",
+        "level": 27,
+        "aiTier": "strong",
+        "xpMultiplierPct": 240
+      },
+      {
+        "stage": 30,
+        "cpuId": "cpu_06",
+        "level": 30,
+        "aiTier": "strong",
+        "xpMultiplierPct": 245
+      }
+    ]
+  }
+}
