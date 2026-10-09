@@ -1,0 +1,140 @@
+# Google Play lanes for らくがきバトル (Release team). See docs/RELEASE.md.
+#
+# Run from app/android:
+#   export BUNDLE_GEMFILE=fastlane/Gemfile PLAY_JSON_KEY_PATH=/path/to/play-service-account.json
+#   bundle exec fastlane android internal aab:../build/app/outputs/bundle/release/app-release.aab
+#
+# Play track API names: internal | alpha (= closed testing "Alpha") | beta (open) | production,
+# or the name of a custom closed track.
+
+opt_out_usage # no fastlane usage metrics
+
+default_platform(:android)
+
+REPO_ROOT = File.expand_path("../../..", __dir__)
+METADATA_DIR = File.join(REPO_ROOT, "store", "metadata")
+DEFAULT_AAB = File.join(REPO_ROOT, "app", "build", "app", "outputs", "bundle", "release", "app-release.aab")
+DEFAULT_MAPPING = File.join(REPO_ROOT, "app", "build", "app", "outputs", "mapping", "release", "mapping.txt")
+
+def rollout_fraction(value)
+  f = Float(value)
+  UI.user_error!("rollout must be in (0, 1], got #{value}") unless f > 0 && f <= 1
+  f.to_s
+end
+
+def version_code_option(options)
+  vc = options[:version_code] || ENV["VERSION_CODE"]
+  UI.user_error!("version_code is required (e.g. version_code:1000099)") if vc.to_s.empty?
+  Integer(vc)
+end
+
+platform :android do
+  desc "Check that the service-account key can reach the Play Developer API"
+  lane :validate_key do
+    validate_play_store_json_key
+  end
+
+  desc "Upload a signed AAB (+ R8 mapping) to the INTERNAL testing track"
+  desc "Options: aab:<path> mapping:<path> status:<completed|draft> (draft until the app is first published)"
+  lane :internal do |options|
+    aab = options[:aab] || ENV["AAB_PATH"] || DEFAULT_AAB
+    mapping = options[:mapping] || ENV["MAPPING_PATH"] || DEFAULT_MAPPING
+    UI.user_error!("AAB not found: #{aab}") unless File.exist?(aab)
+    upload_to_play_store(
+      track: "internal",
+      aab: aab,
+      mapping: File.exist?(mapping) ? mapping : nil,
+      release_status: options[:status] || ENV["PLAY_RELEASE_STATUS"] || "completed",
+      metadata_path: METADATA_DIR,
+      # Release notes come from store/metadata/<locale>/changelogs/<versionCode>.txt (or default.txt);
+      # the listing itself is updated only by the `metadata` lane.
+      skip_upload_metadata: true,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Promote an existing build between testing tracks (default internal -> alpha/closed)"
+  desc "Options: version_code:<n> from:<track> to:<track>"
+  lane :promote_to_closed do |options|
+    upload_to_play_store(
+      track: options[:from] || "internal",
+      track_promote_to: options[:to] || "alpha",
+      version_code: version_code_option(options),
+      release_status: "completed",
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Promote a tested build to PRODUCTION as a staged rollout"
+  desc "Options: version_code:<n> from:<track, default alpha> rollout:<0-1, default 0.1>"
+  lane :promote_to_production do |options|
+    # supply copies the whole release (incl. its release notes) to production; a rollout < 1
+    # becomes an "inProgress" staged rollout, 1.0 a completed release.
+    upload_to_play_store(
+      track: options[:from] || "alpha",
+      track_promote_to: "production",
+      version_code: version_code_option(options),
+      rollout: rollout_fraction(options[:rollout] || "0.1"),
+      track_promote_release_status: "completed",
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Change the staged-rollout fraction of the current production release (1 = full rollout)"
+  desc "Options: version_code:<n> rollout:<0-1>"
+  lane :rollout do |options|
+    upload_to_play_store(
+      track: "production",
+      version_code: version_code_option(options),
+      rollout: rollout_fraction(options[:rollout] || UI.user_error!("rollout:<fraction> is required")),
+      release_status: "completed", # supply turns this into inProgress while rollout < 1
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "HALT the production staged rollout (rollback step 1, see docs/RELEASE.md)"
+  desc "Options: version_code:<n> rollout:<current fraction>. Resume/complete from Play Console."
+  lane :halt_rollout do |options|
+    upload_to_play_store(
+      track: "production",
+      version_code: version_code_option(options),
+      rollout: rollout_fraction(options[:rollout] || UI.user_error!("rollout:<current fraction> is required")),
+      release_status: "halted",
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Upload the store listing (title, descriptions, icon, feature graphic, screenshots)"
+  desc "Options: dry_run:true (validate only)"
+  lane :metadata do |options|
+    upload_to_play_store(
+      metadata_path: METADATA_DIR,
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_changelogs: true,
+      validate_only: options[:dry_run] == true || options[:dry_run].to_s == "true"
+    )
+  end
+end

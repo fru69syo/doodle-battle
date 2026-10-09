@@ -15,22 +15,21 @@ DrawingFeatures _features({
   double dominantHue = 0,
   double dominantHueShare = 1,
   int balancedHueCount = 1,
-}) =>
-    DrawingFeatures.fromMap({
-      'inkCoverage': inkCoverage,
-      'bboxCoverage': 0.4,
-      'roundness': roundness,
-      'spikiness': spikiness,
-      'redShare': redShare,
-      'lineThickness': lineThickness,
-      'darkness': darkness,
-      'solidity': solidity,
-      'elongation': elongation,
-      'chromaticShare': chromaticShare,
-      'dominantHue': dominantHue,
-      'dominantHueShare': dominantHueShare,
-      'balancedHueCount': balancedHueCount,
-    });
+}) => DrawingFeatures.fromMap({
+  'inkCoverage': inkCoverage,
+  'bboxCoverage': 0.4,
+  'roundness': roundness,
+  'spikiness': spikiness,
+  'redShare': redShare,
+  'lineThickness': lineThickness,
+  'darkness': darkness,
+  'solidity': solidity,
+  'elongation': elongation,
+  'chromaticShare': chromaticShare,
+  'dominantHue': dominantHue,
+  'dominantHueShare': dominantHueShare,
+  'balancedHueCount': balancedHueCount,
+});
 
 void main() {
   group('skillMultiplier (SPEC §3.2)', () {
@@ -57,12 +56,36 @@ void main() {
     test('every weight >= 0.15 and weights sum to 1', () {
       final extremes = [
         _features(),
-        _features(roundness: 1, inkCoverage: 0.5, spikiness: 0, redShare: 0,
-            lineThickness: 1, darkness: 0, solidity: 0, elongation: 1),
-        _features(roundness: 0, inkCoverage: 0, spikiness: 0.6, redShare: 1,
-            lineThickness: 1, darkness: 0, solidity: 0, elongation: 1),
-        _features(roundness: 0, inkCoverage: 0, spikiness: 0, redShare: 0,
-            lineThickness: 1, darkness: 0, solidity: 0, elongation: 8),
+        _features(
+          roundness: 1,
+          inkCoverage: 0.5,
+          spikiness: 0,
+          redShare: 0,
+          lineThickness: 1,
+          darkness: 0,
+          solidity: 0,
+          elongation: 1,
+        ),
+        _features(
+          roundness: 0,
+          inkCoverage: 0,
+          spikiness: 0.6,
+          redShare: 1,
+          lineThickness: 1,
+          darkness: 0,
+          solidity: 0,
+          elongation: 1,
+        ),
+        _features(
+          roundness: 0,
+          inkCoverage: 0,
+          spikiness: 0,
+          redShare: 0,
+          lineThickness: 1,
+          darkness: 0,
+          solidity: 0,
+          elongation: 8,
+        ),
         DrawingFeatures.fromMap(const {}),
       ];
       for (final f in extremes) {
@@ -75,7 +98,12 @@ void main() {
     });
 
     test('stat total equals the rounded budget', () {
-      for (final (e, s) in [(0.0, 0.0), (37.3, 12.0), (88.8, 66.6), (100.0, 99.0)]) {
+      for (final (e, s) in [
+        (0.0, 0.0),
+        (37.3, 12.0),
+        (88.8, 66.6),
+        (100.0, 99.0),
+      ]) {
         final stats = computeBaseStats(_features(), e, s);
         expect(stats.total, statBudget(e, s).round());
       }
@@ -83,11 +111,20 @@ void main() {
 
     test('shape drives the distribution', () {
       final round = computeBaseStats(
-          _features(roundness: 0.95, inkCoverage: 0.3, spikiness: 0), 80, 10);
+        _features(roundness: 0.95, inkCoverage: 0.3, spikiness: 0),
+        80,
+        10,
+      );
       final spiky = computeBaseStats(
-          _features(roundness: 0.2, spikiness: 0.4, redShare: 0.8), 80, 10);
+        _features(roundness: 0.2, spikiness: 0.4, redShare: 0.8),
+        80,
+        10,
+      );
       final long = computeBaseStats(
-          _features(roundness: 0.2, elongation: 4, lineThickness: 2), 80, 10);
+        _features(roundness: 0.2, elongation: 4, lineThickness: 2),
+        80,
+        10,
+      );
       expect(round.hp, greaterThan(round.atk));
       expect(spiky.atk, greaterThan(spiky.hp));
       expect(long.spd, greaterThan(long.def));
@@ -95,8 +132,10 @@ void main() {
 
     test('map round-trip gives identical stats', () {
       final f = _features(roundness: 0.7, spikiness: 0.2);
-      expect(computeBaseStatsFromMap(f.toMap(), 64.2, 41.5),
-          computeBaseStats(f, 64.2, 41.5));
+      expect(
+        computeBaseStatsFromMap(f.toMap(), 64.2, 41.5),
+        computeBaseStats(f, 64.2, 41.5),
+      );
     });
   });
 
@@ -108,8 +147,7 @@ void main() {
 
   group('computeElement', () {
     test('hue bands', () {
-      ElementType el(double hue) =>
-          computeElement(_features(dominantHue: hue));
+      ElementType el(double hue) => computeElement(_features(dominantHue: hue));
       expect(el(0), ElementType.fire);
       expect(el(30), ElementType.fire); // orange
       expect(el(340), ElementType.fire); // pink
@@ -121,16 +159,18 @@ void main() {
     });
 
     test('achromatic drawings are shadow, balanced hues are rainbow', () {
-      expect(computeElement(_features(chromaticShare: 0.1)),
-          ElementType.shadow);
       expect(
-          computeElement(
-              _features(balancedHueCount: 4, dominantHueShare: 0.3)),
-          ElementType.rainbow);
+        computeElement(_features(chromaticShare: 0.1)),
+        ElementType.shadow,
+      );
       expect(
-          computeElement(
-              _features(balancedHueCount: 4, dominantHueShare: 0.6)),
-          ElementType.fire);
+        computeElement(_features(balancedHueCount: 4, dominantHueShare: 0.3)),
+        ElementType.rainbow,
+      );
+      expect(
+        computeElement(_features(balancedHueCount: 4, dominantHueShare: 0.6)),
+        ElementType.fire,
+      );
     });
   });
 
