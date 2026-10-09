@@ -74,8 +74,9 @@ describe('golden vectors', () => {
         case 'stats': {
           const base = v.input.base as Stats;
           const level = v.input.level as number;
-          expect(statsAtLevel(spec, base, level, v.input.seeds)).toEqual(v.expected.stats);
-          expect(maxStatsAtLevel(spec, base, level)).toEqual(v.expected.maxStats);
+          const shobo = v.input.isShobo as boolean;
+          expect(statsAtLevel(spec, base, level, v.input.seeds, shobo)).toEqual(v.expected.stats);
+          expect(maxStatsAtLevel(spec, base, level, shobo)).toEqual(v.expected.maxStats);
           expect(specialPowerAt(spec, level)).toBe(v.expected.specialPower);
           expect(stageAtLevel(spec, level)).toBe(v.expected.stage);
           break;

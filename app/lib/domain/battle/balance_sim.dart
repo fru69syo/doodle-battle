@@ -9,6 +9,7 @@ import 'battle_engine.dart';
 import 'battle_spec.dart';
 import 'battle_types.dart';
 import 'cpu_ai.dart';
+import 'cpu_roster.dart';
 import 'growth.dart';
 import 'rng.dart';
 
@@ -84,6 +85,7 @@ class SimSide {
     this.element,
     this.tier = AiTier.normal,
     this.even = false,
+    this.seeds = false,
   });
 
   final double energy;
@@ -96,7 +98,25 @@ class SimSide {
 
   /// Use an even 25% split instead of random weights.
   final bool even;
+
+  /// Spend all (level-1) パワーのたね round-robin hp, atk, def, spd.
+  final bool seeds;
+
+  SimSide at(int level, {bool seeds = false}) => SimSide(
+    energy: energy,
+    skill: skill,
+    level: level,
+    element: element,
+    tier: tier,
+    even: even,
+    seeds: seeds,
+  );
 }
+
+Map<StatKind, int> _spreadSeeds(int n) => {
+  for (var i = 0; i < StatKind.values.length; i++)
+    StatKind.values[i]: n ~/ 4 + (i < n % 4 ? 1 : 0),
+};
 
 /// Runs [n] battles of [a] vs [b]. If [mirror] is set, b gets a's exact
 /// stats and element (pure symmetry check).
@@ -111,6 +131,17 @@ SimResult simulate(
 }) {
   final res = SimResult(name);
   final meta = Mulberry32(seed);
+  FighterSetup setup(SimSide s, Stats base, ElementType e) => FighterSetup(
+    element: e,
+    level: s.level,
+    stats: statsAtLevel(
+      spec,
+      base,
+      s.level,
+      s.seeds ? _spreadSeeds(s.level - 1) : const {},
+      isShobo: isShoboSkill(spec, s.skill),
+    ),
+  );
   for (var i = 0; i < n; i++) {
     final matchSeed = meta.nextUint32();
     final gen = Mulberry32(deriveSeed(matchSeed, 3));
@@ -122,19 +153,7 @@ SimResult simulate(
         ? baseA
         : syntheticBaseStats(b.energy, b.skill, gen, even: b.even);
     final elB = mirror ? elA : pick(b.element);
-    var state = initBattle(
-      spec,
-      FighterSetup(
-        element: elA,
-        level: a.level,
-        stats: statsAtLevel(spec, baseA, a.level, const {}),
-      ),
-      FighterSetup(
-        element: elB,
-        level: b.level,
-        stats: statsAtLevel(spec, baseB, b.level, const {}),
-      ),
-    );
+    var state = initBattle(spec, setup(a, baseA, elA), setup(b, baseB, elB));
     final rng = Mulberry32(deriveSeed(matchSeed, 0));
     final aiA = Mulberry32(deriveSeed(matchSeed, 1));
     final aiB = Mulberry32(deriveSeed(matchSeed, 2));
@@ -153,20 +172,115 @@ SimResult simulate(
   return res;
 }
 
+/// Player (kid scribble at the stage's recommended level, seeds spent,
+/// ふつう AI) vs the CPU of [stage] (its doodle, level and AI tier).
+SimResult simulateStage(
+  BattleSpec spec,
+  CpuRoster roster,
+  CpuStage stage, {
+  int n = 2000,
+}) {
+  final level = stage.recommendedLevel;
+  final res = SimResult(
+    'stage ${stage.stage} (${stage.cpuId} Lv${stage.level} '
+    '${stage.aiTier.name}, player Lv$level)',
+  );
+  final meta = Mulberry32(9000 + stage.stage);
+  final cpu = cpuFighterSetup(spec, stage, roster);
+  for (var i = 0; i < n; i++) {
+    final matchSeed = meta.nextUint32();
+    final gen = Mulberry32(deriveSeed(matchSeed, 3));
+    final base = syntheticBaseStats(80, 15, gen);
+    final player = FighterSetup(
+      element: ElementType.values[gen.nextInt(ElementType.values.length)],
+      level: level,
+      stats: statsAtLevel(
+        spec,
+        base,
+        level,
+        _spreadSeeds(level - 1),
+        isShobo: false,
+      ),
+    );
+    var state = initBattle(spec, player, cpu);
+    final rng = Mulberry32(deriveSeed(matchSeed, 0));
+    final aiA = Mulberry32(deriveSeed(matchSeed, 1));
+    final aiB = Mulberry32(deriveSeed(matchSeed, 2));
+    while (!state.isOver) {
+      final actA = chooseCpuAction(spec, state, Side.a, AiTier.normal, aiA);
+      final actB = chooseCpuAction(spec, state, Side.b, stage.aiTier, aiB);
+      state = resolveTurn(spec, state, actA, actB, rng).state;
+    }
+    res.battles++;
+    if (state.winner == Side.a) res.winsA++;
+    res.totalTurns += state.turn;
+    if (state.turn > res.maxTurns) res.maxTurns = state.turn;
+    if (state.endReason == EndReason.turnCap) res.turnCapEnds++;
+    res.turnHistogram[state.turn] = (res.turnHistogram[state.turn] ?? 0) + 1;
+  }
+  return res;
+}
+
 const kid = SimSide(energy: 80, skill: 15);
 const shobo = SimSide(energy: 80, skill: 90);
 
-/// The standard scenario set documented in docs/BATTLE.md.
-List<SimResult> standardScenarios(BattleSpec spec, {int n = 4000}) => [
-  simulate(spec, 'kid vs shobo (Lv1)', kid, shobo, n: n, seed: 11),
+/// しょぼキャラ growth scenarios (SPEC §4.2 「育てれば戦える」); a = しょぼ.
+List<SimResult> shoboScenarios(BattleSpec spec, {int n = 4000}) => [
+  for (final lv in [1, 10, 20, 30])
+    simulate(
+      spec,
+      'shobo vs kid, both Lv$lv',
+      shobo.at(lv),
+      kid.at(lv),
+      n: n,
+      seed: 100 + lv,
+    ),
+  for (final lv in [10, 20, 30])
+    simulate(
+      spec,
+      'shobo vs kid, both Lv$lv, seeds spent',
+      shobo.at(lv, seeds: true),
+      kid.at(lv, seeds: true),
+      n: n,
+      seed: 140 + lv,
+    ),
   simulate(
     spec,
-    'kid vs shobo (Lv10)',
-    const SimSide(energy: 80, skill: 15, level: 10),
-    const SimSide(energy: 80, skill: 90, level: 10),
+    'shobo Lv30 vs kid Lv15',
+    shobo.at(30),
+    kid.at(15),
     n: n,
-    seed: 12,
+    seed: 131,
   ),
+  simulate(
+    spec,
+    'shobo Lv30 vs kid Lv15, seeds spent',
+    shobo.at(30, seeds: true),
+    kid.at(15, seeds: true),
+    n: n,
+    seed: 132,
+  ),
+  simulate(
+    spec,
+    'shobo Lv30 vs kid Lv13',
+    shobo.at(30),
+    kid.at(13),
+    n: n,
+    seed: 133,
+  ),
+  simulate(
+    spec,
+    'shobo Lv30 vs kid Lv17',
+    shobo.at(30),
+    kid.at(17),
+    n: n,
+    seed: 134,
+  ),
+  simulate(spec, 'shobo vs shobo', shobo, shobo, n: n, seed: 26),
+];
+
+/// The standard scenario set documented in docs/BATTLE.md.
+List<SimResult> standardScenarios(BattleSpec spec, {int n = 4000}) => [
   simulate(
     spec,
     'mirror (equal stats)',
@@ -211,47 +325,9 @@ List<SimResult> standardScenarios(BattleSpec spec, {int n = 4000}) => [
     n: n,
     seed: 17,
   ),
-  simulate(
-    spec,
-    'Lv6 vs Lv1',
-    const SimSide(energy: 80, skill: 15, level: 6),
-    kid,
-    n: n,
-    seed: 18,
-  ),
-  simulate(
-    spec,
-    'Lv15 vs Lv10',
-    const SimSide(energy: 80, skill: 15, level: 15),
-    const SimSide(energy: 80, skill: 15, level: 10),
-    n: n,
-    seed: 19,
-  ),
-  simulate(
-    spec,
-    'Lv30 vs Lv25',
-    const SimSide(energy: 80, skill: 15, level: 30),
-    const SimSide(energy: 80, skill: 15, level: 25),
-    n: n,
-    seed: 20,
-  ),
-  simulate(
-    spec,
-    'shobo Lv6 vs kid Lv1',
-    const SimSide(energy: 80, skill: 90, level: 6),
-    kid,
-    n: n,
-    seed: 21,
-  ),
-  simulate(spec, 'shobo vs shobo', shobo, shobo, n: n, seed: 26),
-  simulate(
-    spec,
-    'shobo Lv30 vs kid Lv1',
-    const SimSide(energy: 80, skill: 90, level: 30),
-    kid,
-    n: n,
-    seed: 27,
-  ),
+  simulate(spec, 'Lv6 vs Lv1', kid.at(6), kid, n: n, seed: 18),
+  simulate(spec, 'Lv15 vs Lv10', kid.at(15), kid.at(10), n: n, seed: 19),
+  simulate(spec, 'Lv30 vs Lv25', kid.at(30), kid.at(25), n: n, seed: 20),
   simulate(
     spec,
     'strong AI vs normal AI',
@@ -284,4 +360,5 @@ List<SimResult> standardScenarios(BattleSpec spec, {int n = 4000}) => [
     n: n,
     seed: 24,
   ),
+  ...shoboScenarios(spec, n: n),
 ];

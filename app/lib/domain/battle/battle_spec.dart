@@ -279,6 +279,8 @@ class GrowthSpec {
   const GrowthSpec({
     required this.maxLevel,
     required this.levelUpStatPct,
+    required this.shoboLevelUpStatPct,
+    required this.shoboSkillAbove,
     required this.seedStatPct,
     required this.seedsPerLevel,
     required this.xpToNextBase,
@@ -287,7 +289,15 @@ class GrowthSpec {
   });
 
   final int maxLevel;
+
+  /// Stat growth per level (percent of Lv1 stats) for normal characters.
   final int levelUpStatPct;
+
+  /// Stat growth per level for しょぼキャラ (「育てれば戦える」, SPEC §4.2).
+  final int shoboLevelUpStatPct;
+
+  /// A character is しょぼ when skill > shoboSkillAbove (SPEC §1).
+  final int shoboSkillAbove;
   final int seedStatPct;
   final int seedsPerLevel;
   final int xpToNextBase;
@@ -296,9 +306,14 @@ class GrowthSpec {
   /// Sorted by level ascending.
   final List<EvolutionSpec> evolutions;
 
+  int levelUpPct({required bool isShobo}) =>
+      isShobo ? shoboLevelUpStatPct : levelUpStatPct;
+
   factory GrowthSpec.fromJson(Map<String, Object?> j) => GrowthSpec(
     maxLevel: _i(j, 'maxLevel'),
     levelUpStatPct: _i(j, 'levelUpStatPct'),
+    shoboLevelUpStatPct: _i(j, 'shoboLevelUpStatPct'),
+    shoboSkillAbove: _i(j, 'shoboSkillAbove'),
     seedStatPct: _i(j, 'seedStatPct'),
     seedsPerLevel: _i(j, 'seedsPerLevel'),
     xpToNextBase: _i(j, 'xpToNextBase'),
@@ -312,6 +327,8 @@ class GrowthSpec {
   Map<String, Object?> toJson() => {
     'maxLevel': maxLevel,
     'levelUpStatPct': levelUpStatPct,
+    'shoboLevelUpStatPct': shoboLevelUpStatPct,
+    'shoboSkillAbove': shoboSkillAbove,
     'seedStatPct': seedStatPct,
     'seedsPerLevel': seedsPerLevel,
     'xpToNextBase': xpToNextBase,
@@ -448,6 +465,7 @@ class CpuStage {
     required this.stage,
     required this.cpuId,
     required this.level,
+    required this.recommendedLevel,
     required this.aiTier,
     required this.xpMultiplierPct,
   });
@@ -456,7 +474,13 @@ class CpuStage {
 
   /// Id of a bundled CPU doodle (`app/assets/cpu/manifest.json`).
   final String cpuId;
+
+  /// CPU level (tuned per doodle so the stages form a smooth difficulty
+  /// curve; see docs/BATTLE.md §7).
   final int level;
+
+  /// Player level the stage is designed for (「おすすめ Lv」).
+  final int recommendedLevel;
   final AiTier aiTier;
   final int xpMultiplierPct;
 
@@ -464,6 +488,7 @@ class CpuStage {
     stage: _i(j, 'stage'),
     cpuId: j['cpuId']! as String,
     level: _i(j, 'level'),
+    recommendedLevel: _i(j, 'recommendedLevel'),
     aiTier: AiTier.values.byName(j['aiTier']! as String),
     xpMultiplierPct: _i(j, 'xpMultiplierPct'),
   );
@@ -472,6 +497,7 @@ class CpuStage {
     'stage': stage,
     'cpuId': cpuId,
     'level': level,
+    'recommendedLevel': recommendedLevel,
     'aiTier': aiTier.name,
     'xpMultiplierPct': xpMultiplierPct,
   };
@@ -480,7 +506,7 @@ class CpuStage {
 class CpuSpec {
   const CpuSpec({required this.characterIds, required this.stages});
 
-  /// Placeholder ids until Vision delivers the CPU manifest.
+  /// Ids of the bundled CPU doodles (`app/assets/cpu/manifest.json`).
   final List<String> characterIds;
   final List<CpuStage> stages;
 

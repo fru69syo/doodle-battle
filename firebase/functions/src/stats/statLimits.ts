@@ -1,4 +1,12 @@
 import { LIMITS } from "../config";
+import {
+  defaultSpec as SPEC,
+  isShoboSkill,
+  maxStatsAtLevel,
+  stageAtLevel,
+  statsAtLevel,
+  xpToNext as sharedXpToNext,
+} from "../vendor/battle_engine";
 
 export const ELEMENTS = ["fire", "water", "leaf", "thunder", "shadow", "rainbow"] as const;
 export type Element = (typeof ELEMENTS)[number];
@@ -20,13 +28,14 @@ export function statBudget(energy: number, skill: number): number {
   return (200 + 2 * energy) * skillMultiplier(skill);
 }
 
+/** しょぼキャラ (SPEC §1): skill above the shared spec's threshold (75). */
 export function isShobo(skill: number): boolean {
-  return skill > 75;
+  return isShoboSkill(SPEC, skill);
 }
 
-/** SPEC §4.2: XP needed to go from level L to L+1. */
+/** SPEC §4.2: XP needed to go from level L to L+1 (shared battle spec). */
 export function xpToNext(level: number): number {
-  return 50 + 25 * level;
+  return sharedXpToNext(SPEC, level);
 }
 
 /**
@@ -39,23 +48,27 @@ export const MAX_STAT_SHARE = 0.7;
 /** Rounding slack for four integer stats. */
 const ROUNDING_SLACK = 4;
 
-/** Growth per level (SPEC §4.2): +4% of Lv1 value per level, +3% per seed. */
-export const GROWTH_PER_LEVEL = 0.04;
-export const GROWTH_PER_SEED = 0.03;
+/**
+ * Effective stats at `level` (SPEC §4.2), computed by the shared battle engine
+ * exactly as the app does: +4%/level of the Lv1 value (+12%/level for
+ * しょぼキャラ), +3% per パワーのたね, floored.
+ */
+export function effectiveStats(base: Stats, level: number, seeds: Partial<Stats>, shobo: boolean): Stats {
+  return statsAtLevel(SPEC, base, level, seeds, shobo);
+}
 
-export function effectiveStats(base: Stats, level: number, seeds: Partial<Stats>): Stats {
-  const out = {} as Stats;
-  for (const k of STAT_KEYS) {
-    const mult = 1 + GROWTH_PER_LEVEL * (level - 1) + GROWTH_PER_SEED * (seeds[k] ?? 0);
-    out[k] = Math.round(base[k] * mult);
-  }
-  return out;
+/**
+ * Highest value each stat can legally reach at `level` for this energy/skill:
+ * the per-stat Lv1 share cap grown with every seed in that stat
+ * (shared `maxStatsAtLevel`, including the しょぼ growth rate).
+ */
+export function statCapsAtLevel(energy: number, skill: number, level: number): Stats {
+  const cap = Math.ceil(statBudget(energy, skill) * MAX_STAT_SHARE) + 1;
+  return maxStatsAtLevel(SPEC, { hp: cap, atk: cap, def: cap, spd: cap }, level, isShobo(skill));
 }
 
 export function evolutionStage(level: number): "normal" | "kagayaki" | "densetsu" {
-  if (level >= 20) return "densetsu";
-  if (level >= 10) return "kagayaki";
-  return "normal";
+  return stageAtLevel(SPEC, level);
 }
 
 export interface StatClaim {
@@ -99,6 +112,16 @@ export function validateStatClaim(c: StatClaim): string[] {
       seeds += n;
     }
   }
-  if (seeds > c.level - 1) problems.push("more seeds than level-ups");
+  if (seeds > (c.level - 1) * SPEC.growth.seedsPerLevel) problems.push("more seeds than level-ups");
+  if (problems.length > 0) return problems;
+
+  // Effective stats (what the battle uses) must stay within the level caps.
+  const shobo = isShobo(c.skill);
+  const eff = effectiveStats(c.baseStats, c.level, c.seedAllocations, shobo);
+  const caps = statCapsAtLevel(c.energy, c.skill, c.level);
+  const own = maxStatsAtLevel(SPEC, c.baseStats, c.level, shobo);
+  for (const k of STAT_KEYS) {
+    if (eff[k] > caps[k] || eff[k] > own[k]) problems.push(`${k} exceeds level cap`);
+  }
   return problems;
 }

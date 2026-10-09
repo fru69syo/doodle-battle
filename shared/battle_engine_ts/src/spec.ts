@@ -14,6 +14,7 @@ export interface CpuStage {
   stage: number;
   cpuId: string;
   level: number;
+  recommendedLevel: number;
   aiTier: AiTier;
   xpMultiplierPct: number;
 }
@@ -56,6 +57,8 @@ export interface BattleSpec {
   growth: {
     maxLevel: number;
     levelUpStatPct: number;
+    shoboLevelUpStatPct: number;
+    shoboSkillAbove: number;
     seedStatPct: number;
     seedsPerLevel: number;
     xpToNextBase: number;
@@ -100,7 +103,7 @@ export function parseSpec(json: unknown): BattleSpec {
     fail('moves.guard.damageTakenPctByStreak');
   }
   for (const a of ELEMENTS) checkInts(s.typeChart?.matrix?.[a], `typeChart.matrix.${a}`, [...ELEMENTS]);
-  checkInts(s.growth, 'growth', ['maxLevel', 'levelUpStatPct', 'seedStatPct', 'seedsPerLevel', 'xpToNextBase', 'xpToNextPerLevel']);
+  checkInts(s.growth, 'growth', ['maxLevel', 'levelUpStatPct', 'shoboLevelUpStatPct', 'shoboSkillAbove', 'seedStatPct', 'seedsPerLevel', 'xpToNextBase', 'xpToNextPerLevel']);
   checkInts(s.xp, 'xp', ['win', 'lose', 'shoboBonusPct', 'adBoostMultiplier']);
   if (!Array.isArray(s.cpu?.stages)) fail('cpu.stages');
   return s;

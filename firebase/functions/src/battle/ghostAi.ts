@@ -1,27 +1,12 @@
-import type { Element } from "../stats/statLimits";
-import { typeMultiplier, type ActionId, type BattleEngine, type EngineState, type Side } from "./engine";
-import { mulberry32, turnSeed } from "./rng";
+import type { ActionId, EngineState, SharedEngine, Side } from "./engine";
+import { turnSeed } from "./rng";
 
 /**
- * Server-side AI for ghost opponents ("ふつう" strength, SPEC §4.3):
- * uses the special when ready, prefers the element move unless it is weak
- * against the opponent, and sometimes guards when low on HP.
- * Deterministic for (match seed, turn).
+ * Server-side AI for ghost opponents: the shared CPU AI at "ふつう" strength
+ * (SPEC §4.3 — special when ready, element move unless type-disadvantaged,
+ * occasional guard). Its rng is seeded from (match seed, turn, side), separate
+ * from the battle rng, so it is deterministic and never shifts battle rolls.
  */
-export function chooseGhostAction(
-  engine: BattleEngine,
-  state: EngineState,
-  side: Side,
-  elements: Record<Side, Element>,
-): ActionId {
-  const legal = engine.legalActions(state, side);
-  const view = engine.view(state);
-  const me = view[side];
-  const rng = mulberry32(turnSeed(state.seed, view.turn + 1, `ghost-${side}`));
-  if (legal.includes("special")) return "special";
-  const opp: Side = side === "a" ? "b" : "a";
-  if (legal.includes("guard") && me.hp < me.maxHp * 0.3 && rng() < 0.35) return "guard";
-  const mult = typeMultiplier(elements[side], elements[opp]);
-  const elementChance = mult > 1 ? 0.9 : mult < 1 ? 0.25 : 0.65;
-  return rng() < elementChance && legal.includes("element") ? "element" : "tackle";
+export function chooseGhostAction(engine: SharedEngine, state: EngineState, side: Side): ActionId {
+  return engine.chooseGhostAction(state, side, (seed, turn) => turnSeed(seed, turn, `ghost-${side}`));
 }

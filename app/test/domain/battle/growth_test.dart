@@ -115,7 +115,7 @@ void main() {
   test('maxStatsAtLevel bounds any legal allocation', () {
     final c = ch(level: 30, seeds: {StatKind.atk: 29});
     final cur = currentStats(spec, c);
-    final max = maxStatsAtLevel(spec, c.baseStats, 30);
+    final max = maxStatsAtLevel(spec, c.baseStats, 30, isShobo: false);
     expect(cur.atk, max.atk);
     expect(cur.hp, lessThan(max.hp));
   });
@@ -132,5 +132,33 @@ void main() {
     expect(stageAtLevel(spec, 20), EvolutionStage.densetsu);
     expect(stageAtLevel(spec, 10), EvolutionStage.kagayaki);
     expect(stageAtLevel(spec, 9), EvolutionStage.normal);
+  });
+
+  test('しょぼキャラ grow faster (shoboLevelUpStatPct) and the threshold matches Character.isShobo', () {
+    expect(
+      spec.growth.shoboLevelUpStatPct,
+      greaterThan(spec.growth.levelUpStatPct),
+    );
+    final shobo = ch(level: 11, skill: 90);
+    final pct = 100 + spec.growth.shoboLevelUpStatPct * 10;
+    expect(currentStats(spec, shobo).hp, (100 * pct) ~/ 100);
+    expect(
+      currentStats(spec, shobo).hp,
+      greaterThan(currentStats(spec, ch(level: 11)).hp),
+    );
+    for (final skill in [75.0, 75.5, 76.0, 90.0, 20.0]) {
+      expect(
+        isShoboSkill(spec, skill),
+        ch(skill: skill).isShobo,
+        reason: '$skill',
+      );
+    }
+    final max = maxStatsAtLevel(spec, shobo.baseStats, 11, isShobo: true);
+    expect(
+      max.hp,
+      greaterThan(
+        maxStatsAtLevel(spec, shobo.baseStats, 11, isShobo: false).hp,
+      ),
+    );
   });
 }
