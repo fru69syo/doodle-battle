@@ -22,6 +22,21 @@ val keystoreProperties =
     }
 val hasReleaseKey = keystorePropertiesFile.exists()
 
+// Compliance team: AdMob App ID (required meta-data; the Mobile Ads SDK crashes at start
+// without it). Taken from the Gradle property or environment variable ADMOB_APP_ID
+// (release.yml: GitHub secret), defaulting to Google's official *test* App ID so dev/CI builds
+// work. scripts/check_release.sh --require-real-admob rejects the test id for Play uploads.
+val admobTestAppId = "ca-app-pub-3940256099942544~3347511713"
+val admobAppId: String =
+    providers.gradleProperty("ADMOB_APP_ID")
+        .orElse(providers.environmentVariable("ADMOB_APP_ID"))
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .getOrElse(admobTestAppId)
+require(Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$").matches(admobAppId)) {
+    "ADMOB_APP_ID must look like ca-app-pub-0000000000000000~0000000000 (got '$admobAppId')"
+}
+
 android {
     namespace = "com.fru69syo.doodle_battle"
     compileSdk = flutter.compileSdkVersion
@@ -45,6 +60,8 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Compliance team: see admobAppId above (AndroidManifest.xml ${admobAppId}).
+        manifestPlaceholders["admobAppId"] = admobAppId
     }
 
     // AR team: needed for the ARSceneView composable hosted in a platform view.

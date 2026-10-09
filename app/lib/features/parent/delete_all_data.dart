@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,7 +17,9 @@ Future<bool> deleteAllData(BuildContext context, WidgetRef ref) async {
       content: const Text(
         'この端末のキャラクター・進み具合・設定と、サーバー上のデータ'
         '（登録したキャラクター・対戦の記録など）をすべて削除します。'
-        '元に戻すことはできません。',
+        '元に戻すことはできません。\n'
+        '購入した商品は Google Play のアカウントに記録されているため、'
+        '削除のあとも使えます。',
       ),
       actions: [
         TextButton(
@@ -59,6 +63,9 @@ Future<bool> deleteAllData(BuildContext context, WidgetRef ref) async {
   }
   await ref.read(charactersProvider.notifier).deleteAll();
   await ref.read(settingsProvider.notifier).resetLocal();
+  // Purchases live in the parent's Google account, not in our data: put
+  // them back into the (now empty) local cache.
+  unawaited(ref.read(monetizationServiceProvider).restorePurchases());
   ref.invalidate(progressProvider);
   ref.read(parentSessionProvider.notifier).lock();
   return true;

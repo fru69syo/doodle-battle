@@ -18,6 +18,15 @@
          allowlist in scripts/check_release.sh green. -->
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" tools:node="remove" />
     <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES" tools:node="remove" />
+    <!-- ===== Compliance team (SPEC §7, Google Play Families policy) =====
+         Child-directed app: never access the advertising ID. The Mobile Ads SDK
+         (play-services-ads) merges these in; remove them all. scripts/check_release.sh
+         fails the build if any of them is still in the merged manifest. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_TOPICS" tools:node="remove" />
+    <!-- ===== /Compliance team ===== -->
     <!-- Nothing is required: the app must install on devices without AR/camera. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature
@@ -62,6 +71,21 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Compliance team: AdMob App ID from Gradle (ADMOB_APP_ID; test id by default).
+             The SDK itself is only initialised after the parent allows ads. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+        <!-- No Google Analytics / app measurement from the ads SDK. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
+        <!-- Crashlytics is opt-in: off until the parent enables
+             「ふぐあいの じょうほうを おくる」 (the app then calls
+             setCrashlyticsCollectionEnabled). -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="false" />
         <!-- AR team: ARCore is optional; installs on non-AR devices
              (かんたん AR fallback is used there). -->
         <meta-data
@@ -78,6 +102,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Compliance team: url_launcher opens the policy pages (parent area only). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
         </intent>
     </queries>
 </manifest>

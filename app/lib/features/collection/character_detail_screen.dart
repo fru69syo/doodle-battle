@@ -14,6 +14,8 @@ import '../../domain/battle/battle.dart';
 import '../../domain/character.dart';
 import '../../domain/stats.dart';
 import '../battle_ui/move_labels.dart';
+import '../monetization/card_frames.dart';
+import '../monetization/monetization_service.dart';
 import 'xp_bar.dart';
 
 /// Character page: stats, level, XP, evolution, パワーのたね, AR, battle.
@@ -52,6 +54,7 @@ class CharacterDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _Moves(c: c),
+            _FramePicker(c: c),
             const SizedBox(height: 20),
             FilledButton.icon(
               key: const Key('detail-battle'),
@@ -215,4 +218,59 @@ class _Moves extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// フレームパック: choose a card frame (only when the pack is owned; nothing
+/// is advertised to the child otherwise).
+class _FramePicker extends ConsumerWidget {
+  const _FramePicker({required this.c});
+  final Character c;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final owned =
+        ref
+            .watch(settingsProvider)
+            .value
+            ?.entitlements
+            .contains(Product.framePack.id) ??
+        false;
+    if (!owned) return const SizedBox.shrink();
+    Future<void> pick(String? id) => ref
+        .read(charactersProvider.notifier)
+        .save(c.copyWith(cardFrame: () => id));
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        key: const Key('frame-picker'),
+        children: [
+          const Text(
+            'カードの わく',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                key: const Key('frame-none'),
+                label: const Text('なし', style: TextStyle(fontSize: 18)),
+                selected: CardFrame.byId(c.cardFrame) == null,
+                onSelected: (_) => pick(null),
+              ),
+              for (final f in CardFrame.values)
+                ChoiceChip(
+                  key: Key('frame-${f.id}'),
+                  label: Text(f.label, style: const TextStyle(fontSize: 18)),
+                  selected: c.cardFrame == f.id,
+                  onSelected: (_) => pick(f.id),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

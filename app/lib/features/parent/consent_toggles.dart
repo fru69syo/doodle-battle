@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/app_settings.dart';
 
-/// The four consent switches (SPEC §7). Parent-facing text (kanji is fine).
+/// The consent switches (SPEC §7 + opt-in crash reports). Parent-facing text (kanji is fine).
 /// Server features are disabled while the backend is not configured.
 class ConsentToggles extends StatelessWidget {
   const ConsentToggles({
@@ -10,11 +10,15 @@ class ConsentToggles extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.serverAvailable,
+    this.crashReportsAvailable = false,
   });
 
   final ParentConsents value;
   final ValueChanged<ParentConsents> onChanged;
   final bool serverAvailable;
+
+  /// Crashlytics needs Firebase; otherwise the switch shows 「準備中」.
+  final bool crashReportsAvailable;
 
   static const _pending = '（現在準備中のため利用できません）\n';
 
@@ -61,6 +65,18 @@ class ConsentToggles extends StatelessWidget {
         on: value.purchases,
         enabled: true,
         set: (v) => onChanged(value.copyWith(purchases: v)),
+      ),
+      _tile(
+        key: 'crashReports',
+        title: 'ふぐあいの じょうほうを おくる',
+        body:
+            'アプリが異常終了したときなどに、原因を調べるための情報（端末の機種・'
+            'OS のバージョン・エラーの内容・匿名のインストール ID）を Google の '
+            'Firebase Crashlytics に送ります。絵や名前は送りません。'
+            'オフにすると、まだ送っていない情報も削除します。',
+        on: value.crashReports,
+        enabled: crashReportsAvailable,
+        set: (v) => onChanged(value.copyWith(crashReports: v)),
       ),
     ],
   );

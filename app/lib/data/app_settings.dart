@@ -13,6 +13,7 @@ class ParentConsents {
     this.online = false,
     this.ads = false,
     this.purchases = false,
+    this.crashReports = false,
   });
 
   /// Send the cut-out drawing to the AI judge (SPEC §3.3).
@@ -27,16 +28,22 @@ class ParentConsents {
   /// In-app purchases (shop in おうちのひと).
   final bool purchases;
 
+  /// Send crash reports (Firebase Crashlytics) 「ふぐあいの じょうほうを おくる」.
+  /// Only effective when Firebase is configured.
+  final bool crashReports;
+
   ParentConsents copyWith({
     bool? cloudJudge,
     bool? online,
     bool? ads,
     bool? purchases,
+    bool? crashReports,
   }) => ParentConsents(
     cloudJudge: cloudJudge ?? this.cloudJudge,
     online: online ?? this.online,
     ads: ads ?? this.ads,
     purchases: purchases ?? this.purchases,
+    crashReports: crashReports ?? this.crashReports,
   );
 
   Map<String, Object?> toJson() => {
@@ -44,6 +51,7 @@ class ParentConsents {
     'online': online,
     'ads': ads,
     'purchases': purchases,
+    'crashReports': crashReports,
   };
 
   factory ParentConsents.fromJson(Map<String, Object?> j) => ParentConsents(
@@ -51,6 +59,7 @@ class ParentConsents {
     online: j['online'] as bool? ?? false,
     ads: j['ads'] as bool? ?? false,
     purchases: j['purchases'] as bool? ?? false,
+    crashReports: j['crashReports'] as bool? ?? false,
   );
 
   @override
@@ -59,10 +68,12 @@ class ParentConsents {
       other.cloudJudge == cloudJudge &&
       other.online == online &&
       other.ads == ads &&
-      other.purchases == purchases;
+      other.purchases == purchases &&
+      other.crashReports == crashReports;
 
   @override
-  int get hashCode => Object.hash(cloudJudge, online, ads, purchases);
+  int get hashCode =>
+      Object.hash(cloudJudge, online, ads, purchases, crashReports);
 }
 
 /// The consent fields the server knows about (`users/{uid}.consent`).

@@ -24,6 +24,7 @@ class Character {
     this.elementMoveName,
     this.specialMoveName,
     this.onlineId,
+    this.cardFrame,
   });
 
   final String id;
@@ -58,6 +59,10 @@ class Character {
   /// Server id once registered for online play (passed moderation).
   final String? onlineId;
 
+  /// Cosmetic card frame id from the フレームパック (`CardFrame.id`), local
+  /// only (never sent to the server). Null = none.
+  final String? cardFrame;
+
   bool get isShobo => skill > 75;
 
   EvolutionStage get stage => level >= 20
@@ -77,6 +82,7 @@ class Character {
     String? elementMoveName,
     String? specialMoveName,
     String? onlineId,
+    String? Function()? cardFrame,
   }) => Character(
     id: id,
     name: name ?? this.name,
@@ -95,6 +101,7 @@ class Character {
     elementMoveName: elementMoveName ?? this.elementMoveName,
     specialMoveName: specialMoveName ?? this.specialMoveName,
     onlineId: onlineId ?? this.onlineId,
+    cardFrame: cardFrame != null ? cardFrame() : this.cardFrame,
   );
 
   Map<String, Object?> toJson() => {
@@ -117,6 +124,7 @@ class Character {
     'elementMoveName': elementMoveName,
     'specialMoveName': specialMoveName,
     'onlineId': onlineId,
+    'cardFrame': cardFrame,
   };
 
   factory Character.fromJson(Map<String, Object?> json) => Character(
@@ -142,5 +150,6 @@ class Character {
     elementMoveName: json['elementMoveName'] as String?,
     specialMoveName: json['specialMoveName'] as String?,
     onlineId: json['onlineId'] as String?,
+    cardFrame: json['cardFrame'] as String?,
   );
 }

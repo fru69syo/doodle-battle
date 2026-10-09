@@ -43,12 +43,19 @@ class OnlineRegistration {
         RegisterCharacterRequest(character: c, png: png),
       );
       switch (outcome) {
-        case RegisterAccepted(:final snapshotId):
+        case RegisterAccepted(:final snapshotId, :final displayName):
           final updated = c.copyWith(onlineId: snapshotId);
           await _ref.read(charactersProvider.notifier).save(updated);
-          await _ref
-              .read(progressProvider.notifier)
-              .setOnlineLevel(c.id, c.level);
+          final progress = _ref.read(progressProvider.notifier);
+          await progress.setOnlineLevel(c.id, c.level);
+          // The server assigns a random preset name at the first
+          // registration; remember it so the lobby can show it.
+          if (displayName != null &&
+              (await _ref.read(progressProvider.future)).displayName == null) {
+            await progress.setDisplayName(
+              ChosenDisplayName(adjectiveId: '', nounId: '', text: displayName),
+            );
+          }
           return RegistrationOk(updated);
         case RegisterRejected(
           :final reason,

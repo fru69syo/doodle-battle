@@ -2,8 +2,10 @@ import 'dart:typed_data';
 
 import '../../domain/battle/battle.dart';
 import '../app_settings.dart';
+import '../game_progress.dart';
 import 'backend_models.dart';
 
+export '../game_progress.dart' show ChosenDisplayName;
 export 'backend_models.dart';
 
 /// All server calls (docs/BACKEND.md §5). Every method throws
@@ -39,6 +41,10 @@ abstract interface class BackendApi {
   Future<void> submitAction(String matchId, int turn, BattleAction action);
 
   Future<PollResult> pollMatch(String matchId);
+
+  /// Sets the online display name from preset word ids (shared/names);
+  /// returns the name as composed by the server.
+  Future<ChosenDisplayName> setDisplayName(String adjectiveId, String nounId);
 
   /// Returns true when this child had already reported the character.
   Future<bool> reportCharacter(String snapshotId, ReportReason reason);
@@ -85,6 +91,11 @@ class UnavailableBackendApi implements BackendApi {
   ) async => _fail();
   @override
   Future<PollResult> pollMatch(String matchId) async => _fail();
+  @override
+  Future<ChosenDisplayName> setDisplayName(
+    String adjectiveId,
+    String nounId,
+  ) async => _fail();
   @override
   Future<bool> reportCharacter(String snapshotId, ReportReason reason) async =>
       _fail();
