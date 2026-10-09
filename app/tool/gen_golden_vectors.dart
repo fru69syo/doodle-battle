@@ -140,7 +140,13 @@ void xpVector(
   });
 }
 
-void statsVector(String name, Stats base, int level, Map<StatKind, int> seeds) {
+void statsVector(
+  String name,
+  Stats base,
+  int level,
+  Map<StatKind, int> seeds, {
+  bool isShobo = false,
+}) {
   vectors.add({
     'kind': 'stats',
     'name': name,
@@ -148,10 +154,17 @@ void statsVector(String name, Stats base, int level, Map<StatKind, int> seeds) {
       'base': base.toJson(),
       'level': level,
       'seeds': {for (final e in seeds.entries) e.key.name: e.value},
+      'isShobo': isShobo,
     },
     'expected': {
-      'stats': statsAtLevel(spec, base, level, seeds).toJson(),
-      'maxStats': maxStatsAtLevel(spec, base, level).toJson(),
+      'stats': statsAtLevel(
+        spec,
+        base,
+        level,
+        seeds,
+        isShobo: isShobo,
+      ).toJson(),
+      'maxStats': maxStatsAtLevel(spec, base, level, isShobo: isShobo).toJson(),
       'specialPower': specialPowerAt(spec, level),
       'stage': stageAtLevel(spec, level).name,
     },
@@ -513,6 +526,7 @@ void main() {
         Stats(hp: 80 + i * 7, atk: 95 - i * 3, def: 85, spd: 90 + i),
         la,
         const {},
+        isShobo: false,
       ),
     );
     final setupB = FighterSetup(
@@ -523,6 +537,7 @@ void main() {
         Stats(hp: 95, atk: 80 + i * 4, def: 90 - i * 2, spd: 88),
         lb,
         const {},
+        isShobo: false,
       ),
     );
     // Record the AI's choices with dedicated streams, then store them as a
@@ -718,6 +733,55 @@ void main() {
     30,
     const {StatKind.def: 29},
   );
+  const shoboBase = Stats(hp: 31, atk: 33, def: 30, spd: 32);
+  statsVector('shobo Lv1', shoboBase, 1, const {}, isShobo: true);
+  statsVector('shobo Lv15 with seeds', shoboBase, 15, const {
+    StatKind.atk: 7,
+    StatKind.spd: 7,
+  }, isShobo: true);
+  statsVector('shobo Lv30', shoboBase, 30, const {
+    StatKind.hp: 29,
+  }, isShobo: true);
+
+  // しょぼ Lv30 vs normal Lv15: a full battle with growth-scaled stats.
+  {
+    final a = FighterSetup(
+      element: ElementType.leaf,
+      level: 30,
+      stats: statsAtLevel(spec, shoboBase, 30, const {
+        StatKind.atk: 29,
+      }, isShobo: true),
+    );
+    final b = FighterSetup(
+      element: ElementType.water,
+      level: 15,
+      stats: statsAtLevel(
+        spec,
+        const Stats(hp: 95, atk: 90, def: 85, spd: 90),
+        15,
+        const {StatKind.hp: 14},
+        isShobo: false,
+      ),
+    );
+    final rng = Mulberry32(deriveSeed(77, 0));
+    final ai = [Mulberry32(deriveSeed(77, 1)), Mulberry32(deriveSeed(77, 2))];
+    var st = initBattle(spec, a, b);
+    final turns = <(BattleAction, BattleAction)>[];
+    while (!st.isOver) {
+      final x = chooseCpuAction(spec, st, Side.a, AiTier.normal, ai[0]);
+      final y = chooseCpuAction(spec, st, Side.b, AiTier.normal, ai[1]);
+      turns.add((x, y));
+      st = resolveTurn(spec, st, x, y, rng).state;
+    }
+    battle(
+      'shobo Lv30 vs normal Lv15',
+      'Grown しょぼキャラ vs a mid-level kid.',
+      a: a,
+      b: b,
+      turns: turns,
+      require: (ev, end) => end.isOver,
+    );
+  }
 
   final out = const JsonEncoder.withIndent(' ').convert({
     'specVersion': spec.specVersion,

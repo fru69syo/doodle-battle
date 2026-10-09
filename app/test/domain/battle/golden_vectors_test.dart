@@ -137,8 +137,15 @@ void main() {
               StatKind.values.byName(e.key): e.value! as int,
           };
           final exp = _m(v['expected']);
-          expect(statsAtLevel(spec, base, level, seeds).toJson(), exp['stats']);
-          expect(maxStatsAtLevel(spec, base, level).toJson(), exp['maxStats']);
+          final shobo = i['isShobo']! as bool;
+          expect(
+            statsAtLevel(spec, base, level, seeds, isShobo: shobo).toJson(),
+            exp['stats'],
+          );
+          expect(
+            maxStatsAtLevel(spec, base, level, isShobo: shobo).toJson(),
+            exp['maxStats'],
+          );
           expect(specialPowerAt(spec, level), exp['specialPower']);
           expect(stageAtLevel(spec, level).name, exp['stage']);
         default:
