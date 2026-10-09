@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "generatedBy": "tool/gen_cpu_doodles.dart",
+  "note": "Lv1 stats from the on-device analyzer; scale by level with the battle growth rules.",
+  "characters": [
+    {
+      "id": "cpu_fire_blob",
+      "name": "ぷるぷるスライム",
+      "asset": "assets/cpu/cpu_fire_blob.png",
+      "element": "fire",
+      "energy": 80.7,
+      "skill": 21.9,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 116,
+        "atk": 77,
+        "def": 106,
+        "spd": 62
+      },
+      "imageHash": "7c7b129c31a29b101dae95702e0d5089d57d12f0faa10204cde5ae489f88ac79"
+    },
+    {
+      "id": "cpu_fire_spiky",
+      "name": "トゲトゲ",
+      "asset": "assets/cpu/cpu_fire_spiky.png",
+      "element": "fire",
+      "energy": 81.2,
+      "skill": 24.1,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 91,
+        "atk": 110,
+        "def": 105,
+        "spd": 56
+      },
+      "imageHash": "d861f70331653f8c2eb19c49e9c78a5deef98b89870c106d1016d6da841c707a"
+    },
+    {
+      "id": "cpu_water_snake",
+      "name": "にょろにょろ",
+      "asset": "assets/cpu/cpu_water_snake.png",
+      "element": "water",
+      "energy": 69.1,
+      "skill": 18.3,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 71,
+        "atk": 84,
+        "def": 90,
+        "spd": 93
+      },
+      "imageHash": "bcccc800438a4d9954ba05c2f94d4c8a1255f28cc7367ef32cad7ac7b7d0be69"
+    },
+    {
+      "id": "cpu_water_fish",
+      "name": "まんまるフィッシュ",
+      "asset": "assets/cpu/cpu_water_fish.png",
+      "element": "water",
+      "energy": 81.5,
+      "skill": 7.0,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 110,
+        "atk": 72,
+        "def": 111,
+        "spd": 70
+      },
+      "imageHash": "2724c5b910eaadf3f39ca6450d8fd7aac394ed83780d55889a01e9ed7f45d833"
+    },
+    {
+      "id": "cpu_leaf_frog",
+      "name": "ケロケロ",
+      "asset": "assets/cpu/cpu_leaf_frog.png",
+      "element": "leaf",
+      "energy": 82.3,
+      "skill": 22.7,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 105,
+        "atk": 84,
+        "def": 113,
+        "spd": 63
+      },
+      "imageHash": "3ef817e7dd21e6df60c061a3d808e1c1f56a22584750ef6a08d5d59422949d84"
+    },
+    {
+      "id": "cpu_leaf_caterpillar",
+      "name": "もりもりイモムシ",
+      "asset": "assets/cpu/cpu_leaf_caterpillar.png",
+      "element": "leaf",
+      "energy": 82.1,
+      "skill": 7.3,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 80,
+        "atk": 90,
+        "def": 100,
+        "spd": 94
+      },
+      "imageHash": "ec4ded121a05fbf0e65d26017c291514964140c078a1f8b6c0cbd2f7c00b923b"
+    },
+    {
+      "id": "cpu_thunder_bird",
+      "name": "ピヨピカ",
+      "asset": "assets/cpu/cpu_thunder_bird.png",
+      "element": "thunder",
+      "energy": 74.0,
+      "skill": 27.1,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 103,
+        "atk": 82,
+        "def": 107,
+        "spd": 56
+      },
+      "imageHash": "c1762ccff0f31d4a19bad13c0272c5a3153c3fca1ce6d7015e771122ccd44ba8"
+    },
+    {
+      "id": "cpu_thunder_star",
+      "name": "ビリビリスター",
+      "asset": "assets/cpu/cpu_thunder_star.png",
+      "element": "thunder",
+      "energy": 73.9,
+      "skill": 25.5,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 95,
+        "atk": 90,
+        "def": 106,
+        "spd": 57
+      },
+      "imageHash": "32b9aa3a19c6a607928b19e02e9504c7f049edc2aaeabe2c4a893d34c86e310d"
+    },
+    {
+      "id": "cpu_shadow_ghost",
+      "name": "おばけのモヤ",
+      "asset": "assets/cpu/cpu_shadow_ghost.png",
+      "element": "shadow",
+      "energy": 74.1,
+      "skill": 22.3,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 117,
+        "atk": 60,
+        "def": 113,
+        "spd": 58
+      },
+      "imageHash": "7846140f47e44e416f2c0e1d27ac28ebc9e660395a42891a276e8251f6d8c298"
+    },
+    {
+      "id": "cpu_shadow_bat",
+      "name": "コウモリン",
+      "asset": "assets/cpu/cpu_shadow_bat.png",
+      "element": "shadow",
+      "energy": 76.0,
+      "skill": 22.4,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 84,
+        "atk": 77,
+        "def": 101,
+        "spd": 90
+      },
+      "imageHash": "9dc3e73d2750d659592f24c8e86bac11415069933cd3c83c924152260c44ba8b"
+    },
+    {
+      "id": "cpu_rainbow_cat",
+      "name": "にじにゃん",
+      "asset": "assets/cpu/cpu_rainbow_cat.png",
+      "element": "rainbow",
+      "energy": 98.4,
+      "skill": 26.8,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 130,
+        "atk": 77,
+        "def": 126,
+        "spd": 64
+      },
+      "imageHash": "132efffef3f7961772ae8c37546375850d7f7ddc9ca0d2733dda7391af73d794"
+    },
+    {
+      "id": "cpu_rainbow_robot",
+      "name": "カラフルロボ",
+      "asset": "assets/cpu/cpu_rainbow_robot.png",
+      "element": "rainbow",
+      "energy": 100.0,
+      "skill": 20.0,
+      "isShobo": false,
+      "baseStats": {
+        "hp": 111,
+        "atk": 111,
+        "def": 118,
+        "spd": 60
+      },
+      "imageHash": "2952d7e7353d651b3042e17afffea18fe5f5ee522302f17eb763eabb08951de3"
+    }
+  ]
+}
