@@ -1,44 +1,34 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { StubEngine, typeMultiplier, type ActionId, type FighterInput } from "../../src/battle/engine";
+import { SharedEngine, SPEC, TIMEOUT_ACTION, type ActionId, type FighterInput } from "../../src/battle/engine";
 import { chooseGhostAction } from "../../src/battle/ghostAi";
 import { computeResults } from "../../src/battle/results";
-import { hash32, mulberry32, turnSeed } from "../../src/battle/rng";
+import { hash32, turnSeed } from "../../src/battle/rng";
 import type { MatchDoc, SideInfo } from "../../src/model";
+import { xpForBattle, type BattleState } from "../../src/vendor/battle_engine";
 
 const fire: FighterInput = { element: "fire", stats: { hp: 60, atk: 70, def: 50, spd: 60 }, level: 5 };
 const leaf: FighterInput = { element: "leaf", stats: { hp: 60, atk: 60, def: 60, spd: 50 }, level: 5 };
+const repo = join(__dirname, "..", "..", "..", "..");
 
-describe("rng", () => {
-  it("is deterministic", () => {
+describe("seed helpers", () => {
+  it("are deterministic", () => {
     expect(hash32("abc")).toBe(hash32("abc"));
     expect(turnSeed(1, 2)).not.toBe(turnSeed(1, 3));
-    const a = mulberry32(42);
-    const b = mulberry32(42);
-    for (let i = 0; i < 5; i++) {
-      const x = a();
-      expect(x).toBe(b());
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(x).toBeLessThan(1);
-    }
   });
 });
 
-describe("type chart (SPEC §4.1)", () => {
-  it("4-way cycle and shadow/rainbow", () => {
-    expect(typeMultiplier("fire", "leaf")).toBe(1.5);
-    expect(typeMultiplier("leaf", "thunder")).toBe(1.5);
-    expect(typeMultiplier("thunder", "water")).toBe(1.5);
-    expect(typeMultiplier("water", "fire")).toBe(1.5);
-    expect(typeMultiplier("leaf", "fire")).toBe(0.75);
-    expect(typeMultiplier("shadow", "rainbow")).toBe(1.5);
-    expect(typeMultiplier("rainbow", "shadow")).toBe(1.5);
-    expect(typeMultiplier("shadow", "fire")).toBe(1);
-    expect(typeMultiplier("fire", "fire")).toBe(1);
+describe("shared spec", () => {
+  it("vendored battle_spec.json equals the spec embedded in the engine", () => {
+    const json: unknown = JSON.parse(readFileSync(join(__dirname, "..", "..", "src", "vendor", "battle_spec", "battle_spec.json"), "utf8"));
+    expect(SPEC).toEqual(json);
+    expect(TIMEOUT_ACTION).toBe("tackle");
   });
 });
 
-describe("StubEngine", () => {
-  const engine = new StubEngine();
+describe("SharedEngine", () => {
+  const engine = new SharedEngine();
 
   function play(seed: number, pick: (turn: number) => [ActionId, ActionId]) {
     let state = engine.init(fire, leaf, seed);
@@ -52,18 +42,27 @@ describe("StubEngine", () => {
     return { state, log };
   }
 
-  it("HP is 3x the hp stat", () => {
+  it("id follows the spec version; HP is hp x hpMultiplier", () => {
+    expect(engine.id).toBe(`shared-${SPEC.specVersion}`);
     const v = engine.view(engine.init(fire, leaf, 1));
-    expect(v.a).toEqual({ hp: 180, maxHp: 180, gauge: 0 });
+    expect(v.a).toEqual({ hp: 60 * SPEC.hpMultiplier, maxHp: 60 * SPEC.hpMultiplier, gauge: 0 });
     expect(v.finished).toBe(false);
+    expect(v.endReason).toBeNull();
   });
 
-  it("is deterministic for the same seed and actions", () => {
+  it("is deterministic for the same seed and actions, and survives a JSON round trip", () => {
     const pick = (): [ActionId, ActionId] => ["element", "tackle"];
     expect(play(7, pick)).toEqual(play(7, pick));
+    let s = engine.init(fire, leaf, 7);
+    for (let i = 0; i < 3; i++) {
+      s = JSON.parse(JSON.stringify(engine.resolveTurn(s, "element", "tackle").state)) as typeof s;
+    }
+    let t = engine.init(fire, leaf, 7);
+    for (let i = 0; i < 3; i++) t = engine.resolveTurn(t, "element", "tackle").state;
+    expect(s).toEqual(t);
   });
 
-  it("does not mutate the input state and eventually finishes with a winner", () => {
+  it("does not mutate the input state and finishes with a winner", () => {
     const s0 = engine.init(fire, leaf, 3);
     const copy = structuredClone(s0);
     engine.resolveTurn(s0, "tackle", "tackle");
@@ -72,39 +71,70 @@ describe("StubEngine", () => {
     const v = engine.view(state);
     expect(v.finished).toBe(true);
     expect(["a", "b"]).toContain(v.winner);
+    expect(v.endReason).toBe("ko");
+    expect(engine.legalActions(state, "a")).toEqual([]);
     expect(engine.resolveTurn(state, "tackle", "tackle").events).toEqual([]);
   });
 
-  it("special is only legal with a full gauge; illegal actions fall back to tackle", () => {
+  it("ends at the turn cap by HP ratio (turn_limit)", () => {
+    const { state } = play(5, () => ["guard", "guard"]);
+    const v = engine.view(state);
+    expect(v.turn).toBe(SPEC.turnCap);
+    expect(v.endReason).toBe("turn_limit");
+    expect(["a", "b"]).toContain(v.winner);
+  });
+
+  it("special is only legal with a full gauge", () => {
     let s = engine.init(fire, leaf, 9);
     expect(engine.legalActions(s, "a")).not.toContain("special");
-    const r = engine.resolveTurn(s, "special", "guard");
-    expect(r.events.find((e) => e.side === "a")).toMatchObject({ type: "attack", action: "tackle" });
-    for (let i = 0; i < 5; i++) s = engine.resolveTurn(s, "tackle", "guard").state;
+    for (let i = 0; i < 6 && !engine.legalActions(s, "a").includes("special"); i++) {
+      s = engine.resolveTurn(s, "tackle", "guard").state;
+    }
     expect(engine.legalActions(s, "a")).toContain("special");
   });
 
-  it("guard halves damage, repeated guards weaken", () => {
-    const s = engine.init(fire, leaf, 11);
-    const r1 = engine.resolveTurn(s, "tackle", "guard");
-    expect(r1.events.find((e) => e.type === "guard")).toMatchObject({ reduction: 0.5 });
-    const r2 = engine.resolveTurn(r1.state, "tackle", "guard");
-    expect(r2.events.find((e) => e.type === "guard")).toMatchObject({ reduction: 0.25 });
+  it("rejects states of another engine version", () => {
+    const other = new SharedEngine({ ...SPEC, specVersion: 999 });
+    expect(() => other.view(engine.init(fire, leaf, 1))).toThrow(/shared-999/);
+  });
+
+  it("replays every shared golden battle vector exactly", () => {
+    const golden = JSON.parse(readFileSync(join(repo, "shared", "battle_spec", "golden_vectors.json"), "utf8")) as {
+      vectors: { kind: string; name: string; seed: number; initial: BattleState; turns: [string, string][]; expected: any }[];
+    };
+    const battles = golden.vectors.filter((v) => v.kind === "battle");
+    expect(battles.length).toBeGreaterThanOrEqual(40);
+    for (const v of battles) {
+      let state = engine.fromInner(structuredClone(v.initial), v.seed, v.seed);
+      v.turns.forEach(([a, b], i) => {
+        const act = (x: string): ActionId => (x === "timeout" ? TIMEOUT_ACTION : (x as ActionId));
+        const r = engine.resolveTurn(state, act(a), act(b), { a: a === "timeout", b: b === "timeout" });
+        expect(r.events, `${v.name} turn ${i + 1}`).toEqual(v.expected.events[i]);
+        state = r.state;
+      });
+      expect(state.inner, v.name).toEqual(v.expected.final);
+      expect(state.rngState, v.name).toBe(v.expected.rngState);
+    }
   });
 });
 
 describe("ghost AI", () => {
-  const engine = new StubEngine();
+  const engine = new SharedEngine();
   it("is deterministic and legal", () => {
     const s = engine.init(fire, leaf, 5);
-    const a = chooseGhostAction(engine, s, "b", { a: "fire", b: "leaf" });
-    expect(chooseGhostAction(engine, s, "b", { a: "fire", b: "leaf" })).toBe(a);
+    const a = chooseGhostAction(engine, s, "b");
+    expect(chooseGhostAction(engine, s, "b")).toBe(a);
     expect(engine.legalActions(s, "b")).toContain(a);
   });
-  it("uses the special as soon as it is ready", () => {
+  it("is the shared ふつう AI: tackles when type-disadvantaged, specials when ready", () => {
     let s = engine.init(fire, leaf, 5);
-    for (let i = 0; i < 5; i++) s = engine.resolveTurn(s, "guard", "tackle").state;
-    expect(chooseGhostAction(engine, s, "b", { a: "fire", b: "leaf" })).toBe("special");
+    const picks = new Set<ActionId>();
+    for (let seed = 0; seed < 40; seed++) picks.add(chooseGhostAction(engine, { ...s, seed }, "b"));
+    expect([...picks].sort()).toEqual(["guard", "tackle"]);
+    for (let i = 0; i < 8 && !engine.legalActions(s, "b").includes("special"); i++) {
+      s = engine.resolveTurn(s, "tackle", "guard").state;
+    }
+    expect(chooseGhostAction(engine, s, "b")).toBe("special");
   });
 });
 
@@ -142,8 +172,15 @@ describe("results", () => {
       b: { xp: 150 },
     });
   });
+  it("agree with the shared xpForBattle", () => {
+    for (const isShobo of [false, true]) {
+      const r = computeResults(match({ isShobo }, { isShobo }), "a");
+      expect(r.a.xp).toBe(xpForBattle(SPEC, { won: true, isShobo }));
+      expect(r.b.xp).toBe(xpForBattle(SPEC, { won: false, isShobo }));
+    }
+  });
   it("draws, ghosts and aborted matches", () => {
-    expect(computeResults(match({}, {}), "draw").a).toEqual({ xp: 70, ratingDelta: 0, outcome: "draw" });
+    expect(computeResults(match({}, {}), "draw").a).toEqual({ xp: 40, ratingDelta: 0, outcome: "draw" });
     const g = computeResults(match({}, { uid: null, isGhost: true }, "ghost"), "a");
     expect(g.a).toEqual({ xp: 100, ratingDelta: 8, outcome: "win" });
     expect(g.b).toEqual({ xp: 0, ratingDelta: 0, outcome: "none" });

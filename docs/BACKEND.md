@@ -270,21 +270,29 @@ IMAGE_NOT_DRAWING, IMAGE_OTHER, TOO_MANY_CHARACTERS`.
 ## 7. Battles, ghosts and timeouts
 
 - **Engine adapter** (`functions/src/battle/engine.ts`): `BattleEngine { id, init(a, b, seed),
-  legalActions(state, side), resolveTurn(state, actionA, actionB) → {state, events},
-  view(state) }`. States/events are plain JSON stored in Firestore. Randomness is derived per turn
-  from `(match seed, turn)` (`turnSeed`), so a turn can be resolved statelessly and replayed.
-  Every match records `engineId`; if a deploy changes the engine, running matches are aborted
-  rather than resolved with different rules.
-- **Stub engine** (`StubEngine`, id `stub-1`): SPEC §4.1-shaped placeholder (HP = hp×3, spd order,
-  4 moves, guard 50% → 25% → 0% when repeated, gauge, type chart, Lv20 special +20). It exists so
-  the whole online flow is testable before the shared engine lands.
+  legalActions(state, side), resolveTurn(state, actionA, actionB, timedOut?) → {state, events},
+  view(state) }`, implemented by `SharedEngine`, which delegates to the shared TypeScript engine
+  (`shared/battle_engine_ts`, the same rules as the app; see docs/BATTLE.md). Id
+  `shared-<specVersion>`. States/events are plain JSON stored in Firestore:
+  `{engine, seed, turn, rngState, inner}` where `inner` is the shared `BattleState`.
+  **Randomness**: the shared mulberry32 state lives *in* the engine state (`rngState`, initialised
+  to `deriveSeed(seed, 0)`) and is advanced by each resolved turn inside the same transaction, so a
+  turn needs only the stored state and a whole match replays from its seed + action log. (This
+  replaces the earlier per-turn `turnSeed` design so that the shared golden vectors replay through
+  the adapter unchanged — `test/unit/engine.test.ts`.) Timed-out players are passed to the engine
+  as `timeout` (it plays たいあたり and logs a `timeout` event).
+  Every match records `engineId`; if a deploy changes the engine (spec version), running matches
+  are aborted rather than resolved with different rules.
 - **Turn limit / end**: 20 s per turn (+3 s server grace). Missing actions become たいあたり.
   3 consecutive timeouts by a human → forfeit (`forfeit_timeout`); both players gone → `aborted`
-  (no XP/rating). Turn 30 without KO → winner by remaining HP ratio (`turn_limit`), equal → draw.
-- **Results**: XP win 100 / lose 40 / draw 70, しょぼキャラ ×1.5 (SPEC §4.2). Elo per user,
+  (no XP/rating). Turn 30 without KO → the shared engine picks the winner by remaining HP ratio
+  (`turn_limit`); an exact tie is broken by its rng, so there are no draws.
+- **Results**: XP from the shared `xpForBattle` (win 100 / lose 40, しょぼキャラ ×1.5, SPEC §4.2),
+  identical to the app. A legacy `draw` outcome earns the losing XP. Elo per user,
   K = 32 (PvP), 16 (ghost; the ghost's rating mirrors the player's). Ghost owners are unaffected.
-- **Ghost AI** ("ふつう"): special when ready, element move unless type-disadvantaged, sometimes
-  guards at low HP; deterministic per (seed, turn).
+- **Ghost AI** ("ふつう"): the shared `chooseCpuAction(…, "normal")` — special when ready, element
+  move unless type-disadvantaged, occasional guard; its own rng from `turnSeed(seed, turn,
+  "ghost-<side>")`, so it is deterministic and never shifts battle rolls.
 
 **Timeout design choice — lazy enforcement + 1-minute sweep (no Cloud Tasks).** Every
 `submitAction` and `pollMatch` first checks the current deadline and, if it has passed, resolves
@@ -297,31 +305,22 @@ hot path; since a turn only matters while at least one player is watching, clien
 enforcement is simpler and cheaper. Switching later only requires calling `enforceDeadline` from a
 task handler.
 
-### Wiring the shared battle engine (PM, after merge)
+### Shared battle engine wiring (done, Battle team round 2)
 
-1. Battle team ships pure TS sources in `shared/battle_engine_ts/src/` (no runtime deps; relative
-   imports without extensions; the spec passed in as an argument, not imported by relative path)
-   and `shared/battle_spec/battle_spec.json` (+ `golden_vectors.json`).
-2. `npm run build` (or `npm run sync-shared`) copies them to `functions/src/vendor/battle_engine/`
-   and `functions/src/vendor/battle_spec/` (this already works; nothing to change in scripts).
-3. In `engine.ts` add `createSharedEngineAdapter()` implementing `BattleEngine` by delegating to
-   the shared `resolveTurn(spec, state, actionA, actionB, rng)`:
-   - `id`: `shared-<spec version>`;
-   - keep `{engine, seed, turn, inner: <shared state>}` as the stored state;
-   - build the per-turn rng with the shared PRNG seeded by `turnSeed(state.seed, state.turn + 1)`;
-   - map action ids (`tackle|element|guard|special`) and `FighterInput` (effective stats, element,
-     level) to the shared types; implement `view` from the shared state (hp, maxHp, gauge, winner).
-4. Make `getEngine()` return it (the stub stays for tests), and add a unit test that runs
-   `shared/battle_spec/golden_vectors.json` through the adapter.
-5. Deploying aborts matches that were started with the stub (by design).
+`npm run build` / `lint` / `test` first run `scripts/sync-shared.mjs`, which copies
+`shared/battle_engine_ts/src/` → `src/vendor/battle_engine/` and `shared/battle_spec/*.json` →
+`src/vendor/battle_spec/` (git-ignored). `getEngine()` returns `SharedEngine`; the stub engine was
+removed. A unit test replays every battle vector of `shared/battle_spec/golden_vectors.json`
+through the adapter and checks that the vendored JSON equals the spec embedded in the engine.
 
 ## 8. Stat validation (anti-tamper)
 
 `validateStatClaim` (pure, unit-tested) checks: energy/skill in 0–100; level 1–30; `0 ≤ xp <
 50 + 25·L` (any xp at Lv30); base stats are non-negative integers; `Σ base ≤ ceil(budget) + 4` with
 `budget = (200 + 2·energy) · skillMultiplier(skill)` (SPEC §3.2, so しょぼキャラ get 0.35×); each
-stat ≤ `ceil(0.7 · budget) + 1`; `Σ seeds ≤ L − 1`. The server then computes effective stats as
-`round(base · (1 + 0.04·(L−1) + 0.03·seeds))`. If the AI's `skillEstimate` exceeds the claimed
+stat ≤ `ceil(0.7 · budget) + 1`; `Σ seeds ≤ L − 1`. The server then computes effective stats with the shared
+`statsAtLevel` (`floor(base · (100 + g·(L−1) + 3·seeds) / 100)`, g = 4, or 12 for しょぼキャラ) and
+checks them against the shared `maxStatsAtLevel` caps (`statCapsAtLevel`). If the AI's `skillEstimate` exceeds the claimed
 skill by ≥ 50, the snapshot is accepted but flagged `moderation.suspectSkill` for review (likely an
 adult/traced drawing claiming a child's "のびのび" budget).
 
@@ -383,7 +382,7 @@ npm test            # unit tests, then emulator tests (Auth/Firestore/Storage em
 npm run test:unit   # pure tests only (no Java needed)
 ```
 
-- Unit (`test/unit`, 193 tests): normaliser + NG vectors, names, stat limits, PNG checks, engine,
+- Unit (`test/unit`, 200 tests): normaliser + NG vectors, names, stat limits, PNG checks, shared engine adapter + golden vectors,
   ghost AI, results, Claude service request shape / error mapping with a mocked SDK client.
 - Emulator (`test/emulator`, 51 tests): every callable handler against real emulators with a
   mocked AI service (`setAiServiceForTesting`) and an injectable clock (ghost wait, turn

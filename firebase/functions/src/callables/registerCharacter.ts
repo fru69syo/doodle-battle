@@ -202,7 +202,7 @@ export async function registerCharacterHandler(req: CallableRequest<unknown>): P
     ownerDisplayName: displayName.text,
     element: input.element,
     baseStats: input.baseStats,
-    stats: effectiveStats(input.baseStats, input.level, seeds),
+    stats: effectiveStats(input.baseStats, input.level, seeds, isShobo(input.skill)),
     energy: input.energy,
     skill: input.skill,
     isShobo: isShobo(input.skill),
