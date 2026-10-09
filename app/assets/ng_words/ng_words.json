@@ -1,0 +1,434 @@
+{
+  "version": 1,
+  "normalizerVersion": 1,
+  "description": "NG word dictionary shared by the server (firebase/functions) and the app's offline filter. Entries are written in natural form; loaders MUST normalise every entry with normalizeForMatch() (see normalize_vectors.json) before comparing. 'substring' entries block any normalised text that contains them; 'exact' entries block only when the whole normalised text equals them (used for short words that would otherwise cause false positives, e.g. 'kill' inside 'skill'). 'patterns' are JavaScript/Dart-compatible regular expressions evaluated against normalizeForPatterns() output. This list is the cheap first layer only; the server additionally runs an AI check before anything is shown online.",
+  "categories": {
+    "slur": {
+      "ja": {
+        "substring": [
+          "きちがい",
+          "気違い",
+          "基地外",
+          "がいじ",
+          "かたわ",
+          "めくら",
+          "つんぼ",
+          "しなじん",
+          "支那",
+          "ちゃんころ",
+          "くろんぼ",
+          "どじん",
+          "土人",
+          "部落民",
+          "おかま",
+          "ちょんこ",
+          "ばかちょん",
+          "ねとうよ",
+          "ぱよく"
+        ],
+        "exact": [
+          "ちょん",
+          "えた",
+          "ひにん",
+          "ほも",
+          "れず",
+          "にがー",
+          "じっぷ",
+          "おし"
+        ]
+      },
+      "en": {
+        "substring": [
+          "nigger",
+          "nigga",
+          "faggot",
+          "retard",
+          "chink",
+          "kike",
+          "tranny",
+          "wetback",
+          "gook",
+          "jigaboo"
+        ],
+        "exact": [
+          "fag",
+          "spic",
+          "dyke",
+          "jap",
+          "paki",
+          "homo",
+          "coon"
+        ]
+      }
+    },
+    "sexual": {
+      "ja": {
+        "substring": [
+          "ちんこ",
+          "ちんちん",
+          "ちんぽ",
+          "まんこ",
+          "おっぱい",
+          "せっくす",
+          "えっち",
+          "えろい",
+          "えろほん",
+          "おなにー",
+          "ぱいぱん",
+          "ちくび",
+          "きんたま",
+          "ぼっき",
+          "勃起",
+          "射精",
+          "しゃせい",
+          "性器",
+          "れいぷ",
+          "強姦",
+          "ごうかん",
+          "いんもう",
+          "陰毛",
+          "ふぇら",
+          "あなる",
+          "びっち",
+          "ぱこぱこ",
+          "せふれ",
+          "やりまん",
+          "やりちん",
+          "どうてい",
+          "童貞",
+          "しょじょ",
+          "処女",
+          "らぶほ",
+          "えーぶい",
+          "あだると",
+          "全裸",
+          "ぜんら",
+          "はだか",
+          "痴漢",
+          "ちかん",
+          "変態",
+          "へんたい",
+          "乳首",
+          "おなほ",
+          "でりへる",
+          "ふうぞく"
+        ],
+        "exact": [
+          "えろ",
+          "えっちい",
+          "まん",
+          "ちん",
+          "av",
+          "せいき"
+        ]
+      },
+      "en": {
+        "substring": [
+          "fuck",
+          "sex",
+          "porn",
+          "penis",
+          "vagina",
+          "pussy",
+          "boob",
+          "slut",
+          "whore",
+          "horny",
+          "nude",
+          "naked",
+          "rapist",
+          "hentai",
+          "milf",
+          "dildo",
+          "orgasm",
+          "blowjob",
+          "handjob",
+          "masturb",
+          "erotic",
+          "nsfw",
+          "cumshot",
+          "titties",
+          "bukkake",
+          "pedo",
+          "fck",
+          "fuk",
+          "fuq"
+        ],
+        "exact": [
+          "dick",
+          "cock",
+          "tits",
+          "tit",
+          "cum",
+          "rape",
+          "anal",
+          "xxx",
+          "sexy",
+          "hoe"
+        ]
+      }
+    },
+    "violence": {
+      "ja": {
+        "substring": [
+          "しね",
+          "死ね",
+          "ころす",
+          "ころせ",
+          "ころして",
+          "ころしてやる",
+          "ぶっころ",
+          "殺",
+          "さつじん",
+          "じさつ",
+          "自殺",
+          "くびつり",
+          "首吊",
+          "しんでしまえ",
+          "しんじまえ",
+          "ばくだん",
+          "爆弾",
+          "てろりすと",
+          "ないふでさす",
+          "さしころ",
+          "ぎゃくたい",
+          "虐待",
+          "いじめてやる",
+          "なぐってやる",
+          "ぼこぼこにする",
+          "ちまつり",
+          "血祭",
+          "なちす",
+          "ひとらー",
+          "はーけんくろいつ"
+        ],
+        "exact": [
+          "てろ",
+          "しぬ",
+          "しんで",
+          "きる",
+          "だいしね"
+        ]
+      },
+      "en": {
+        "substring": [
+          "murder",
+          "suicide",
+          "killyou",
+          "killer",
+          "hangyourself",
+          "terrorist",
+          "nazi",
+          "hitler",
+          "genocide",
+          "massacre",
+          "shootup",
+          "behead",
+          "bloodbath"
+        ],
+        "exact": [
+          "kill",
+          "kys",
+          "die",
+          "bomb",
+          "isis",
+          "kkk",
+          "gore",
+          "dead"
+        ]
+      }
+    },
+    "insult": {
+      "ja": {
+        "substring": [
+          "ばかやろう",
+          "ばかやろ",
+          "ばかたれ",
+          "あほんだら",
+          "きもい",
+          "きもちわるいやつ",
+          "きしょい",
+          "うざい",
+          "きえろ",
+          "くたばれ",
+          "ぶさいく",
+          "不細工",
+          "のろま",
+          "くそやろう",
+          "くそが",
+          "ごみくず",
+          "ざまあみろ",
+          "ぼけなす",
+          "ちょうしにのるな",
+          "かすやろう"
+        ],
+        "exact": [
+          "ばか",
+          "あほ",
+          "あほう",
+          "ぶす",
+          "でぶ",
+          "はげ",
+          "くず",
+          "かす",
+          "うざ",
+          "ぼけ",
+          "くそ",
+          "きも"
+        ]
+      },
+      "en": {
+        "substring": [
+          "stupid",
+          "idiot",
+          "moron",
+          "loser",
+          "shit",
+          "bitch",
+          "bastard",
+          "asshole",
+          "dumbass",
+          "jackass",
+          "fatso",
+          "stfu",
+          "motherf"
+        ],
+        "exact": [
+          "ass",
+          "dumb",
+          "damn",
+          "crap",
+          "wtf",
+          "ugly",
+          "fat",
+          "suck",
+          "sucks"
+        ]
+      }
+    },
+    "personal_info": {
+      "ja": {
+        "substring": [
+          "じゅうしょ",
+          "住所",
+          "でんわばんごう",
+          "電話番号",
+          "でんわして",
+          "しょうがっこう",
+          "小学校",
+          "ちゅうがっこう",
+          "中学校",
+          "ようちえん",
+          "幼稚園",
+          "ほいくえん",
+          "保育園",
+          "ちょうめ",
+          "丁目",
+          "ばんち",
+          "番地",
+          "めーるあどれす",
+          "めあど",
+          "らいんid",
+          "らいんこうかん",
+          "いんすた",
+          "ついったー",
+          "てぃっくとっく",
+          "ゆーちゅーぶ",
+          "でぃすこーど",
+          "ぱすわーど",
+          "あいでぃーおしえて",
+          "ほんみょう",
+          "本名",
+          "なんさい",
+          "なんねんせい",
+          "ねんくみ",
+          "年組",
+          "まんしょん",
+          "あぱーと",
+          "号室",
+          "ごうしつ",
+          "県立"
+        ],
+        "exact": [
+          "らいん",
+          "めーる",
+          "でんわ"
+        ]
+      },
+      "en": {
+        "substring": [
+          "http",
+          "www",
+          "password",
+          "instagram",
+          "tiktok",
+          "discord",
+          "snapchat",
+          "youtube",
+          "twitter",
+          "facebook",
+          "whatsapp",
+          "telegram",
+          "gmail",
+          "school",
+          "address",
+          "phonenumber"
+        ],
+        "exact": [
+          "line",
+          "insta",
+          "dm",
+          "email",
+          "mail",
+          "x",
+          "sns"
+        ]
+      }
+    }
+  },
+  "patterns": [
+    {
+      "id": "digits_run",
+      "category": "personal_info",
+      "regex": "[0-9]{6,}",
+      "description": "6+ consecutive digits after separators are removed (phone numbers, postal codes, IDs)"
+    },
+    {
+      "id": "postal_mark",
+      "category": "personal_info",
+      "regex": "〒",
+      "description": "Japanese postal code mark"
+    },
+    {
+      "id": "url_scheme",
+      "category": "personal_info",
+      "regex": "(https?|ftp)[:：]",
+      "description": "URL scheme"
+    },
+    {
+      "id": "www",
+      "category": "personal_info",
+      "regex": "www[.]",
+      "description": "www. prefix"
+    },
+    {
+      "id": "domain",
+      "category": "personal_info",
+      "regex": "[a-z0-9][.](com|net|org|jp|io|me|tv|app|xyz|info|co|ly|gg|link|site)(?![a-z])",
+      "description": "domain name"
+    },
+    {
+      "id": "email",
+      "category": "personal_info",
+      "regex": "[a-z0-9._+]@[a-z0-9]",
+      "description": "email address"
+    },
+    {
+      "id": "handle",
+      "category": "personal_info",
+      "regex": "^@[a-z0-9_]{2,}",
+      "description": "SNS handle"
+    }
+  ],
+  "allowExact": []
+}
