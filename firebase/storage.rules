@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Clients never write to Storage. Snapshot images (written by
+// registerCharacter) are readable by signed-in users only while the snapshot
+// is active (opponents / ghosts), and always by their owner. Hidden, removed,
+// superseded and withdrawn snapshots become unreadable immediately.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /snapshotImages/{snapshotId}/{file} {
+      allow read: if request.auth != null
+        && (firestore.get(/databases/(default)/documents/snapshots/$(snapshotId)).data.status == 'active'
+            || firestore.get(/databases/(default)/documents/snapshots/$(snapshotId)).data.ownerUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

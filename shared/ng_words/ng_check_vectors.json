@@ -1,0 +1,377 @@
+{
+  "ngWordsVersion": 1,
+  "normalizerVersion": 1,
+  "description": "Golden vectors for the NG filter (ng_words.json + normaliser). Both the server and the app offline filter must agree on `blocked` (and on `category` for the first hit). Categories are informational; never show them to children.",
+  "vectors": [
+    {
+      "input": "ねこ",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "どらごん",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "ピカりん",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "もこもこ",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "skill",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "Skiller",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "raccoon",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "grape",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "かえろう",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "ばかり",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "こんにちは",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "しね",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "シネ",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "し ね",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "しーーね",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "死ね",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "ころす",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "コロスケ",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "ぶっころす",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "kill",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "KILL",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "k1ll",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "killer",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "ばか",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "バカ",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "ばか！",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "ばかやろう",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "ﾊﾞｶ",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "あほ",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "fuck",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "F*U*C*K",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "fuuuck",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "ｆｕｃｋ",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "sh1t",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "b1tch",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "ass",
+      "blocked": true,
+      "category": "insult"
+    },
+    {
+      "input": "class",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "@ss",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "セックス",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "えろ",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "えろい",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "おっぱい",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "ちんこ",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "ちんちん",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "sexy",
+      "blocked": true,
+      "category": "sexual"
+    },
+    {
+      "input": "nigger",
+      "blocked": true,
+      "category": "slur"
+    },
+    {
+      "input": "n1gger",
+      "blocked": true,
+      "category": "slur"
+    },
+    {
+      "input": "きちがい",
+      "blocked": true,
+      "category": "slur"
+    },
+    {
+      "input": "キチガイ",
+      "blocked": true,
+      "category": "slur"
+    },
+    {
+      "input": "faggot",
+      "blocked": true,
+      "category": "slur"
+    },
+    {
+      "input": "090-1234-5678",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "０９０１２３４５６７８",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "〇九〇一二三四五六七八",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "ねこ12345",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "ねこ123456",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "www.example.com",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "example.com",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "a@b.jp",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "https://x",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "@neko_chan",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "じゅうしょ",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "でんわ",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "でんわばんごう",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "らいん",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "らいおん",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "しょうがっこう",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "〒1000001",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "instagram",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "x",
+      "blocked": true,
+      "category": "personal_info"
+    },
+    {
+      "input": "あおい ドラゴン",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "てろ",
+      "blocked": true,
+      "category": "violence"
+    },
+    {
+      "input": "てろてろ",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "うんこ",
+      "blocked": false,
+      "category": null
+    },
+    {
+      "input": "パンツ",
+      "blocked": false,
+      "category": null
+    }
+  ]
+}

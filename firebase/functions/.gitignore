@@ -1,0 +1,10 @@
+node_modules/
+lib/
+src/vendor/
+coverage/
+.env.local
+*.local
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+*-debug.log

@@ -1,0 +1,316 @@
+{
+  "normalizerVersion": 1,
+  "description": "Golden vectors for the NG-word text normaliser. The server (firebase/functions/src/ngwords/normalize.ts) and the app offline filter (Dart port) MUST produce exactly `match` = normalizeForMatch(input) and `pattern` = normalizeForPatterns(input) for every vector. Dart has no built-in NFKC: use a Unicode normalisation package (e.g. unorm_dart) for step 1.",
+  "algorithm": {
+    "normalizeForMatch": [
+      "1. Unicode NFKC",
+      "2. lower-case",
+      "3. katakana U+30A1..U+30F6 -> hiragana (code point - 0x60); ヷヸヹヺ (U+30F7..U+30FA) -> わゐゑを",
+      "4. small kana -> full size: ぁぃぅぇぉっゃゅょゎゕゖ -> あいうえおつやゆよわかけ",
+      "5. leetspeak, only inside maximal runs of [a-z0-9@$!] that contain at least one a-z letter: 0->o 1->i 3->e 4->a 5->s 7->t 8->b @->a $->s !->i",
+      "6. strip every character except a-z, 0-9, hiragana U+3041..U+3096, 々 U+3005, CJK ideographs (U+3400..U+4DBF, U+4E00..U+9FFF, U+F900..U+FAFF, U+20000..U+3134F)",
+      "7. collapse runs of the same character into one character"
+    ],
+    "normalizeForPatterns": [
+      "1. Unicode NFKC",
+      "2. lower-case",
+      "3. kanji numerals 〇零一二三四五六七八九 -> 0-9",
+      "4. remove whitespace and the separators - ‐ ‑ ‒ – — ― − ー － ~ 〜 ( ) （ ） [ ] 【 】 「 」 ・ _ / |"
+    ],
+    "matching": [
+      "ng_words.json entries are normalised with normalizeForMatch at load time",
+      "patterns are tested (unanchored unless the regex says otherwise) against normalizeForPatterns(text)",
+      "then: if normalizeForMatch(text) is in allowExact -> clean; equals an exact entry -> blocked; contains a substring entry -> blocked"
+    ]
+  },
+  "vectors": [
+    {
+      "input": "ねこ",
+      "match": "ねこ",
+      "pattern": "ねこ",
+      "note": "plain hiragana"
+    },
+    {
+      "input": "ネコ",
+      "match": "ねこ",
+      "pattern": "ネコ",
+      "note": "katakana -> hiragana"
+    },
+    {
+      "input": "ﾈｺ",
+      "match": "ねこ",
+      "pattern": "ネコ",
+      "note": "half-width katakana (NFKC)"
+    },
+    {
+      "input": "ガンダム",
+      "match": "がんだむ",
+      "pattern": "ガンダム",
+      "note": "voiced katakana"
+    },
+    {
+      "input": "ｶﾞﾝﾀﾞﾑ",
+      "match": "がんだむ",
+      "pattern": "ガンダム",
+      "note": "half-width voiced katakana composes under NFKC"
+    },
+    {
+      "input": "ヴァイオリン",
+      "match": "ゔあいおりん",
+      "pattern": "ヴァイオリン",
+      "note": "ヴ and small ァ"
+    },
+    {
+      "input": "ヵヶ",
+      "match": "かけ",
+      "pattern": "ヵヶ",
+      "note": "small katakana ka/ke"
+    },
+    {
+      "input": "ヷヸヹヺ",
+      "match": "わゐゑを",
+      "pattern": "ヷヸヹヺ",
+      "note": "rare katakana with no hiragana form"
+    },
+    {
+      "input": "きゃっと",
+      "match": "きやつと",
+      "pattern": "きゃっと",
+      "note": "small ya and small tsu"
+    },
+    {
+      "input": "ドラゴーーン",
+      "match": "どらごん",
+      "pattern": "ドラゴン",
+      "note": "long vowel mark stripped, then repeats collapsed"
+    },
+    {
+      "input": "し ね",
+      "match": "しね",
+      "pattern": "しね",
+      "note": "space stripped"
+    },
+    {
+      "input": "し　ね",
+      "match": "しね",
+      "pattern": "しね",
+      "note": "ideographic space stripped"
+    },
+    {
+      "input": "し・ね！",
+      "match": "しね",
+      "pattern": "しね!",
+      "note": "symbols stripped"
+    },
+    {
+      "input": "シ〜ネ",
+      "match": "しね",
+      "pattern": "シネ",
+      "note": "wave dash stripped"
+    },
+    {
+      "input": "しねしね",
+      "match": "しねしね",
+      "pattern": "しねしね",
+      "note": "non-adjacent repeats are kept"
+    },
+    {
+      "input": "しーーーね",
+      "match": "しね",
+      "pattern": "しね",
+      "note": "long vowel run"
+    },
+    {
+      "input": "ばかかかか",
+      "match": "ばか",
+      "pattern": "ばかかかか",
+      "note": "repeated characters collapsed"
+    },
+    {
+      "input": "ＦＵＣＫ",
+      "match": "fuck",
+      "pattern": "fuck",
+      "note": "full-width ASCII -> ASCII, lower-cased"
+    },
+    {
+      "input": "F U C K",
+      "match": "fuck",
+      "pattern": "fuck",
+      "note": "spaces between letters"
+    },
+    {
+      "input": "f.u.c.k",
+      "match": "fuck",
+      "pattern": "f.u.c.k",
+      "note": "punctuation between letters"
+    },
+    {
+      "input": "fuuuuck",
+      "match": "fuck",
+      "pattern": "fuuuuck",
+      "note": "repeated letters collapsed"
+    },
+    {
+      "input": "sh1t",
+      "match": "shit",
+      "pattern": "sh1t",
+      "note": "leet 1 -> i"
+    },
+    {
+      "input": "b1tch",
+      "match": "bitch",
+      "pattern": "b1tch",
+      "note": "leet"
+    },
+    {
+      "input": "@$$",
+      "match": "",
+      "pattern": "@$$",
+      "note": "leet symbols @ -> a, $ -> s, then collapse"
+    },
+    {
+      "input": "5h0074",
+      "match": "shota",
+      "pattern": "5h0074",
+      "note": "leet digits"
+    },
+    {
+      "input": "k!ll",
+      "match": "kil",
+      "pattern": "k!ll",
+      "note": "! -> i"
+    },
+    {
+      "input": "a2b6c9",
+      "match": "a2b6c9",
+      "pattern": "a2b6c9",
+      "note": "digits without leet mapping survive"
+    },
+    {
+      "input": "Ｓｋｉｌｌ",
+      "match": "skil",
+      "pattern": "skill",
+      "note": "full-width latin"
+    },
+    {
+      "input": "ぴかちゅう",
+      "match": "ぴかちゆう",
+      "pattern": "ぴかちゅう",
+      "note": "small yu"
+    },
+    {
+      "input": "死ね",
+      "match": "死ね",
+      "pattern": "死ね",
+      "note": "kanji kept"
+    },
+    {
+      "input": "佐々木",
+      "match": "佐々木",
+      "pattern": "佐々木",
+      "note": "々 kept"
+    },
+    {
+      "input": "ゝゞ",
+      "match": "",
+      "pattern": "ゝゞ",
+      "note": "iteration marks stripped"
+    },
+    {
+      "input": "が゛",
+      "match": "が",
+      "pattern": "が゙",
+      "note": "standalone dakuten stripped"
+    },
+    {
+      "input": "😀ねこ😀",
+      "match": "ねこ",
+      "pattern": "😀ねこ😀",
+      "note": "emoji stripped"
+    },
+    {
+      "input": "ドラゴン①",
+      "match": "どらごん1",
+      "pattern": "ドラゴン1",
+      "note": "circled digit -> 1 (NFKC) -> i (leet)"
+    },
+    {
+      "input": "ｱｲｳｴｵ",
+      "match": "あいうえお",
+      "pattern": "アイウエオ",
+      "note": "half-width vowels"
+    },
+    {
+      "input": "ハローWorld",
+      "match": "はろworld",
+      "pattern": "ハロworld",
+      "note": "mixed scripts"
+    },
+    {
+      "input": "",
+      "match": "",
+      "pattern": "",
+      "note": "empty string"
+    },
+    {
+      "input": "ーー",
+      "match": "",
+      "pattern": "",
+      "note": "only symbols -> empty"
+    },
+    {
+      "input": "090-1234-5678",
+      "match": "09012345678",
+      "pattern": "09012345678",
+      "note": "phone number with hyphens"
+    },
+    {
+      "input": "０９０ー１２３４ー５６７８",
+      "match": "09012345678",
+      "pattern": "09012345678",
+      "note": "full-width phone number with katakana long-vowel dashes"
+    },
+    {
+      "input": "〇九〇一二三四五六七八",
+      "match": "九一二三四五六七八",
+      "pattern": "09012345678",
+      "note": "kanji numerals"
+    },
+    {
+      "input": "www.example.com",
+      "match": "wexamplecom",
+      "pattern": "www.example.com",
+      "note": "url"
+    },
+    {
+      "input": "mail@example.jp",
+      "match": "mailaexamplejp",
+      "pattern": "mail@example.jp",
+      "note": "email"
+    },
+    {
+      "input": "ばか！",
+      "match": "ばか",
+      "pattern": "ばか!",
+      "note": "standalone ! is not leet (no letter in the run)"
+    },
+    {
+      "input": "ばか1ごう",
+      "match": "ばか1ごう",
+      "pattern": "ばか1ごう",
+      "note": "digit run without letters stays a digit"
+    },
+    {
+      "input": "(03) 1234 5678",
+      "match": "0312345678",
+      "pattern": "0312345678",
+      "note": "parentheses and spaces"
+    },
+    {
+      "input": "〒100-0001",
+      "match": "101",
+      "pattern": "〒1000001",
+      "note": "postal code"
+    }
+  ]
+}
