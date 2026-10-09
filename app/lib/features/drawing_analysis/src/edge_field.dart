@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'raster.dart';
+import 'raster.dart' show Mask;
 
 /// Sobel gradients plus structure-tensor coherence of a luminance image.
 ///
@@ -114,6 +114,3 @@ Float64List _boxSum(Float64List src, int w, int h, int r) {
     coherentEdgePixels: coherent,
   );
 }
-
-/// Clamped helper re-exported for feature code.
-double coherenceToSmoothness(double c) => ramp(c, 0.45, 0.9);
