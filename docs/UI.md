@@ -39,7 +39,7 @@ lib/
 ## 3. ローカル保存（`lib/data/`）
 
 - `CharacterRepository`（interface）/ `FileCharacterRepository`（`<documents>/characters/<id>.json` + `<id>.png`、JSON は一時ファイル→rename で書く、壊れたファイルは飛ばす、id は `[A-Za-z0-9_-]{1,64}`）/ `InMemoryCharacterRepository`。
-- `SettingsRepository`: `settings.json`（同意・プレイ時間・購入権のキャッシュ・最後にサーバーへ送った同意）と `progress.json`（クリア済みステージ、適用済みオンライン対戦 ID（最新 100 件）、今日のプレイ秒数、オンライン登録時の Lv）。
+- `SettingsRepository`: `settings.json`（同意・プレイ時間・購入権のキャッシュ・最後にサーバーへ送った同意）と `progress.json`（クリア済みステージ、適用済みオンライン対戦 ID（最新 100 件）、今日のプレイ秒数、オンライン登録時の Lv、今日の広告ブーストの回数、オンラインの表示名）。
 - ずかんの上限: 12 体。`slots_24` の購入権があれば 36 体（`collectionLimitProvider`）。
 
 ## 4. 画面ごとの決定事項
@@ -55,7 +55,7 @@ lib/
 - **CPU 戦**: ステージ表は spec、CPU は `loadCpuRoster()` + `cpuFighterSetup()`。ステージ一覧は「おすすめ Lv」（`recommendedLevel`）と強さ（よわい/ふつう/つよい）を表示し、クリア済み +1 まで開放。エンジンのイベントを順に再生（攻撃側がぴょこっと跳ねる、被弾側が揺れてダメージ数字が浮く、相性はバナー、まもるは盾アイコン、たおれると傾いて薄くなる）。乱数は seed から `deriveSeed(seed,0)`（バトル）/`(seed,2)`（CPU AI）。
 - **結果**: XP（`applyXp`）、レベルアップ、たね、進化を表示して保存。勝てば次のステージへ。
 - **オンライン**: ホームのボタンは保護者が許可したときだけ表示（未設定なら「じゅんびちゅう」で押せない）。ロビーは Lv5 以上のみ選べる。未登録・登録後に Lv が上がったキャラは `registerCharacter` で審査し直す（`SNAPSHOT_NOT_ACTIVE` でも再登録）。不合格理由は全 14 種をやさしい文に対応付け（`online_messages.dart`）、名前の不合格ではサーバーのプリセット名から選んで再審査（ローカルの名前もその名前になる）。待機中は 10 秒ごとに `joinQueue`（ハートビート）、やめると `leaveQueue`。対戦は `matches/{id}` を購読し、ターンが進んだら `turns/{n}` のイベントを再生。20 秒タイマー、0 になったら `pollMatch`、送信後は 5 秒ごとに `pollMatch`。終了時は `result[mySide].xp` を matchId 単位で 1 回だけ適用。通報は旗ボタン → 6 つの理由から選ぶ（自由入力なし）。相手の絵は Storage から読む（読めなければ属性アイコン）。
-- **おうちのひと**: 同意 4 種、プレイ時間の目安（なし/30/60/90/120 分。超えるとホームに「そろそろ おやすみ しよう」。前面にいた時間を resume〜pause で数える。タイマーなし）、AR の準備、ショップ、サポート ID（サインイン済みのとき）、すべてのデータを削除、プライバシーポリシー（URL はプレースホルダー）、ライセンス（フォントの OFL を `LicenseRegistry` に登録済み）。
+- **おうちのひと**: 同意 5 種（クラウド判定・オンライン・広告・課金・ふぐあいの情報）、プレイ時間の目安（なし/30/60/90/120 分。超えるとホームに「そろそろ おやすみ しよう」。前面にいた時間を resume〜pause で数える。タイマーなし）、AR の準備、ショップ、サポート ID（サインイン済みのとき）、すべてのデータを削除、ポリシーとサポートのページ（外部ブラウザ、`core/config/app_config.dart` の URL）、ライセンス（フォントの OFL を `LicenseRegistry` に登録済み）。
 - **全データ削除**: 確認 → サーバーがあれば `deleteMyData`（未サインインなら何もしない）→ 失敗なら端末のデータは消さずに再試行を案内 → 端末のキャラ・設定・進み具合を削除 → セットアップに戻る。
 
 ## 5. Firebase（オフライン動作とセットアップ）
@@ -75,12 +75,14 @@ lib/
   そのあと Firebase コンソールで匿名認証、App Check（Play Integrity・debug トークンの登録）、Functions/Firestore/Storage を docs/BACKEND.md §14 のとおり設定する。CI/リリースでは `scripts/write_firebase_config.sh` がシークレットからこのファイルを書く。プレースホルダーには `demo-doodle-battle` の文字が入っているので、`--require`（リリース）では弾かれる。
 - マニフェスト: Firebase が持ち込む `c2dm.permission.RECEIVE`（firebase-iid）と `READ_GSERVICES`（recaptcha）は使わないので `tools:node="remove"` で外した（`scripts/check_release.sh` の許可リストに合わせる）。
 
-## 6. 収益化のフック（Compliance が実装を差し込む）
+## 6. 収益化（Compliance が実装済み。詳細は docs/COMPLIANCE.md）
 
-- `MonetizationService`（`features/monetization/monetization_service.dart`）: `rewardedAdReady`/`showRewardedAd()`、`storeAvailable`/`purchase(Product)`/`restorePurchases()`、`entitlements`（Stream）。既定は `NoopMonetizationService`（広告なし・ストアなし）。`monetizationServiceProvider` を override する。
-- 商品 ID（仮）: `slots_24`、`frame_pack_1`、`ouen_pass`。購入権はストリームから `settings.entitlements` にキャッシュされ、`slots_24` でずかんが 36 体、`ouen_pass` で結果画面の「おうえんパスで けいけんち 2ばい」（広告なし）。フレームパックの見た目は未実装（フックのみ）。
-- 結果画面の「どうがを みて けいけんち 2ばい」: 広告が許可されているときだけ表示 → 必ず「おうちのひとに きいてから みてね / こうこくが ながれるよ」を出し、「みる」を押したときだけ `showRewardedAd()`。報酬は `xpForBattle(adBoost)` との差分を加算（1 バトル 1 回）。
-- ショップ: 課金が許可されているときだけ「おうちのひと」に表示。「おかねが かかるよ。おうちのひとと いっしょに かってね」を常に表示し、**購入ボタンごとに保護者ゲートをもう一度**通す。
+- `MonetizationService`（`features/monetization/monetization_service.dart`、`Listenable`）: `start(cached)`、`setAdsAllowed`/`adState`/`preloadRewardedAd`/`showRewardedAd`、`refreshStore`/`priceOf`/`purchase`/`restorePurchases`、`owned`/`entitlements`。本番は `AppMonetizationService`（AdMob + Play Billing、`main.dart` で Android のときだけ）、既定とテスト以外のプラットフォームは `NoopMonetizationService`、テストは `FakeMonetization`。
+- `monetizationSyncProvider`（`app.dart` で watch）: 起動時にキャッシュした購入権で `start`、ストアの購入権 → `settings.entitlements`、広告の同意 → `setAdsAllowed`、ふぐあいの情報の同意 → `CrashReporter.setEnabled`。
+- 商品 ID: `slots_24`（ずかん 36 体）、`frame_pack_1`（ずかんのカードの枠: ほし・はな・にじ。`Character.cardFrame`）、`ouen_pass`（結果画面の「おうえんパスで けいけんち 2ばい」）。すべて買い切り。
+- 結果画面の「どうがを みて けいけんち 2ばい」: 広告の許可があるときだけ。1 日 3 回（`GameProgress.adBoostsToday`）。読み込み中は押せず、失敗時は「いまは どうがが ないみたい…」。押すと必ず注意書き → 「みる」のときだけ `showRewardedAd()`。
+- ショップ: 課金の許可があるときだけ。購入ごとに保護者ゲート → 価格と注意書きの確認 → Play。「購入を復元する」。
+- オンラインのロビー: 「オンラインの なまえ」（`features/online/display_name_picker.dart`、`setDisplayName`、語彙は `shared/names/`）。
 
 ## 7. NG フィルタ（`features/ng_filter/`）
 
