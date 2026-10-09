@@ -1,0 +1,5 @@
+# fastlane for Google Play uploads (Release team).
+# Run from app/android:  BUNDLE_GEMFILE=fastlane/Gemfile bundle exec fastlane <lane>
+source "https://rubygems.org"
+
+gem "fastlane", "~> 2.240"

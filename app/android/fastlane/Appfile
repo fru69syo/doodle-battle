@@ -1,0 +1,4 @@
+# Play Console API access: service-account JSON key (never committed).
+# CI writes it from the PLAY_SERVICE_ACCOUNT_JSON secret; locally point PLAY_JSON_KEY_PATH at it.
+json_key_file(ENV.fetch("PLAY_JSON_KEY_PATH", File.expand_path("service-account-play.json", __dir__)))
+package_name("com.fru69syo.doodle_battle")
