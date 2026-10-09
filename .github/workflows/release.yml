@@ -130,7 +130,8 @@ jobs:
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
           flutter pub get
-          flutter build appbundle --release --build-name "$VERSION_NAME" --build-number "$VERSION_CODE"
+          flutter build appbundle --release --build-name "$VERSION_NAME" --build-number "$VERSION_CODE" \
+            --obfuscate --split-debug-info=build/symbols
 
       - name: Verify signature, Families / Play compliance
         env:
@@ -151,6 +152,7 @@ jobs:
           path: |
             app/build/app/outputs/bundle/release/app-release.aab
             app/build/app/outputs/mapping/release/mapping.txt
+            app/build/symbols/
           if-no-files-found: error
           retention-days: 90
 
