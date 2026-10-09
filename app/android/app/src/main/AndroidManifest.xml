@@ -13,6 +13,11 @@
     <!-- Merged in by plugins but unused (kids app: keep permissions minimal). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
     <uses-permission android:name="android.permission.VIBRATE" tools:node="remove" />
+    <!-- UI team: pulled in by Firebase but unused (no FCM, no reCAPTCHA
+         flows; only anonymous auth + callables). Keeps the Families
+         allowlist in scripts/check_release.sh green. -->
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" tools:node="remove" />
+    <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES" tools:node="remove" />
     <!-- Nothing is required: the app must install on devices without AR/camera. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature
@@ -33,6 +38,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
+            android:screenOrientation="portrait"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
