@@ -60,8 +60,9 @@ DrawingAnalysisReport analyzeDrawingSync(Uint8List imageBytes) {
   final norm = normalizeImage(imageBytes);
   lap('normalize');
   final paper = detectPaper(norm.working);
-  final paperImage =
-      paper.quad == null ? norm.working : warpPaper(norm, paper.quad!);
+  final paperImage = paper.quad == null
+      ? norm.working
+      : warpPaper(norm, paper.quad!);
   lap('paper');
   final wb = whiteBalance(paperImage);
   lap('whiteBalance');
@@ -134,7 +135,9 @@ DrawingRejectReason? rejectReasonOf(DrawingAnalysisResult result) =>
 /// Applies the cloud judge's skill estimate (SPEC §3.3): blends skill
 /// 0.6/0.4 and re-derives the Lv1 stats from the same features and energy.
 DrawingAnalysisResult applyCloudSkill(
-    DrawingAnalysisResult result, double cloudSkill) {
+  DrawingAnalysisResult result,
+  double cloudSkill,
+) {
   final skill = (blendCloudSkill(result.skill, cloudSkill) * 10).round() / 10;
   return DrawingAnalysisResult(
     cutoutPng: result.cutoutPng,

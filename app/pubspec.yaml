@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -49,6 +51,7 @@ dependencies:
   cloud_firestore: ^6.10.0
   firebase_app_check: ^0.4.8
   unorm_dart: ^0.3.3
+  firebase_storage: ^13.6.0
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +85,8 @@ flutter:
     # Byte-identical copy of shared/ng_words/ng_words.json. Re-sync with
     # `dart run tool/sync_ng_words.dart`; a test fails if they diverge.
     - assets/ng_words/ng_words.json
+    # SIL OFL 1.1 text for Zen Maru Gothic (registered in LicenseRegistry).
+    - assets/fonts/OFL.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -93,6 +98,16 @@ flutter:
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
+
+  # Zen Maru Gothic (SIL OFL 1.1, google/fonts ofl/zenmarugothic). Bundled so
+  # nothing is fetched at runtime; licence text in assets/fonts/OFL.txt.
+  fonts:
+    - family: ZenMaruGothic
+      fonts:
+        - asset: assets/fonts/ZenMaruGothic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/ZenMaruGothic-Bold.ttf
+          weight: 700
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a

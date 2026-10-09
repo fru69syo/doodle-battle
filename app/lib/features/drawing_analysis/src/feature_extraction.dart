@@ -72,9 +72,11 @@ DrawingFeatures extractFeatures(
   final es = edgeStats(edges, dilate(sil, 2));
   final contour = _contourStats(seg.inkLabels, ink);
   // Clean edges (coherence), little outline jitter, few wobbles.
-  final smoothness = clamp01(0.5 * ramp(es.meanCoherence, 0.55, 0.85) +
-      0.2 / (1 + math.pow(contour.roughness / 0.45, 2)) +
-      0.3 * (1 - ramp(contour.wobble, 0.4, 2.5)));
+  final smoothness = clamp01(
+    0.5 * ramp(es.meanCoherence, 0.55, 0.85) +
+        0.2 / (1 + math.pow(contour.roughness / 0.45, 2)) +
+        0.3 * (1 - ramp(contour.wobble, 0.4, 2.5)),
+  );
   final symmetry = 0.5 * _mirrorIoU(sil) + 0.5 * _mirrorIoU(dilate(ink, 2));
   final inkDt = chamferDistance(ink, target: 0);
   final thickness = _lineThickness(ink, inkDt);
@@ -86,17 +88,20 @@ DrawingFeatures extractFeatures(
   final smallParts = seg.inkLabels.components
       .where((c) => c.area < 0.004 * n)
       .length;
-  final detail = clamp01(0.75 * ramp(fineLines, 4, 14) +
-      0.25 * ramp(smallParts.toDouble(), 3, 15));
+  final detail = clamp01(
+    0.75 * ramp(fineLines, 4, 14) + 0.25 * ramp(smallParts.toDouble(), 3, 15),
+  );
 
   final silCov = silArea / n;
   // Photographs / digital art: no paper, full frame, smooth gradients, many
   // colours spread continuously over the hue circle.
-  final photo = clamp01(0.35 * (1 - paperLike) +
-      0.20 * ramp(silCov, 0.5, 0.9) +
-      0.20 * ramp(shading.gradientShare, 0.1, 0.4) +
-      0.10 * ramp(colour.uniqueColors.toDouble(), 150, 500) +
-      0.15 * ramp(1 - colour.peakedness, 0.1, 0.4));
+  final photo = clamp01(
+    0.35 * (1 - paperLike) +
+        0.20 * ramp(silCov, 0.5, 0.9) +
+        0.20 * ramp(shading.gradientShare, 0.1, 0.4) +
+        0.10 * ramp(colour.uniqueColors.toDouble(), 150, 500) +
+        0.15 * ramp(1 - colour.peakedness, 0.1, 0.4),
+  );
 
   return DrawingFeatures(
     inkCoverage: inkArea / n,
@@ -208,7 +213,8 @@ _ColourStats _colourStats(RgbImage image, Mask ink, int inkArea) {
   // to its local maximum.
   final smooth = Float64List(_hueBins);
   for (var k = 0; k < _hueBins; k++) {
-    smooth[k] = (hueHist[(k + _hueBins - 1) % _hueBins] +
+    smooth[k] =
+        (hueHist[(k + _hueBins - 1) % _hueBins] +
             2 * hueHist[k] +
             hueHist[(k + 1) % _hueBins]) /
         4;
@@ -231,18 +237,20 @@ _ColourStats _colourStats(RgbImage image, Mask ink, int inkArea) {
   for (var k = 0; k < _hueBins; k++) {
     clusterMass[peakOf[k]] += hueHist[k];
   }
-  final peaks = [
-    for (var k = 0; k < _hueBins; k++)
-      if (clusterMass[k] > 0) k,
-  ]..sort((a, b) {
-      final c = clusterMass[b].compareTo(clusterMass[a]);
-      return c != 0 ? c : a.compareTo(b);
-    });
+  final peaks =
+      [
+        for (var k = 0; k < _hueBins; k++)
+          if (clusterMass[k] > 0) k,
+      ]..sort((a, b) {
+        final c = clusterMass[b].compareTo(clusterMass[a]);
+        return c != 0 ? c : a.compareTo(b);
+      });
   var colorCount = 0;
   var balanced = 0;
   final nearPeak = Uint8List(_hueBins);
   for (final p in peaks) {
-    if (clusterMass[p] >= 0.03 * inkArea && clusterMass[p] >= 0.04 * chromatic) {
+    if (clusterMass[p] >= 0.03 * inkArea &&
+        clusterMass[p] >= 0.04 * chromatic) {
       colorCount++;
       for (var k = -1; k <= 1; k++) {
         nearPeak[(p + k + _hueBins) % _hueBins] = 1;
@@ -281,8 +289,8 @@ _ColourStats _colourStats(RgbImage image, Mask ink, int inkArea) {
   for (var k = 0; k < _hueBins; k++) {
     if (nearPeak[k] == 1) peaked += hueHist[k];
   }
-  final achromatic = (black >= 0.05 * inkArea ? 1 : 0) +
-      (grey >= 0.05 * inkArea ? 1 : 0);
+  final achromatic =
+      (black >= 0.05 * inkArea ? 1 : 0) + (grey >= 0.05 * inkArea ? 1 : 0);
   return _ColourStats(
     colorCount: colorCount,
     achromaticCount: achromatic,
@@ -365,14 +373,20 @@ _Shading _shading(Mask ink, Uint8List lum, Int16List cluster) {
   }
   final meanLevels = mass == 0 ? 1.0 : weighted / mass;
   final gradientShare = gentle / total;
-  final level = clamp01(0.5 * ramp(meanLevels, 2, 6) +
-      0.5 * ramp(gradientShare, 0.05, 0.35));
+  final level = clamp01(
+    0.5 * ramp(meanLevels, 2, 6) + 0.5 * ramp(gradientShare, 0.05, 0.35),
+  );
   return _Shading(level, gradientShare);
 }
 
 class _Shape {
-  _Shape(this.spikiness, this.defects, this.roundness, this.solidity,
-      this.elongation);
+  _Shape(
+    this.spikiness,
+    this.defects,
+    this.roundness,
+    this.solidity,
+    this.elongation,
+  );
   final double spikiness;
   final int defects;
   final double roundness;
@@ -388,8 +402,14 @@ _Shape _shapeStats(Mask sil) {
     if (main == null || c.area > main.area) main = c;
   }
   final comp = main!;
-  final raw = toPoints(traceContour(sil, comp.firstIndex,
-      labels: lab.labels, labelValue: comp.label));
+  final raw = toPoints(
+    traceContour(
+      sil,
+      comp.firstIndex,
+      labels: lab.labels,
+      labelValue: comp.label,
+    ),
+  );
   final contour = smoothClosed(raw, 2);
   final perimeter = math.max(1.0, closedLength(contour));
   final hull = convexHull(raw);
@@ -418,7 +438,9 @@ _Shape _shapeStats(Mask sil) {
     hullIdx.sort();
     for (var k = 0; k < hullIdx.length; k++) {
       final a = hullIdx[k];
-      final b = k + 1 < hullIdx.length ? hullIdx[k + 1] : hullIdx[0] + raw.length;
+      final b = k + 1 < hullIdx.length
+          ? hullIdx[k + 1]
+          : hullIdx[0] + raw.length;
       final pa = raw[a];
       final pb = raw[b % raw.length];
       final seg = pb - pa;
@@ -480,8 +502,14 @@ _Shape _shapeStats(Mask sil) {
   var wobbleLen = 0.0;
   for (final c in labels.components) {
     if (c.area < 30) continue;
-    final raw = toPoints(traceContour(ink, c.firstIndex,
-        labels: labels.labels, labelValue: c.label));
+    final raw = toPoints(
+      traceContour(
+        ink,
+        c.firstIndex,
+        labels: labels.labels,
+        labelValue: c.label,
+      ),
+    );
     if (raw.length < 40) continue;
     final fine = smoothClosed(raw, 2);
     final coarse = smoothClosed(raw, 8);
@@ -507,7 +535,10 @@ _Shape _shapeStats(Mask sil) {
     for (var i = 0; i < m; i++) {
       final a = sm[(i - k + m) % m], p = sm[i], q = sm[(i + k) % m];
       final v1 = p - a, v2 = q - p;
-      final turn = math.atan2(v1.x * v2.y - v1.y * v2.x, v1.x * v2.x + v1.y * v2.y);
+      final turn = math.atan2(
+        v1.x * v2.y - v1.y * v2.x,
+        v1.x * v2.x + v1.y * v2.y,
+      );
       if (turn > tau) {
         if (state == -1) count++;
         state = 1;

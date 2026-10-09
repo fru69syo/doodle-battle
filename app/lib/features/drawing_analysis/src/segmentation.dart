@@ -69,8 +69,9 @@ Segmentation segment(RgbImage image) {
   }
   final mad = _percentile(devHist, 0.5, total: paperCount);
   final noiseFloor = (median + 6 * mad + 8) / 255;
-  final t = math.max(noiseFloor, (otsu / 255).clamp(0.13, 0.32)).clamp(
-      0.13, 0.45);
+  final t = math
+      .max(noiseFloor, (otsu / 255).clamp(0.13, 0.32))
+      .clamp(0.13, 0.45);
   final strong = (t * 255).round();
   final weak = (t * 0.6 * 255).round();
 
@@ -117,8 +118,9 @@ Segmentation segment(RgbImage image) {
       if (math.min(dyEdge, math.min(x, w - 1 - x)) < band) bandCount[lab]++;
     }
   }
-  final ink = labeling.maskOf((c) =>
-      c.area >= minArea && bandCount[c.label] < 0.6 * c.area);
+  final ink = labeling.maskOf(
+    (c) => c.area >= minArea && bandCount[c.label] < 0.6 * c.area,
+  );
   final inkLabels = labelComponents(ink);
 
   final silhouette = fillHoles(close(ink, 3)).or(ink);

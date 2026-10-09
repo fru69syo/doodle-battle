@@ -17,21 +17,25 @@ class Stats {
   int get total => hp + atk + def + spd;
 
   Stats copyWith({int? hp, int? atk, int? def, int? spd}) => Stats(
-        hp: hp ?? this.hp,
-        atk: atk ?? this.atk,
-        def: def ?? this.def,
-        spd: spd ?? this.spd,
-      );
+    hp: hp ?? this.hp,
+    atk: atk ?? this.atk,
+    def: def ?? this.def,
+    spd: spd ?? this.spd,
+  );
 
-  Map<String, Object?> toJson() =>
-      {'hp': hp, 'atk': atk, 'def': def, 'spd': spd};
+  Map<String, Object?> toJson() => {
+    'hp': hp,
+    'atk': atk,
+    'def': def,
+    'spd': spd,
+  };
 
   factory Stats.fromJson(Map<String, Object?> json) => Stats(
-        hp: json['hp']! as int,
-        atk: json['atk']! as int,
-        def: json['def']! as int,
-        spd: json['spd']! as int,
-      );
+    hp: json['hp']! as int,
+    atk: json['atk']! as int,
+    def: json['def']! as int,
+    spd: json['spd']! as int,
+  );
 
   @override
   bool operator ==(Object other) =>

@@ -64,8 +64,14 @@ NormalizedImage normalizeImage(Uint8List bytes) {
   RgbImage hi;
   if (orientedLongest > kHiResSize) {
     final s = kHiResSize / orientedLongest;
-    hi = _areaDownscale(px.raw, px.nc, srcW, srcH,
-        math.max(1, (srcW * s).round()), math.max(1, (srcH * s).round()));
+    hi = _areaDownscale(
+      px.raw,
+      px.nc,
+      srcW,
+      srcH,
+      math.max(1, (srcW * s).round()),
+      math.max(1, (srcH * s).round()),
+    );
   } else {
     hi = _areaDownscale(px.raw, px.nc, srcW, srcH, srcW, srcH);
   }
@@ -124,8 +130,7 @@ NormalizedImage normalizeImage(Uint8List bytes) {
 /// Area-averaging resample of interleaved pixels with [nc] channels to RGB
 /// (alpha composited onto white). With dw == sw and dh == sh it is a plain
 /// format conversion.
-RgbImage _areaDownscale(
-    Uint8List raw, int nc, int sw, int sh, int dw, int dh) {
+RgbImage _areaDownscale(Uint8List raw, int nc, int sw, int sh, int dw, int dh) {
   final xmap = Int32List(sw);
   for (var x = 0; x < sw; x++) {
     xmap[x] = math.min(dw - 1, x * dw ~/ sw);

@@ -95,9 +95,12 @@ Float64List _boxSum(Float64List src, int w, int h, int r) {
 }
 
 /// Mean coherence and the density of coherent edge pixels inside [region].
-({double meanCoherence, int edgePixels, int coherentEdgePixels})
-    edgeStats(EdgeField f, Mask region,
-        {double minMagnitude = 60, double coherentAbove = 0.75}) {
+({double meanCoherence, int edgePixels, int coherentEdgePixels}) edgeStats(
+  EdgeField f,
+  Mask region, {
+  double minMagnitude = 60,
+  double coherentAbove = 0.75,
+}) {
   var sum = 0.0;
   var edges = 0;
   var coherent = 0;

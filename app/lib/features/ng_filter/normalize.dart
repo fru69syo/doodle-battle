@@ -62,8 +62,9 @@ const Map<String, String> _kanjiDigits = {
 String _nfkcLower(String input) => unorm.nfkc(input).toLowerCase();
 
 /// Splits into Unicode scalar values (like JS `Array.from(str)`).
-List<String> _codePoints(String s) =>
-    [for (final r in s.runes) String.fromCharCode(r)];
+List<String> _codePoints(String s) => [
+  for (final r in s.runes) String.fromCharCode(r),
+];
 
 String _katakanaToHiragana(String ch) {
   final cp = ch.runes.first;

@@ -218,8 +218,12 @@ int _dirOf(int dx, int dy) {
 ///
 /// Uses Moore-neighbour tracing with Jacob's stopping criterion and returns
 /// the ordered boundary pixels as a flat list `[x0, y0, x1, y1, ...]`.
-Int32List traceContour(Mask mask, int startIndex, {int? labelValue,
-    Int32List? labels}) {
+Int32List traceContour(
+  Mask mask,
+  int startIndex, {
+  int? labelValue,
+  Int32List? labels,
+}) {
   final w = mask.width;
   final h = mask.height;
   bool inside(int x, int y) {
@@ -275,9 +279,9 @@ Int32List traceContour(Mask mask, int startIndex, {int? labelValue,
 
 /// Converts a flat `[x0, y0, ...]` list into points.
 List<Pt> toPoints(Int32List flat) => [
-      for (var i = 0; i + 1 < flat.length; i += 2)
-        Pt(flat[i].toDouble(), flat[i + 1].toDouble()),
-    ];
+  for (var i = 0; i + 1 < flat.length; i += 2)
+    Pt(flat[i].toDouble(), flat[i + 1].toDouble()),
+];
 
 /// Circular moving average of a closed polyline (window = 2*[radius]+1).
 List<Pt> smoothClosed(List<Pt> pts, int radius) {

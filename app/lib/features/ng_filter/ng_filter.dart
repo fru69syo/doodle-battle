@@ -45,10 +45,10 @@ class NgFilter {
     required Map<String, NgCategory> exact,
     required List<(String, NgCategory, RegExp)> patterns,
     required Set<String> allowExact,
-  }) : _substring = substring,
-       _exact = exact,
-       _patterns = patterns,
-       _allowExact = allowExact;
+  }) : _substring = substring, // ignore: prefer_initializing_formals
+       _exact = exact, // ignore: prefer_initializing_formals
+       _patterns = patterns, // ignore: prefer_initializing_formals
+       _allowExact = allowExact; // ignore: prefer_initializing_formals
 
   /// Compiles a parsed `ng_words.json`.
   factory NgFilter.fromJson(Map<String, Object?> json) {
