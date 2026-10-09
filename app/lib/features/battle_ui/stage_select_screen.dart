@@ -112,10 +112,13 @@ class _StageTile extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Row(
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        'おすすめ Lv${stage.recommendedLevel}  ${aiTierLabel(stage.aiTier)}  ',
+                        'おすすめ Lv${stage.recommendedLevel}  ${aiTierLabel(stage.aiTier)}',
                         style: const TextStyle(fontSize: 16),
                       ),
                       if (unlocked) ElementBadge(cpu.element),

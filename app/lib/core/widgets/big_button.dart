@@ -34,10 +34,10 @@ class BigActionButton extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(32),
           onTap: onPressed,
-          child: SizedBox(
-            height: height,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: height),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Row(
                 children: [
                   Icon(icon, size: 44, color: Colors.white),

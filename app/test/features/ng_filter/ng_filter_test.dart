@@ -35,8 +35,11 @@ void main() {
       final input = v['input']! as String;
       test('${v['note']}: "$input"', () {
         expect(normalizeForMatch(input), v['match'], reason: 'match form');
-        expect(normalizeForPatterns(input), v['pattern'],
-            reason: 'pattern form');
+        expect(
+          normalizeForPatterns(input),
+          v['pattern'],
+          reason: 'pattern form',
+        );
       });
     }
   });

@@ -102,7 +102,8 @@ class _BattleResultScreenState extends ConsumerState<BattleResultScreen> {
 
   List<Widget> _buttons(BuildContext context, Character? c) {
     final stage = _o.stage;
-    final lastStage = ref.read(battleSpecProvider).value?.cpu.stages.length ?? 30;
+    final lastStage =
+        ref.read(battleSpecProvider).value?.cpu.stages.length ?? 30;
     return [
       if (stage != null && _o.won && stage < lastStage && c != null)
         FilledButton(

@@ -103,10 +103,12 @@ class _Row extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
-                          'Lv${c.level}  ',
+                          'Lv${c.level}',
                           style: const TextStyle(fontSize: 18),
                         ),
                         ElementBadge(c.element),

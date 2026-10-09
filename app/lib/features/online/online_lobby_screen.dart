@@ -75,9 +75,12 @@ class _OnlineQueueScreenState extends ConsumerState<OnlineQueueScreen> {
   bool _inQueue = false;
   bool _navigated = false;
 
+  late final BackendApi _api;
+
   @override
   void initState() {
     super.initState();
+    _api = ref.read(backendApiProvider);
     _register();
   }
 
@@ -85,7 +88,7 @@ class _OnlineQueueScreenState extends ConsumerState<OnlineQueueScreen> {
   void dispose() {
     _heartbeat?.cancel();
     if (_inQueue && !_navigated) {
-      unawaited(ref.read(backendApiProvider).leaveQueue().catchError((_) {}));
+      unawaited(_api.leaveQueue().catchError((Object _) {}));
     }
     super.dispose();
   }
@@ -124,7 +127,7 @@ class _OnlineQueueScreenState extends ConsumerState<OnlineQueueScreen> {
 
   Future<void> _beat() async {
     try {
-      final s = await ref.read(backendApiProvider).joinQueue(_c.onlineId!);
+      final s = await _api.joinQueue(_c.onlineId!);
       if (!mounted || _navigated) return;
       if (s.state == QueueState.matched && s.matchId != null) {
         _navigated = true;

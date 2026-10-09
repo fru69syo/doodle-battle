@@ -22,12 +22,25 @@ class ParentSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
-  late final ParentSession _session = ref.read(parentSessionProvider.notifier);
+  late final ParentSession _session;
+
+  @override
+  void initState() {
+    super.initState();
+    _session = ref.read(parentSessionProvider.notifier);
+  }
 
   @override
   void dispose() {
     // Leaving the area locks it again (next visit needs the gate).
-    Future.microtask(_session.lock);
+    final session = _session;
+    Future.microtask(() {
+      try {
+        session.lock();
+      } on Object {
+        // container already disposed (app shutting down)
+      }
+    });
     super.dispose();
   }
 
