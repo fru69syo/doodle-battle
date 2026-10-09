@@ -19,13 +19,25 @@ void main() {
     final wide = img.Image(width: 500, height: 80, numChannels: 4);
     img.fill(wide, color: img.ColorRgba8(30, 140, 230, 255));
     final cases = {
-      'lv1_fire': (png, ArEffects.forStage(EvolutionStage.normal, ElementType.fire)),
-      'lv10_water': (png, ArEffects.forStage(EvolutionStage.kagayaki, ElementType.water)),
-      'lv20_rainbow': (png, ArEffects.forStage(EvolutionStage.densetsu, ElementType.rainbow)),
+      'lv1_fire': (
+        png,
+        ArEffects.forStage(EvolutionStage.normal, ElementType.fire),
+      ),
+      'lv10_water': (
+        png,
+        ArEffects.forStage(EvolutionStage.kagayaki, ElementType.water),
+      ),
+      'lv20_rainbow': (
+        png,
+        ArEffects.forStage(EvolutionStage.densetsu, ElementType.rainbow),
+      ),
       'wide_lv1': (img.encodePng(wide), ArEffects.none),
     };
     for (final MapEntry(key: name, value: (bytes, effects)) in cases.entries) {
-      final r = buildStandeeGlb(bytes, options: StandeeGlbOptions(effects: effects));
+      final r = buildStandeeGlb(
+        bytes,
+        options: StandeeGlbOptions(effects: effects),
+      );
       File('${out.path}/$name.glb').writeAsBytesSync(r.glb);
     }
   }, skip: dir == null ? 'set AR_GLB_EXPORT_DIR to export' : false);

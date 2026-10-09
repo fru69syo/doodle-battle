@@ -207,7 +207,10 @@ class _ArViewScreenState extends State<ArViewScreen> {
       );
     } else if (_mode == ArMode.needCamera) {
       // The user may have granted the permission in the system settings.
-      _permission = await _deps.platform.requestCameraPermission();
+      // Only check here: the permission dialog itself pauses/resumes the
+      // activity, so requesting again would loop.
+      final now = await _deps.platform.checkCameraPermission();
+      if (now == CameraPermission.granted) _permission = now;
       if (mounted && _permission == CameraPermission.granted) {
         setState(
           () => _mode = decideArMode(

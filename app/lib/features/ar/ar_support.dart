@@ -95,6 +95,21 @@ class ArPlatform {
     }
   }
 
+  /// Current CAMERA permission without showing any dialog.
+  Future<CameraPermission> checkCameraPermission() async {
+    if (!_isAndroid) return CameraPermission.granted;
+    try {
+      final r = await arChannel.invokeMethod<String>('cameraPermission');
+      return r == 'granted'
+          ? CameraPermission.granted
+          : CameraPermission.denied;
+    } on PlatformException {
+      return CameraPermission.denied;
+    } on MissingPluginException {
+      return CameraPermission.denied;
+    }
+  }
+
   /// Requests the CAMERA runtime permission (shows the system dialog when
   /// needed).
   Future<CameraPermission> requestCameraPermission() async {

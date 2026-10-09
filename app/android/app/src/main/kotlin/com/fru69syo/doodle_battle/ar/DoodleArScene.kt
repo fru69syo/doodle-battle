@@ -23,6 +23,7 @@ import io.github.sceneview.math.Scale
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
+import kotlinx.coroutines.delay
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -115,6 +116,8 @@ class ArSceneState(
     }
 }
 
+private const val MODEL_LOAD_TIMEOUT_MS = 15_000L
+
 @Composable
 fun DoodleArScene(state: ArSceneState) {
     val engine = rememberEngine()
@@ -155,7 +158,14 @@ fun DoodleArScene(state: ArSceneState) {
             null
         }
         LaunchedEffect(instance) {
-            if (instance != null) state.onModelLoaded(true)
+            if (instance != null) {
+                state.onModelLoaded(true)
+            } else {
+                // rememberModelInstance yields null on failure without an
+                // error callback: give up after a while so Dart can fall back.
+                delay(MODEL_LOAD_TIMEOUT_MS)
+                state.onModelLoaded(false)
+            }
         }
         val anchor = state.firstAnchor
         if (anchor != null && instance != null) {

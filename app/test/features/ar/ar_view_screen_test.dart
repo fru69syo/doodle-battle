@@ -44,6 +44,9 @@ class FakePlatform extends ArPlatform {
   }
 
   @override
+  Future<CameraPermission> checkCameraPermission() async => permission;
+
+  @override
   Future<bool> openAppSettings() async => true;
 }
 
@@ -133,12 +136,26 @@ void main() {
     await tester.pump(const Duration(seconds: 6));
   });
 
-  testWidgets('permanently denied → settings button', (tester) async {
-    await pumpScreen(
-      tester,
-      FakePlatform(permission: CameraPermission.permanentlyDenied),
+  testWidgets('permanently denied → settings button; resume re-checks', (
+    tester,
+  ) async {
+    final platform = FakePlatform(
+      permission: CameraPermission.permanentlyDenied,
     );
+    await pumpScreen(tester, platform);
     expect(find.text(ArStrings.openSettings), findsOneWidget);
+    final requests = platform.permissionRequests;
+
+    // Back from the system settings with the permission granted.
+    platform.permission = CameraPermission.granted;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(SimpleArStage), findsOneWidget);
+    // Resuming must not trigger another permission dialog.
+    expect(platform.permissionRequests, requests);
+    await tester.pump(const Duration(seconds: 6));
   });
 
   testWidgets('ARCore missing → offer install; declining falls back', (
