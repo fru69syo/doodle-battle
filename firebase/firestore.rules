@@ -1,0 +1,84 @@
+rules_version = '2';
+
+// Deny by default. Clients may only:
+//  - create/update their own users/{uid} consent fields (validated below),
+//  - read their own profile, queue entry and snapshots,
+//  - read matches (and turn logs) they play in.
+// Everything else is written by Cloud Functions (Admin SDK bypasses rules).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // consent: { cloudJudge: bool, online: bool, policyVersion: int }
+    function validConsent(c) {
+      return c is map
+        && c.keys().hasAll(['cloudJudge', 'online', 'policyVersion'])
+        && c.keys().hasOnly(['cloudJudge', 'online', 'policyVersion'])
+        && c.cloudJudge is bool
+        && c.online is bool
+        && c.policyVersion is int
+        && c.policyVersion >= 1
+        && c.policyVersion <= 1000;
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid);
+
+      allow create: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['consent', 'consentUpdatedAt', 'createdAt'])
+        && validConsent(request.resource.data.consent)
+        && request.resource.data.consentUpdatedAt == request.time
+        && request.resource.data.createdAt == request.time;
+
+      // Only consent may change; server-managed fields (displayName, rating,
+      // onlineStats, activeMatchId) are untouchable from the client.
+      allow update: if isSelf(uid)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['consent', 'consentUpdatedAt'])
+        && validConsent(request.resource.data.consent)
+        && request.resource.data.consentUpdatedAt == request.time;
+
+      // Account deletion goes through the deleteMyData function.
+      allow delete: if false;
+    }
+
+    match /snapshots/{snapshotId} {
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /queue/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if false;
+    }
+
+    match /matches/{matchId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.playerUids;
+      allow write: if false;
+
+      match /turns/{turn} {
+        allow read: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.playerUids;
+        allow write: if false;
+      }
+
+      // Pending actions stay hidden until the turn is resolved.
+      match /private/{doc} {
+        allow read, write: if false;
+      }
+    }
+
+    // reports, moderationQueue, moderationLog, rateLimits and anything else:
+    // server only.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

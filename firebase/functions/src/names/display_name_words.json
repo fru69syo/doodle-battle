@@ -1,0 +1,248 @@
+{
+  "version": 1,
+  "description": "Preset vocabulary for online display names (adjective + noun). Players can only choose ids from these lists; no free text is ever accepted. The app may bundle a copy of this file to show choices; the server stores the composed text.",
+  "adjectives": [
+    {
+      "id": "a01",
+      "text": "あおい"
+    },
+    {
+      "id": "a02",
+      "text": "あかい"
+    },
+    {
+      "id": "a03",
+      "text": "きいろい"
+    },
+    {
+      "id": "a04",
+      "text": "みどりの"
+    },
+    {
+      "id": "a05",
+      "text": "げんきな"
+    },
+    {
+      "id": "a06",
+      "text": "ふわふわ"
+    },
+    {
+      "id": "a07",
+      "text": "きらきら"
+    },
+    {
+      "id": "a08",
+      "text": "ちいさな"
+    },
+    {
+      "id": "a09",
+      "text": "おおきな"
+    },
+    {
+      "id": "a10",
+      "text": "はやい"
+    },
+    {
+      "id": "a11",
+      "text": "つよい"
+    },
+    {
+      "id": "a12",
+      "text": "やさしい"
+    },
+    {
+      "id": "a13",
+      "text": "ねむい"
+    },
+    {
+      "id": "a14",
+      "text": "にこにこ"
+    },
+    {
+      "id": "a15",
+      "text": "ぴかぴか"
+    },
+    {
+      "id": "a16",
+      "text": "もこもこ"
+    },
+    {
+      "id": "a17",
+      "text": "ゆかいな"
+    },
+    {
+      "id": "a18",
+      "text": "のんびり"
+    },
+    {
+      "id": "a19",
+      "text": "すばやい"
+    },
+    {
+      "id": "a20",
+      "text": "まんまるな"
+    },
+    {
+      "id": "a21",
+      "text": "ぽかぽか"
+    },
+    {
+      "id": "a22",
+      "text": "しずかな"
+    },
+    {
+      "id": "a23",
+      "text": "ふしぎな"
+    },
+    {
+      "id": "a24",
+      "text": "かがやく"
+    },
+    {
+      "id": "a25",
+      "text": "わくわく"
+    },
+    {
+      "id": "a26",
+      "text": "ほかほか"
+    },
+    {
+      "id": "a27",
+      "text": "そよかぜの"
+    },
+    {
+      "id": "a28",
+      "text": "ほしぞらの"
+    },
+    {
+      "id": "a29",
+      "text": "にじいろの"
+    },
+    {
+      "id": "a30",
+      "text": "ゆうきある"
+    }
+  ],
+  "nouns": [
+    {
+      "id": "n01",
+      "text": "ドラゴン"
+    },
+    {
+      "id": "n02",
+      "text": "ネコ"
+    },
+    {
+      "id": "n03",
+      "text": "イヌ"
+    },
+    {
+      "id": "n04",
+      "text": "ウサギ"
+    },
+    {
+      "id": "n05",
+      "text": "パンダ"
+    },
+    {
+      "id": "n06",
+      "text": "ペンギン"
+    },
+    {
+      "id": "n07",
+      "text": "ロボット"
+    },
+    {
+      "id": "n08",
+      "text": "カッパ"
+    },
+    {
+      "id": "n09",
+      "text": "クマ"
+    },
+    {
+      "id": "n10",
+      "text": "ライオン"
+    },
+    {
+      "id": "n11",
+      "text": "キツネ"
+    },
+    {
+      "id": "n12",
+      "text": "タヌキ"
+    },
+    {
+      "id": "n13",
+      "text": "イルカ"
+    },
+    {
+      "id": "n14",
+      "text": "クジラ"
+    },
+    {
+      "id": "n15",
+      "text": "ヒヨコ"
+    },
+    {
+      "id": "n16",
+      "text": "カメ"
+    },
+    {
+      "id": "n17",
+      "text": "ゾウ"
+    },
+    {
+      "id": "n18",
+      "text": "キリン"
+    },
+    {
+      "id": "n19",
+      "text": "ユニコーン"
+    },
+    {
+      "id": "n20",
+      "text": "ハムスター"
+    },
+    {
+      "id": "n21",
+      "text": "フクロウ"
+    },
+    {
+      "id": "n22",
+      "text": "リス"
+    },
+    {
+      "id": "n23",
+      "text": "コアラ"
+    },
+    {
+      "id": "n24",
+      "text": "ラッコ"
+    },
+    {
+      "id": "n25",
+      "text": "カエル"
+    },
+    {
+      "id": "n26",
+      "text": "トラ"
+    },
+    {
+      "id": "n27",
+      "text": "ヒツジ"
+    },
+    {
+      "id": "n28",
+      "text": "アザラシ"
+    },
+    {
+      "id": "n29",
+      "text": "オバケ"
+    },
+    {
+      "id": "n30",
+      "text": "ワニ"
+    }
+  ]
+}
