@@ -5,7 +5,9 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/app_settings.dart';
 import '../../data/app_state.dart';
+import '../../core/config/app_config.dart';
 import '../parent/consent_toggles.dart';
+import '../parent/policy_links.dart';
 
 /// First-run parent setup (SPEC §2-1): parental gate → explanation and
 /// consents → done. Also shown again when the privacy policy version grows.
@@ -96,6 +98,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             child: ConsentToggles(
               value: consents,
               serverAvailable: serverAvailable,
+              crashReportsAvailable: ref
+                  .watch(crashReporterProvider)
+                  .isAvailable,
               onChanged: (c) => setState(() => _consents = c),
             ),
           ),
@@ -107,6 +112,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           'すべて削除できます。',
           style: TextStyle(fontSize: 14),
         ),
+        const PolicyLinks(pages: [PolicyPage.privacy, PolicyPage.terms]),
         const SizedBox(height: 20),
         FilledButton(
           key: const Key('setup-finish'),

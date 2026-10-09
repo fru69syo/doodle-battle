@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/monetization/shop_section.dart';
+import 'features/monetization/monetization_sync.dart';
 import 'features/parent/play_time.dart';
 
 class DoodleBattleApp extends ConsumerWidget {
@@ -12,7 +12,7 @@ class DoodleBattleApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(entitlementSyncProvider);
+    ref.watch(monetizationSyncProvider);
     return PlayTimeTracker(
       child: MaterialApp.router(
         title: 'らくがきバトル',

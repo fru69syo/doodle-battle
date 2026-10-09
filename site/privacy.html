@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>プライバシーポリシー | らくがきバトル</title>
+<meta name="description" content="子ども向けゲーム「らくがきバトル」のプライバシーポリシー（保護者の方へ）">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><a href="index.html">らくがきバトル</a></header>
+<nav class="pages" aria-label="ページ">
+  <a href="index.html">サポート・よくある質問</a>
+  <a href="privacy.html" aria-current="page">プライバシーポリシー</a>
+  <a href="terms.html">利用規約</a>
+  <a href="delete.html">データの削除</a>
+</nav>
+<main>
+<h1>プライバシーポリシー</h1>
+<p class="meta">アプリ「らくがきバトル」（Android）／提供者: {{DEVELOPER_NAME}}<br>
+制定日: 2026年10月9日（ポリシー版 1）</p>
+
+<div class="box important">
+<p><strong>保護者の方へ（要約）</strong></p>
+<ul>
+  <li>このアプリは<strong>子ども（主に6〜12歳）向け</strong>です。お子さまの氏名・住所・メールアドレス・電話番号・位置情報・連絡先・<strong>広告ID</strong>は集めません。</li>
+  <li>絵の解析は<strong>端末の中</strong>で行います。描いた絵やキャラクターは、ふだんは端末の中だけに保存されます。</li>
+  <li>サーバーを使う機能（AI による絵の判定、オンライン対戦）、広告、アプリ内課金、不具合情報の送信は、<strong>すべて初期設定でオフ</strong>です。保護者の方が「おうちのひと」画面（保護者向けの確認つき）で許可した場合だけ使われます。</li>
+  <li>許可はいつでも取り消せます。「おうちのひと」→「すべてのデータを削除」で、端末とサーバーのデータを削除できます（<a href="delete.html">データの削除</a>）。</li>
+</ul>
+</div>
+
+<h2 id="children">1. お子さまのプライバシーへの配慮</h2>
+<ul>
+  <li>Google Play の「ファミリー」ポリシーに沿って作っています。対象年齢は 6〜12 歳で、配信は日本国内のみです。</li>
+  <li>保護者向けの設定や購入、外部のウェブページを開く操作の前には、<strong>保護者ゲート</strong>（3秒の長押しと、2けた×1けたのかけ算）を表示します。</li>
+  <li>ユーザー同士のチャットはありません。オンライン対戦でほかのプレイヤーに表示されるのは、サーバーで審査を通った絵・キャラクター名と、用意された言葉の組み合わせだけの表示名（例:「あおい ドラゴン」）です。自由に入力した文字がほかの人に表示されることはありません。</li>
+  <li>ユーザー登録（ID・パスワードの作成）はありません。サーバーを使う機能を許可したときだけ、個人を特定しない<strong>匿名の ID</strong> が作られます。</li>
+  <li>広告は、許可された場合にだけ、子ども向けの設定（児童向けとしての扱い、レーティング G、パーソナライズしない）で表示します。広告 ID は利用しません。</li>
+</ul>
+
+<h2 id="data">2. 取得する情報と利用目的</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>情報</th><th>いつ</th><th>目的</th><th>送り先・保存場所</th></tr></thead>
+<tbody>
+<tr>
+  <td>描いた絵、キャラクター（名前・ステータスなど）、設定、進み具合</td>
+  <td>常に</td>
+  <td>ゲームの提供</td>
+  <td><strong>端末の中だけ</strong>（送信しません）</td>
+</tr>
+<tr>
+  <td>匿名の ID（Firebase 匿名認証）と、不正なアプリからの接続を防ぐための端末の正当性確認（Firebase App Check / Play Integrity）</td>
+  <td>保護者が「AI による絵の判定」または「オンライン対戦」を許可したとき</td>
+  <td>サーバー機能の提供、不正防止・セキュリティ</td>
+  <td>Google（Firebase、東京リージョン）</td>
+</tr>
+<tr>
+  <td>切り抜いた絵の画像（AI による絵の判定）</td>
+  <td>保護者が「AI による絵の判定」を許可したとき、キャラクターを作るたび</td>
+  <td>名前の候補・わざの名前・じょうずさの判定</td>
+  <td>Google（Cloud Functions）経由で Anthropic（AI「Claude」）が処理します。<strong>当方のサーバーには保存しません</strong>（処理後すぐ破棄）。</td>
+</tr>
+<tr>
+  <td>オンラインに登録したキャラクターの絵・名前・わざの名前・ステータス・レベル、絵の特徴量、表示名、対戦の記録（行動・勝敗・レート）、通報（選択式の理由）</td>
+  <td>保護者が「オンライン対戦」を許可し、お子さまがキャラクターを登録したとき</td>
+  <td>オンライン対戦の提供（審査を通った絵と名前は対戦相手に表示されます）、不適切な投稿の防止</td>
+  <td>Google（Firebase: Firestore・Cloud Storage、東京リージョン）。登録時の審査で Anthropic（AI）が絵と名前を処理します。</td>
+</tr>
+<tr>
+  <td>クラッシュログ・診断情報（端末の機種、OS のバージョン、エラーの内容、アプリの状態、Firebase のインストール ID）</td>
+  <td>保護者が「ふぐあいの じょうほうを おくる」をオンにしたときだけ</td>
+  <td>不具合の調査と修正</td>
+  <td>Google（Firebase Crashlytics）。絵や名前は送りません。</td>
+</tr>
+<tr>
+  <td>広告の表示に必要な情報（IP アドレス〔おおよその地域の推定に使われることがあります〕、広告の表示・タップなどの操作、診断情報、アプリセット ID などの端末の識別子）</td>
+  <td>保護者が「広告の視聴」を許可し、お子さまが動画を見ることを選んだとき</td>
+  <td>広告の配信・効果測定・不正防止（Google による）</td>
+  <td>Google（AdMob）。児童向けの扱い・パーソナライズなしで要求し、<strong>広告 ID は利用しません</strong>。</td>
+</tr>
+<tr>
+  <td>購入の状態（どの商品を持っているか）</td>
+  <td>保護者が「アプリ内課金」を許可して購入したとき</td>
+  <td>購入した機能の提供</td>
+  <td>支払いは Google Play が処理します。当方は支払い情報（カード番号など）を受け取りません。購入の状態は端末に保存します（当方のサーバーには送りません）。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>上記以外の情報（氏名、住所、メールアドレス、電話番号、正確な位置情報、連絡先、写真フォルダの中身、マイクの音声、広告 ID など）は取得しません。カメラは、紙に描いた絵の撮影と AR のためだけに使い、撮影した写真は端末の中で処理します。</p>
+
+<h2 id="processors">3. 外部の事業者への委託と、外国にある事業者への提供</h2>
+<p>上記の処理の一部を、次の事業者に委託しています。これらの事業者は当方の指示に従って処理を行うサービス提供者です。</p>
+<ul>
+  <li><strong>Google LLC（米国）</strong>: Firebase（匿名認証、Cloud Firestore、Cloud Functions、Cloud Storage、App Check、Crashlytics）、Google Play（配信・決済）、Google AdMob（広告）。<a href="https://firebase.google.com/support/privacy">Firebase のプライバシーとセキュリティ</a>、<a href="https://policies.google.com/privacy?hl=ja">Google プライバシーポリシー</a>、<a href="https://policies.google.com/technologies/partner-sites?hl=ja">Google のパートナーのサイトやアプリでのデータ利用</a></li>
+  <li><strong>Anthropic, PBC（米国）</strong>: AI「Claude」による絵の判定と、オンライン登録時の審査。Anthropic の方針では、API で受け取った入力と出力は Anthropic のモデルの学習には使われず、原則として 30 日以内に削除されます（<a href="https://privacy.claude.com/en/articles/7996866">Anthropic のデータ保持について</a>）。</li>
+</ul>
+<p>これらの事業者は米国の事業者で、情報が米国その他の国で処理されることがあります。米国には日本と同等の個人情報保護の制度はありませんが、各事業者は自社のプライバシーポリシーと契約に基づいて情報を保護しています。保護者の方には、各機能を許可していただく際に、このことに同意していただきます。</p>
+<p>法令に基づく場合を除き、これら以外の第三者に情報を提供・販売することはありません。</p>
+
+<h2 id="retention">4. 保存期間</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>情報</th><th>保存期間</th></tr></thead>
+<tbody>
+<tr><td>端末の中のデータ</td><td>アプリを削除するか、「すべてのデータを削除」を行うまで</td></tr>
+<tr><td>AI による絵の判定に送った画像</td><td>当方では保存しません（処理が終わったら破棄）。Anthropic 側は上記の方針に従います。</td></tr>
+<tr><td>オンライン登録したキャラクター、表示名、対戦・通報の記録、匿名の ID</td><td>「すべてのデータを削除」またはウェブからの削除依頼まで。オンライン対戦の許可を取り消すと、登録したキャラクターはすぐに非公開になります。</td></tr>
+<tr><td>クラッシュログ</td><td>Firebase Crashlytics の保存期間（90 日）で自動的に削除。送信をオフにすると、まだ送っていない情報は端末から削除します。</td></tr>
+<tr><td>広告に関する情報</td><td>Google の保存期間に従います。</td></tr>
+<tr><td>購入の記録</td><td>Google Play（保護者の Google アカウント）が管理します。</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="rights">5. 保護者の方ができること</h2>
+<ul>
+  <li><strong>許可の変更・取り消し</strong>: 「おうちのひと」画面で、いつでも各機能をオン・オフできます。</li>
+  <li><strong>削除</strong>: 「おうちのひと」→「すべてのデータを削除」で、端末とサーバーのデータを削除できます。アプリを削除してしまった場合は、<a href="delete.html">データの削除</a>のページの方法でご依頼ください。</li>
+  <li><strong>開示・訂正・利用停止などのご請求</strong>: 下記の窓口までご連絡ください。ご本人（保護者）であることを確認したうえで、法令に従って対応します。</li>
+</ul>
+
+<h2 id="security">6. 安全管理</h2>
+<p>通信はすべて暗号化（TLS）しています。サーバーのデータは、本人だけが読める・書き換えはサーバーだけが行える設定にし、不正なアプリからの接続を App Check で防いでいます。AI の利用に必要な鍵はサーバーだけで管理し、アプリには含めていません。</p>
+
+<h2 id="changes">7. このポリシーの変更</h2>
+<p>内容を変更する場合はこのページで公表し、重要な変更のときはアプリの中で保護者の方にもう一度確認していただきます。</p>
+
+<h2 id="contact">8. お問い合わせ</h2>
+<p>{{DEVELOPER_NAME}}<br>
+メール: <a href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a><br>
+お問い合わせの際は、わかる場合は「おうちのひと」画面に表示される「サポート ID」をお書き添えください。</p>
+</main>
+<footer>© {{DEVELOPER_NAME}} — このサイトはアクセス解析・広告・Cookie を使っていません。</footer>
+</body>
+</html>

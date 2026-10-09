@@ -15,6 +15,7 @@ class BattleSelectScreen extends ConsumerWidget {
     this.title = 'だれで たたかう？',
     this.onSelect,
     this.filter,
+    this.header,
   });
 
   final String title;
@@ -24,6 +25,9 @@ class BattleSelectScreen extends ConsumerWidget {
 
   /// Characters that may be chosen (others are greyed out with the reason).
   final String? Function(Character c)? filter;
+
+  /// Shown above the list (e.g. the online display name).
+  final Widget? header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,6 +44,7 @@ class BattleSelectScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      ?header,
                       const Text(
                         'まずは えを かいて キャラを つくろう！',
                         style: TextStyle(
@@ -59,6 +64,7 @@ class BattleSelectScreen extends ConsumerWidget {
             : ListView(
                 padding: const EdgeInsets.all(12),
                 children: [
+                  ?header,
                   for (final c in chars.reversed)
                     _Row(c: c, blocked: filter?.call(c), onTap: onSelect),
                 ],

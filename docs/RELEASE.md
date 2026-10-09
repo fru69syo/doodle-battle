@@ -89,7 +89,7 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
    - Firebase コンソール → App Check → Android アプリに **Play Integrity** プロバイダを登録します。
    - 開発用の端末・エミュレータでは**デバッグプロバイダ**を使い、表示されたデバッグトークンを App Check に登録します。
    - Functions はコードで `enforceAppCheck: true` です。Firestore と Storage は、App Check の指標で正規のリクエストがほぼ 100% になってから「適用」にします。
-8. Crashlytics を有効にします（UI チームが SDK を組み込んだあと）。
+8. Firebase コンソール → Crashlytics を有効にします。SDK は組み込み済みで、**保護者が「ふぐあいの じょうほうを おくる」をオンにした端末からだけ**レポートが届きます（初期値オフ。docs/COMPLIANCE.md §4）。Crashlytics の Gradle プラグインは使いません（google-services.json は不要のまま）。
 
 ### 1.6 Anthropic の API キーとモデル（30 分）
 1. Anthropic Console で組織（または専用のワークスペース）を作り、**API キー**を発行します。**月の利用上限**を設定し、利用通知を有効にします。
@@ -122,8 +122,9 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
 3. AdMob の設定:
    - ブロックの管理 → 広告コンテンツの最大レーティング **G**、センシティブなカテゴリをすべてブロック。
    - コードで `tagForChildDirectedTreatment = true`、`maxAdContentRating = G`、パーソナライズしない（Compliance チーム）。
-4. **アプリ ID**（`ca-app-pub-...~...`）は AndroidManifest の meta-data、**広告ユニット ID** は Dart の設定に入れます（秘密情報ではありません。開発中は Google のテスト ID を使い、`check_release.sh` はテスト ID のままだと警告します）。
-5. **app-ads.txt**: Play に登録した「ウェブサイト」の**ドメインの直下**に置く必要があります。`https://fru69syo.github.io/doodle-battle/` で登録した場合、置き場所は `https://fru69syo.github.io/app-ads.txt` です（§1.10 のユーザーサイト用リポジトリに置く）。
+4. **アプリ ID**（`ca-app-pub-...~...`）と**リワード広告ユニット ID**（`ca-app-pub-.../...`）を、環境 `play-release` の secret `ADMOB_APP_ID`・`ADMOB_REWARDED_UNIT_ID` に入れます（§1.9）。アプリ ID は Gradle（`ADMOB_APP_ID` の Gradle プロパティか環境変数）→ マニフェストの meta-data、ユニット ID は `--dart-define=ADMOB_REWARDED_UNIT_ID` で入ります。何も設定しないビルド（開発・CI）は Google の**テスト ID** になり、release.yml は secret が無い・テスト用のユニットだと失敗し、`check_release.sh --require-real-admob` もテストのアプリ ID を拒否します。手元で本番の ID を試すとき: `ADMOB_APP_ID=ca-app-pub-...~... flutter build appbundle --release --dart-define=ADMOB_REWARDED_UNIT_ID=ca-app-pub-.../...`。
+5. **app-ads.txt**: Play に登録した「ウェブサイト」の**ドメインの直下**に置く必要があります。`https://fru69syo.github.io/doodle-battle/` で登録した場合、置き場所は `https://fru69syo.github.io/app-ads.txt` です（§1.10 のユーザーサイト用リポジトリに置く。中身は `site/app-ads.txt`、pub ID は `scripts/build_site.py` が入れる）。
+6. 広告の仕様（子ども向けの設定、1 日 3 回、許可までは SDK を初期化しない）は docs/COMPLIANCE.md §2。
 
 ### 1.9 GitHub の設定（30 分）
 1. リポジトリ `fru69syo/doodle-battle`（private）を作り、push します。
@@ -138,6 +139,10 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
 | | secret | `PLAY_SERVICE_ACCOUNT_JSON` | §1.4 の JSON の中身 |
 | | secret | `FIREBASE_OPTIONS_DART_B64` | §1.5 の `firebase_options.dart` の base64 |
 | | secret | `GOOGLE_SERVICES_JSON_B64` | §1.5 の `google-services.json` の base64 |
+| | secret | `ADMOB_APP_ID` | AdMob のアプリ ID `ca-app-pub-XXXXXXXXXXXXXXXX~NNNNNNNNNN`（§1.8）。**必須** |
+| | secret | `ADMOB_REWARDED_UNIT_ID` | リワード広告ユニット ID `ca-app-pub-XXXXXXXXXXXXXXXX/NNNNNNNNNN`。**必須** |
+| | variable（任意） | `POLICY_BASE_URL` | ポリシーのページの場所を既定（`https://fru69syo.github.io/doodle-battle/`）から変えるときだけ。`https://…/` の形 |
+| リポジトリ | variable | `DEVELOPER_NAME`・`SUPPORT_EMAIL`・`ADMOB_PUBLISHER_ID`・`PAGES_ENABLED` | ポリシーのサイト（`pages.yml`、§1.10）。この 3 つの値はページに入れて公開される |
 | `firebase-production` | secret | `FIREBASE_SERVICE_ACCOUNT_JSON` | §1.7 の JSON の中身 |
 | | variable | `CLAUDE_MODEL` | 最新の Haiku 系モデルの ID（§1.6） |
 
@@ -146,24 +151,30 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
 4. Settings → Actions → General: 「Read repository contents permission」を既定に。サードパーティのアクションはすべてコミット SHA で固定しています（更新するときは Dependabot か手動で SHA を差し替える）。
 
 ### 1.10 プライバシーポリシー・サポート・削除ページの公開（1 時間）
-**private リポジトリの GitHub Pages は有料プランでしか使えません。** 公開用に**別の public リポジトリ** `fru69syo/fru69syo.github.io`（ユーザーサイト）を作ることを推奨します。
+ページの中身は `site/`（Compliance チーム。プライバシーポリシー、利用規約、データの削除、サポート・よくある質問、app-ads.txt）。デベロッパー名・問い合わせ先メール・AdMob の pub ID は `{{…}}` のプレースホルダーで、`scripts/build_site.py` が置き換えます（値が無いと失敗）。詳しくは docs/COMPLIANCE.md §5。
+
+**private リポジトリの GitHub Pages は有料プランでしか使えません。** 次のどちらかにします。
+- **A（有料プランがある）**: Settings → Pages → Source「GitHub Actions」。リポジトリ変数 `DEVELOPER_NAME`・`SUPPORT_EMAIL`・`ADMOB_PUBLISHER_ID` と `PAGES_ENABLED=true` を設定すると、`.github/workflows/pages.yml` が `main` の `site/` を公開します。app-ads.txt だけは B のユーザーサイトの直下に置く必要があります。
+- **B（推奨・無料）**: 公開用の**別の public リポジトリ** `fru69syo/fru69syo.github.io`（ユーザーサイト）に、`build_site.py --out` で作ったファイルを置きます:
 
 ```
 fru69syo.github.io/
-  app-ads.txt                    ← AdMob（§1.8）
+  app-ads.txt                    ← AdMob（§1.8）。ドメインの直下
   doodle-battle/index.html       ← サポートページ（連絡先、よくある質問）
-  doodle-battle/privacy.html     ← docs/PRIVACY_POLICY.md（Compliance チーム）を HTML にしたもの
+  doodle-battle/privacy.html     ← プライバシーポリシー
+  doodle-battle/terms.html       ← 利用規約
   doodle-battle/delete.html      ← データ削除ページ（§1.11）
+  doodle-battle/style.css
 ```
-- Settings → Pages → Deploy from a branch（`main` / root）。数分で `https://fru69syo.github.io/doodle-battle/privacy.html` が見られるようになります。
-- ページには子ども向けの広告やトラッキング（Google Analytics など）を**入れません**。
-- プライバシーポリシーを変えたら、アプリの `consent.policyVersion` を上げて保護者に再同意してもらいます（BACKEND §3）。
+- Settings → Pages → Deploy from a branch（`main` / root）。数分で `https://fru69syo.github.io/doodle-battle/privacy.html` が見られるようになります。アプリの既定の URL と同じなので、アプリの設定は不要です。
+- ページには子ども向けの広告やトラッキング（Google Analytics など）を**入れません**（`build_site.py --check` が `<script>` を拒否します）。
+- プライバシーポリシーを変えたら、アプリの `currentPolicyVersion`（`consent.policyVersion`）を上げて保護者に再同意してもらいます（BACKEND §3）。
 
 ### 1.11 アカウント（データ）削除ページ
 Play のデータセーフティに URL を入力します。ページに必ず書くこと:
 - ストアと同じアプリ名「らくがきバトル」とデベロッパー名
 - 削除の手順:
-  1. アプリで: 「おうちのひと」（保護者ゲート）→「データをけす」→ 確認。すぐにサーバーと端末のデータが消えます。
+  1. アプリで: 「おうちのひと」（保護者ゲート）→「すべてのデータを削除」→ 確認。すぐにサーバーと端末のデータが消えます。
   2. アプリを消してしまった場合: 問い合わせ先メールに「らくがきバトルのデータ削除希望」と、わかれば「サポート ID」（おうちのひと画面に表示）を書いて送る。運営が確認して 30 日以内に削除し、完了を返信します。
 - 削除されるデータ: サーバーのプロフィール（表示名・レーティング）、登録したキャラクターの絵・名前・ステータス、対戦と通報の記録、匿名の認証 ID。
 - 削除されない・残るデータ: クラッシュログ（Crashlytics の保持期間 90 日で自動削除）、法令で必要な記録。クラウド判定の画像はもともと保存していません。
@@ -213,6 +224,7 @@ cd .. && scripts/check_release.sh app/build/app/outputs/bundle/release/app-relea
 scripts/check_16kb.sh app/build/app/outputs/bundle/release/app-release.aab
 ```
 2026-10-09 の計測（テスト用の鍵で署名）: ビルド成功、AAB 61.8 MiB（全 ABI 入り）、arm64 端末のダウンロードサイズの見積もり 16.9 MiB。64 bit のネイティブライブラリ 22 個はすべて 16 KB 境界（`zipalign -c -P 16` 合格、ELF の `p_align` ≥ 16384）。
+2026-10-09 の再計測（Compliance: AdMob・Play Billing・Crashlytics・url_launcher を追加、debug 鍵、`--obfuscate` なし）: AAB 88.5 MiB、arm64 のダウンロードサイズの見積もり **26.9 MiB**、64 bit のネイティブライブラリ 24 個すべて 16 KB 境界、`check_release.sh` 合格（警告はテストの AdMob ID と debug 鍵だけ）。増えた分の大部分は Google Mobile Ads SDK（と依存する WebView 関連）。
 
 ---
 
@@ -223,10 +235,12 @@ scripts/check_16kb.sh app/build/app/outputs/bundle/release/app-release.aab
 | `ci.yml` | PR、`main` への push、手動 | 変更があった部分だけ実行: Flutter（format・analyze・test とカバレッジの基準）、TS バトルエンジンのテスト、Functions（lint・build・unit・emulator）、Android の debug APK とリリース用マニフェストの検査、ストア文の文字数、actionlint。`main` への push では release AAB も作って 16 KB を確認 |
 | `release.yml` | タグ `v*` の push、手動 | 署名付き AAB → 検査（署名・権限・targetSdk・16 KB）→ Artifact（AAB と mapping、90 日）→ fastlane で**内部テスト**にアップロード |
 | `functions-deploy.yml` | **手動だけ** | lint と unit テスト → Functions・ルールのデプロイ（push では絶対に動きません） |
+| `pages.yml` | `site/` の変更（PR・`main`）、手動 | `build_site.py --check`。`PAGES_ENABLED=true` なら `main` で GitHub Pages に公開（§1.10） |
 
 - docs だけの変更では、重いジョブ（Flutter・Android・Functions）は動きません。
 - `scripts/check_release.sh` の許可リスト: CAMERA、INTERNET、ACCESS_NETWORK_STATE、WAKE_LOCK・RECEIVE_BOOT_COMPLETED・FOREGROUND_SERVICE（WorkManager などライブラリ由来）、com.android.vending.BILLING、WRITE/READ_EXTERNAL_STORAGE（maxSdkVersion ≤ 28 のときだけ）。AD_ID、位置情報、RECORD_AUDIO、連絡先、READ_MEDIA_*、POST_NOTIFICATIONS、インストールリファラなどは理由つきで失敗します。
-- **広告や課金の SDK を入れたら**、`check_release.sh` を CI で通すために `AD_ID` などを `tools:node="remove"` で外してください（Compliance/UI チーム）。
+- 広告と課金の SDK は組み込み済みで、`AD_ID` と `ACCESS_ADSERVICES_*` は `tools:node="remove"` で外しています（Compliance）。`check_release.sh` は AdMob のアプリ ID の形式・`DELAY_APP_MEASUREMENT_INIT=true`・Crashlytics の初期値オフも検査し、release.yml では `--require-real-admob`（テストのアプリ ID を拒否）を付けます。
+- `scripts/write_firebase_config.sh --require` はプレースホルダー（マーカー `DOODLE_BATTLE_FIREBASE_PLACEHOLDER`、`demo-` のプロジェクト、Android の設定なし）を拒否します。テストは `scripts/test_write_firebase_config.sh`（CI の android ジョブ）。
 
 ---
 
@@ -310,6 +324,10 @@ Play では、一度出した版より**小さい versionCode に戻すことは
 | `The caller does not have permission` | Play Console でサービスアカウントの権限が足りない、または反映待ち（§1.4） |
 | `check_release: forbidden permission com.google.android.gms.permission.AD_ID` | 広告や Firebase のライブラリが権限を足した。マニフェストで `tools:node="remove"` |
 | `firebase_options.dart is missing` | secret `FIREBASE_OPTIONS_DART_B64` が無い（§1.5） |
+| `firebase_options.dart is not a real Firebase config (placeholder marker …)` | secret が無く、リポジトリのプレースホルダーのままビルドしようとした（§1.5） |
+| `Missing secrets in environment play-release: ADMOB_APP_ID …` | AdMob の secret が無い（§1.8・§1.9） |
+| `check_release: AdMob APPLICATION_ID is Google's *test* app id` で失敗 | `ADMOB_APP_ID` が Gradle に渡っていない（release.yml の env、手元なら環境変数） |
+| 起動直後に「The Crashlytics build ID is missing」で落ちる | `res/values/crashlytics.xml`（`RequireBuildId=false`）が消えた／縮小で消された（docs/COMPLIANCE.md §4） |
 | Functions のデプロイで `CLAUDE_MODEL` を聞かれて止まる | 環境変数 `CLAUDE_MODEL`（GitHub）か `.env.<projectId>` が無い（§1.6） |
 | App Check で本番のアプリが弾かれる | Firebase にアプリ署名鍵の SHA-256 が登録されていない、または Play Integrity の Cloud プロジェクトのリンクがない（§1.5） |
 
@@ -320,9 +338,9 @@ Play では、一度出した版より**小さい versionCode に戻すことは
 1. デベロッパーアカウントを個人で作るか組織で作るか（クローズドテストの条件が変わる）。
 2. 配信国（日本のみを推奨）、ターゲット年齢に「5 歳以下」を含めるか、カテゴリ（カジュアル／教育）。
 3. `firebase_options.dart` と `google-services.json` をリポジトリに入れるか、secret から作るか（現状は secret）。
-4. Crashlytics を保護者の設定でオフにできるようにするか（データセーフティで「任意」にできる）。匿名サインインを保護者の許可まで遅らせるか（同上。UI チーム）。
+4. ~~Crashlytics を保護者の設定でオフにできるようにするか~~ → **決定**: 保護者が許可したときだけ送る（初期値オフ。docs/COMPLIANCE.md C13）。匿名サインインも保護者の許可まで行わない（UI チーム、実装済み）。
 5. Dart の難読化（`--obfuscate --split-debug-info`）を使うか。使う場合はシンボルを Crashlytics にアップロードする手順を足す。
 6. ウェブからの削除依頼を処理する管理スクリプト（uid を指定して `deleteMyData` と同じ処理）を Backend チームに作ってもらうか。
 7. 審査担当者がオンライン対戦を確認するための手順（Lv5 にするまでの時間）。
 8. Teacher Approved を狙うか（オンライン対戦が「ソーシャル機能」とみなされると対象外）。
-9. おうえんパスを定期購入にするか買い切りにするか。
+9. ~~おうえんパスを定期購入にするか買い切りにするか~~ → **決定**: 買い切り（SPEC §10）。商品の価格と広告の 1 日の上限は docs/COMPLIANCE.md §9。

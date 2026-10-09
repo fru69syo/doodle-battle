@@ -41,7 +41,7 @@ Code layout (`firebase/`):
 | `functions/src/ngwords/*` | Normaliser + NG filter (data in `shared/ng_words/`). |
 | `functions/src/battle/*` | Engine adapter + stub, ghost AI, match service, matchmaking, results. |
 | `functions/src/stats/statLimits.ts` | SPEC §3.2/§4.2 budget, growth and anti-tamper validation. |
-| `functions/src/names/*` | Display-name vocabulary, preset character names, name validation. |
+| `functions/src/names/*` | Display names (words in `shared/names/`), preset character names, name validation. |
 | `functions/scripts/sync-shared.mjs` | Copies `shared/ng_words`, `shared/battle_spec`, `shared/battle_engine_ts/src` into `functions/src/vendor/` (git-ignored) before build/lint/test, because Cloud Functions only uploads `functions/`. |
 
 ## 3. Consent model
@@ -165,8 +165,9 @@ values for those. The app should store `snapshotId` as `Character.onlineId`.
 { "adjectiveId": "a01", "nounId": "n02" }  // both or neither (neither = random)
 → { "displayName": { "adjectiveId": "a01", "nounId": "n02", "text": "あおい ネコ" } }
 ```
-Ids come from `functions/src/names/display_name_words.json` (30 × 30 words; the app may bundle a
-copy to show the choices). A random name is assigned automatically at the first registration.
+Ids come from `shared/names/display_name_words.json` (30 × 30 words), vendored into
+`functions/src/vendor/names/` by `scripts/sync-shared.mjs`; the app bundles a byte-identical copy
+for its picker (drift test in the app). Never reuse or renumber ids. A random name is assigned automatically at the first registration.
 
 ### `joinQueue` / `leaveQueue`
 

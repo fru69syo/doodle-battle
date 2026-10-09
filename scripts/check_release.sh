@@ -8,6 +8,8 @@
 #   --require-upload-key      fail if the AAB/APK is signed with the Android debug key
 #   --expect-version-code N   fail unless versionCode == N
 #   --expect-version-name S   fail unless versionName == S
+#   --require-real-admob      fail when the AdMob APPLICATION_ID is Google's test App ID
+#                             (release.yml; Play uploads must use the real AdMob app)
 #
 # Input:
 #   .aab  manifest read with bundletool (scripts/bundletool.sh downloads it if needed)
@@ -21,7 +23,10 @@
 #   - targetSdkVersion < MIN_TARGET_SDK, minSdkVersion != EXPECTED_MIN_SDK
 #   - wrong package name, android:debuggable="true", cleartext traffic allowed
 #   - Firebase/Google Analytics (measurement) components or the install-referrer service
-#   - AdMob present without the child-directed setup we expect (see docs/STORE_LISTING.md)
+#   - AdMob present without the setup we expect: DELAY_APP_MEASUREMENT_INIT=true, a well-formed
+#     APPLICATION_ID (test id only a warning unless --require-real-admob); the AD_ID / Privacy
+#     Sandbox permissions are on the deny list above (docs/COMPLIANCE.md)
+#   - Crashlytics present without firebase_crashlytics_collection_enabled=false (opt-in only)
 #   - with --require-upload-key: debug-signed artifact
 #
 # The allowlist is deliberately short. To add a permission, add it here *and* update
@@ -36,14 +41,16 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 input=""
 require_upload_key=0
+require_real_admob=0
 expect_code=""
 expect_name=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --require-upload-key) require_upload_key=1 ;;
+    --require-real-admob) require_real_admob=1 ;;
     --expect-version-code) expect_code="$2"; shift ;;
     --expect-version-name) expect_name="$2"; shift ;;
-    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,36p' "$0"; exit 0 ;;
     -*) echo "unknown option: $1" >&2; exit 2 ;;
     *) input="$1" ;;
   esac
@@ -91,12 +98,13 @@ elif [[ "$input" == *.apk ]]; then
 fi
 
 python3 -I - "$manifest" "$EXPECTED_PACKAGE" "$MIN_TARGET_SDK" "$EXPECTED_MIN_SDK" \
-  "$require_upload_key" "$signer" "$expect_code" "$expect_name" <<'PY'
+  "$require_upload_key" "$signer" "$expect_code" "$expect_name" "$require_real_admob" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
 
 (manifest, expected_pkg, min_target, expected_min, require_key, signer,
- expect_code, expect_name) = sys.argv[1:9]
+ expect_code, expect_name, require_real_admob) = sys.argv[1:10]
+import re
 A = "{http://schemas.android.com/apk/res/android}"
 
 # --- Permission policy ----------------------------------------------------------
@@ -239,12 +247,33 @@ else:
         errors.append("firebase_analytics_collection_deactivated must be true when present")
 
     ads_app_id = meta.get("com.google.android.gms.ads.APPLICATION_ID")
+    ads_sdk = any(n.startswith("com.google.android.gms.ads.") for n in names)
+    if ads_sdk and ads_app_id is None:
+        errors.append("Mobile Ads SDK present but no com.google.android.gms.ads.APPLICATION_ID "
+                      "meta-data (the app would crash at start)")
     if ads_app_id is not None:
         info.append(f"AdMob app id present ({ads_app_id})")
-        if ads_app_id.startswith("ca-app-pub-3940256099942544"):
-            warnings.append("AdMob APPLICATION_ID is Google's *test* app id; replace before production")
-        if meta.get("com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT") not in ("true",):
-            warnings.append("AdMob: set meta-data DELAY_APP_MEASUREMENT_INIT=true (no measurement before consent)")
+        if not re.fullmatch(r"ca-app-pub-\d{16}~\d{10}", ads_app_id):
+            errors.append(f"AdMob APPLICATION_ID '{ads_app_id}' is malformed (ADMOB_APP_ID)")
+        elif ads_app_id.startswith("ca-app-pub-3940256099942544"):
+            (errors if require_real_admob == "1" else warnings).append(
+                "AdMob APPLICATION_ID is Google's *test* app id (set ADMOB_APP_ID)")
+        if meta.get("com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT") != "true":
+            errors.append("AdMob: meta-data DELAY_APP_MEASUREMENT_INIT must be true "
+                          "(no app measurement; SPEC §7)")
+    elif require_real_admob == "1":
+        errors.append("--require-real-admob: no AdMob APPLICATION_ID in the manifest")
+
+    # Crashlytics must be opt-in (parent consent): collection off by default.
+    all_meta = {el.get(A + "name", ""): el.get(A + "value") for el in root.iter("meta-data")}
+    crashlytics = any("firebase.crashlytics" in k for k in all_meta)
+    if crashlytics:
+        flag = meta.get("firebase_crashlytics_collection_enabled")
+        if flag != "false":
+            errors.append("Crashlytics present but firebase_crashlytics_collection_enabled is "
+                          f"'{flag}' (must be 'false': crash reports are opt-in)")
+        else:
+            info.append("Crashlytics present, collection disabled by default (opt-in)")
 
     ar = meta.get("com.google.ar.core")
     if ar is not None and ar != "optional":

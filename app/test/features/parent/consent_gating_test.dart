@@ -48,8 +48,9 @@ void main() {
     expect(find.byKey(const Key('setup-start')), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('setup-start')));
     expect((app.gate as FakeGate).calls, 1);
-    // Server features are disabled while Firebase is not configured.
-    expect(find.textContaining('現在準備中'), findsNWidgets(2));
+    // Server features (and Crashlytics) are disabled while Firebase is not
+    // configured.
+    expect(find.textContaining('現在準備中'), findsNWidgets(3));
     await tapVisible(tester, find.byKey(const Key('consent-ads')));
     await tapVisible(tester, find.byKey(const Key('setup-finish')));
     expect(find.byKey(const Key('home-draw')), findsOneWidget);
@@ -250,6 +251,13 @@ void main() {
       gate.pass = true;
       await tapVisible(tester, find.byKey(const Key('buy-slots_24')));
       expect(gate.calls, 3);
+      // Confirmation with the store price and the notice; nothing bought yet.
+      expect(find.byKey(const Key('purchase-price')), findsOneWidget);
+      expect(find.text('￥250'), findsOneWidget);
+      expect(find.byKey(const Key('purchase-notice')), findsOneWidget);
+      expect(store.purchases, isEmpty);
+      await tester.tap(find.byKey(const Key('purchase-confirm')));
+      await tester.pumpAndSettle();
       expect(store.purchases, [Product.slots24]);
     });
 

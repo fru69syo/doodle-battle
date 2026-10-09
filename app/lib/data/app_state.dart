@@ -178,6 +178,17 @@ class ProgressController extends AsyncNotifier<GameProgress> {
     await _save(p.copyWith(playDate: date, playSecondsToday: today + seconds));
   }
 
+  /// Records one rewarded-ad XP boost on the local [date] (yyyy-mm-dd).
+  Future<void> recordAdBoost(String date) async {
+    final p = await future;
+    await _save(p.withAdBoost(date));
+  }
+
+  Future<void> setDisplayName(ChosenDisplayName name) async {
+    final p = await future;
+    await _save(p.copyWith(displayName: name));
+  }
+
   Future<void> setOnlineLevel(String characterId, int level) async {
     final p = await future;
     await _save(

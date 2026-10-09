@@ -14,8 +14,10 @@ import 'package:doodle_battle/domain/element_type.dart';
 import 'package:doodle_battle/domain/stats.dart';
 import 'package:doodle_battle/features/battle_ui/cpu_battle_screen.dart';
 import 'package:doodle_battle/features/ng_filter/ng_filter.dart';
+import 'package:doodle_battle/features/online/display_name_picker.dart';
 import 'package:doodle_battle/features/online/online_battle_screen.dart';
 import 'package:doodle_battle/features/online/online_lobby_screen.dart';
+import 'package:doodle_battle/features/parent/policy_links.dart';
 import 'package:doodle_battle/features/parental_gate/parental_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +30,9 @@ final BattleSpec testSpec = BattleSpec.fromJsonString(
 );
 final NgFilter testNgFilter = NgFilter.fromJsonString(
   File('assets/ng_words/ng_words.json').readAsStringSync(),
+);
+final DisplayNameWords testDisplayNameWords = DisplayNameWords.fromJsonString(
+  File(displayNameWordsAsset).readAsStringSync(),
 );
 final CpuRoster testRoster = CpuRoster.fromManifestJson(
   (jsonDecode(File('assets/cpu/manifest.json').readAsStringSync()) as Map)
@@ -73,6 +78,7 @@ class TestApp {
     required this.gate,
     required this.analyzer,
     required this.imageSource,
+    required this.crash,
   });
 
   final InMemoryCharacterRepository characters;
@@ -82,6 +88,8 @@ class TestApp {
   final ParentalGate gate;
   final FakeAnalyzer analyzer;
   final FakeImageSource imageSource;
+  final FakeCrashReporter crash;
+  final openedUrls = <Uri>[];
   late ProviderContainer container;
 }
 
@@ -96,6 +104,7 @@ Future<TestApp> pumpApp(
   ParentalGate? gate,
   FakeAnalyzer? analyzer,
   FakeImageSource? imageSource,
+  FakeCrashReporter? crash,
   int seed = 7,
   bool settle = true,
 }) async {
@@ -116,6 +125,7 @@ Future<TestApp> pumpApp(
     gate: gate ?? FakeGate(),
     analyzer: analyzer ?? FakeAnalyzer(),
     imageSource: imageSource ?? FakeImageSource(),
+    crash: crash ?? FakeCrashReporter(isAvailable: false),
   );
   await tester.pumpWidget(
     ProviderScope(
@@ -126,6 +136,11 @@ Future<TestApp> pumpApp(
         backendApiProvider.overrideWithValue(app.backend),
         monetizationServiceProvider.overrideWithValue(app.monetization),
         parentalGateProvider.overrideWithValue(app.gate),
+        crashReporterProvider.overrideWithValue(app.crash),
+        urlOpenerProvider.overrideWithValue((uri) async {
+          app.openedUrls.add(uri);
+          return true;
+        }),
         drawingAnalyzerProvider.overrideWithValue(app.analyzer),
         drawingImageSourceProvider.overrideWithValue(app.imageSource),
         randomProvider.overrideWithValue(Random(seed)),
@@ -133,6 +148,9 @@ Future<TestApp> pumpApp(
         battleSpecProvider.overrideWithValue(AsyncData(testSpec)),
         ngFilterProvider.overrideWithValue(AsyncData(testNgFilter)),
         cpuRosterProvider.overrideWithValue(AsyncData(testRoster)),
+        displayNameWordsProvider.overrideWithValue(
+          AsyncData(testDisplayNameWords),
+        ),
         battleStepProvider.overrideWithValue(const Duration(milliseconds: 20)),
         queueHeartbeatProvider.overrideWithValue(const Duration(seconds: 10)),
         matchPollProvider.overrideWithValue(const Duration(seconds: 5)),

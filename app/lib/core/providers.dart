@@ -15,6 +15,7 @@ import '../features/draw/drawing_services.dart';
 import '../features/monetization/monetization_service.dart';
 import '../features/ng_filter/ng_filter.dart';
 import '../features/parental_gate/parental_gate.dart';
+import 'crash_reporting.dart';
 
 final characterRepositoryProvider = Provider<CharacterRepository>(
   (ref) => throw UnimplementedError('override in main()'),
@@ -30,6 +31,11 @@ final backendApiProvider = Provider<BackendApi>(
 
 final monetizationServiceProvider = Provider<MonetizationService>(
   (ref) => const NoopMonetizationService(),
+);
+
+/// Opt-in crash reports (Crashlytics when Firebase is configured).
+final crashReporterProvider = Provider<CrashReporter>(
+  (ref) => const NoopCrashReporter(),
 );
 
 final parentalGateProvider = Provider<ParentalGate>(

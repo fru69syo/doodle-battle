@@ -158,7 +158,8 @@ app/                     Flutter アプリ (package: doodle_battle, applicationI
   test/
 shared/battle_spec/      バトルの定数と正解例（Dart と TS で共有）
 firebase/                functions/(TypeScript), firestore.rules, storage.rules, firebase.json
-docs/                    SPEC, TEAM, PRIVACY_POLICY, STORE_LISTING, RELEASE
+docs/                    SPEC, TEAM, COMPLIANCE, STORE_LISTING, RELEASE
+site/                    プライバシーポリシー・利用規約・データ削除・サポート（GitHub Pages）
 .github/workflows/       CI（analyze, test, functions のテスト、AAB のビルド）
 ```
 
@@ -176,4 +177,5 @@ docs/                    SPEC, TEAM, PRIVACY_POLICY, STORE_LISTING, RELEASE
 - 2026-10-09 Battle v2: 引き分けは無くした（ターン上限に達したら、残り HP と乱数で必ず決着する）。サーバー側の実効ステータスは切り捨てにした（アプリと同じ）。CPU のステージは「おすすめ Lv」を表示する
 - 2026-10-09 Backend: 行動の送信は callable の `submitAction` で行う（クライアントは Firestore に書き込まない）。時間切れは遅延判定と1分ごとの見回りで処理する。引き分けは 70 XP。Elo の K は 32（ゴーストとの対戦は 16）。通報3件で非公開。登録できるのは1人40体まで
 - 2026-10-09 リリース（PM 判断）: 配信は日本のみ。カテゴリはカジュアル。`firebase_options.dart` はコミットせず、CI でシークレットから生成する。リリースビルドは Dart を難読化する（`--obfuscate`、シンボルは成果物として保存）。おうえんパスは買い切り（定期購読にしない）。Teacher Approved は狙わない（オンライン対戦があるため）。Firebase の匿名サインインは、保護者がクラウド判定かオンラインを許可するまで行わない
+- 2026-10-09 Compliance: 広告は保護者が許可するまで SDK を初期化しない。リクエストは児童向け（`ageRestrictedTreatment=child` と TFCD）・G・パーソナライズなし、広告 ID と Privacy Sandbox の権限は外す。広告による経験値 2 倍は 1 日 3 回まで（おうえんパスは無制限）。商品 3 つは買い切りで、価格はストアから表示し、購入ごとに保護者ゲート → 価格と注意書きの確認。購入権は PURCHASED のときだけ付けて確認（acknowledge）し、PENDING では付けない。v1 はサーバーで購入を検証しない（v1.1 で Play Developer API）。Crashlytics は保護者の「ふぐあいの じょうほうを おくる」（初期値オフ）のときだけ。表示名の語彙は `shared/names/`。ポリシーのページは `site/`（詳細と出典は docs/COMPLIANCE.md）
 - 未決定（オーナーが決める）: Play の開発者アカウントの種類（個人／組織）、対象年齢に「5歳以下」を含めるか

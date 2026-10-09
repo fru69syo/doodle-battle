@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Compliance team: Crashlytics without its Gradle plugin.
+     The Crashlytics SDK halts the app at start ("The Crashlytics build ID is missing") when
+     Firebase is configured but no build ID resource exists, which the optional Crashlytics
+     Gradle plugin would generate. We do not apply that plugin (builds must work without
+     google-services.json; see docs/COMPLIANCE.md §4), so the requirement is switched off
+     here. Crash reports are still sent (opt-in), only without automatic mapping-file
+     matching; upload mapping.txt / Dart symbols manually if needed. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@bool/com.google.firebase.crashlytics.RequireBuildId">
+    <bool name="com.google.firebase.crashlytics.RequireBuildId">false</bool>
+</resources>

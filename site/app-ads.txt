@@ -1,0 +1,3 @@
+# app-ads.txt for doodle-battle (rakugaki battle) (AdMob). See docs/COMPLIANCE.md §5.
+# Must be served from the ROOT of the developer website registered in Play Console.
+google.com, {{ADMOB_PUBLISHER_ID}}, DIRECT, f08c47fec0942fa0

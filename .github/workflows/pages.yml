@@ -1,0 +1,79 @@
+# Policy / support site (site/) -> GitHub Pages. See docs/COMPLIANCE.md §5 and RELEASE.md §1.10.
+#
+# Pages on a PRIVATE repository needs a paid GitHub plan. Without one, publish the rendered
+# site from a separate PUBLIC repository instead (docs/COMPLIANCE.md §5.2); this workflow
+# still lints the pages on every PR.
+#
+# Repository variables (Settings -> Secrets and variables -> Actions -> Variables):
+#   DEVELOPER_NAME       developer name exactly as shown on Google Play
+#   SUPPORT_EMAIL        support / deletion-request address (public)
+#   ADMOB_PUBLISHER_ID   pub-XXXXXXXXXXXXXXXX (app-ads.txt)
+#   PAGES_ENABLED        "true" once Pages is enabled (Settings -> Pages -> Source: GitHub Actions)
+name: Policy site (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "scripts/build_site.py"
+      - ".github/workflows/pages.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - "scripts/build_site.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Lint and render site/
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint pages (no scripts/trackers, links, placeholders)
+        run: python3 scripts/build_site.py --check
+      - name: Render with the owner's values
+        if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+        env:
+          DEVELOPER_NAME: ${{ vars.DEVELOPER_NAME }}
+          SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
+          ADMOB_PUBLISHER_ID: ${{ vars.ADMOB_PUBLISHER_ID }}
+        run: >-
+          python3 scripts/build_site.py --out _site
+          --var "DEVELOPER_NAME=${DEVELOPER_NAME}"
+          --var "SUPPORT_EMAIL=${SUPPORT_EMAIL}"
+          --var "ADMOB_PUBLISHER_ID=${ADMOB_PUBLISHER_ID}"
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

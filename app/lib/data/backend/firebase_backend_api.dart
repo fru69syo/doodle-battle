@@ -207,6 +207,22 @@ class FirebaseBackendApi implements BackendApi {
       PollResult.fromJson(await _call('pollMatch', {'matchId': matchId}));
 
   @override
+  Future<ChosenDisplayName> setDisplayName(
+    String adjectiveId,
+    String nounId,
+  ) async {
+    final r = await _call('setDisplayName', {
+      'adjectiveId': adjectiveId,
+      'nounId': nounId,
+    });
+    final dn = r['displayName'];
+    if (dn is! Map) {
+      throw const BackendException(BackendCodes.internal, 'no displayName');
+    }
+    return ChosenDisplayName.fromJson(dn.cast<String, Object?>());
+  }
+
+  @override
   Future<bool> reportCharacter(String snapshotId, ReportReason reason) async {
     final r = await _call('reportCharacter', {
       'snapshotId': snapshotId,

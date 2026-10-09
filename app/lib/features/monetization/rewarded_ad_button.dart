@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
+import '../parent/play_time.dart';
 import 'monetization_service.dart';
+import 'monetization_sync.dart';
 
 /// Notice shown before every ad (SPEC §7).
 const adNoticeText = 'おうちのひとに きいてから みてね\nこうこくが ながれるよ';
 
+/// Shown when today's ad boosts are used up.
+const adCapText = 'きょうの どうがは おしまい。また あした みてね';
+
+/// Shown while no ad could be loaded (offline / no fill).
+const adUnavailableText = 'いまは どうがが ないみたい。また こんど みてね';
+
 /// Post-battle 「どうがを みて けいけんち 2ばい」. Hidden unless the parent
-/// allowed ads. With おうえんパス the bonus is given without an ad.
+/// allowed ads. With おうえんパス the bonus is given without an ad (and
+/// without the daily cap). One bonus per battle.
 class RewardedAdButton extends ConsumerStatefulWidget {
   const RewardedAdButton({super.key, required this.onRewarded});
 
@@ -24,6 +34,16 @@ class RewardedAdButton extends ConsumerStatefulWidget {
 class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
   bool _used = false;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Retry a failed / missing preload when the result screen opens (the
+    // service ignores this unless ads are allowed, and backs off).
+    ref.read(monetizationServiceProvider).preloadRewardedAd();
+  }
+
+  String get _today => dateKey(ref.read(clockProvider)());
 
   Future<void> _reward() async {
     await widget.onRewarded();
@@ -46,11 +66,12 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
     setState(() => _busy = false);
     switch (result) {
       case RewardedAdResult.rewarded:
+        await ref.read(progressProvider.notifier).recordAdBoost(_today);
         await _reward();
       case RewardedAdResult.notRewarded:
         await showKidMessage(context, 'さいごまで みると けいけんちが 2ばいに なるよ');
       case RewardedAdResult.unavailable:
-        await showKidMessage(context, 'いまは どうがが ないみたい。また こんど みてね');
+        await showKidMessage(context, adUnavailableText);
     }
   }
 
@@ -58,9 +79,8 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider).value;
     final pass = settings?.entitlements.contains(Product.ouenPass.id) ?? false;
-    if (!pass && !(settings?.consents.ads ?? false)) {
-      return const SizedBox.shrink();
-    }
+    final adsAllowed = settings?.consents.ads ?? false;
+    if (!pass && !adsAllowed) return const SizedBox.shrink();
     if (_used) {
       return const Text(
         'けいけんちが 2ばいに なったよ！',
@@ -73,12 +93,70 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
         ),
       );
     }
-    return FilledButton.icon(
-      key: const Key('ad-double-xp'),
-      style: FilledButton.styleFrom(backgroundColor: AppColors.pink),
-      icon: Icon(pass ? Icons.favorite : Icons.ondemand_video),
-      label: Text(pass ? 'おうえんパスで けいけんち 2ばい' : 'どうがを みて けいけんち 2ばい'),
-      onPressed: _busy ? null : (pass ? _reward : _watchAd),
+    if (pass) {
+      return FilledButton.icon(
+        key: const Key('ad-double-xp'),
+        style: FilledButton.styleFrom(backgroundColor: AppColors.pink),
+        icon: const Icon(Icons.favorite),
+        label: const Text('おうえんパスで けいけんち 2ばい'),
+        onPressed: _busy ? null : _reward,
+      );
+    }
+    final progress = ref.watch(progressProvider).value;
+    if (progress == null) return const SizedBox.shrink();
+    final left = adBoostsLeft(
+      cap: dailyAdBoostCap,
+      usedToday: progress.adBoostsOn(_today),
+    );
+    if (left == 0) return const _Note(key: Key('ad-cap'), text: adCapText);
+    final service = ref.watch(monetizationServiceProvider);
+    return ListenableBuilder(
+      listenable: service,
+      builder: (context, _) {
+        final state = service.adState;
+        if (state == AdState.unavailable) {
+          return const _Note(
+            key: Key('ad-unavailable'),
+            text: adUnavailableText,
+          );
+        }
+        final ready = state == AdState.ready;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FilledButton.icon(
+              key: const Key('ad-double-xp'),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.pink),
+              icon: const Icon(Icons.ondemand_video),
+              label: Text(ready ? 'どうがを みて けいけんち 2ばい' : 'どうがを じゅんび しているよ…'),
+              onPressed: _busy || !ready ? null : _watchAd,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'きょうは あと $left かい',
+              key: const Key('ad-left'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15),
+            ),
+          ],
+        );
+      },
     );
   }
+}
+
+class _Note extends StatelessWidget {
+  const _Note({super.key, required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    textAlign: TextAlign.center,
+    style: const TextStyle(
+      fontSize: 17,
+      fontWeight: FontWeight.w700,
+      color: AppColors.secondary,
+    ),
+  );
 }

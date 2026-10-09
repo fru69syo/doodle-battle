@@ -12,6 +12,7 @@ import '../../data/app_state.dart';
 import '../../data/backend/backend_api.dart';
 import '../../domain/character.dart';
 import '../battle_ui/battle_select_screen.dart';
+import 'display_name_picker.dart';
 import 'online_messages.dart';
 import 'online_registration.dart';
 
@@ -50,6 +51,7 @@ class OnlineLobbyScreen extends ConsumerWidget {
     return BattleSelectScreen(
       title: 'オンライン たいせん',
       filter: (c) => c.onlineUnlocked ? null : 'Lv5 に なったら あそべるよ',
+      header: const DisplayNameCard(),
       onSelect: (context, c) => context.push(Routes.onlineQueue(c.id)),
     );
   }

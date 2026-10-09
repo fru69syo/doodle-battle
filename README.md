@@ -4,6 +4,7 @@
 
 - 仕様: [docs/SPEC.md](docs/SPEC.md)
 - チーム体制: [docs/TEAM.md](docs/TEAM.md)
+- 広告・課金・プライバシー（ファミリーポリシー対応）: [docs/COMPLIANCE.md](docs/COMPLIANCE.md)、ポリシーのページ: [site/](site/)
 
 ## 開発
 ```sh

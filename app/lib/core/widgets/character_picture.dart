@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_state.dart';
 import '../../domain/character.dart';
+import '../../features/monetization/card_frames.dart';
+import '../../features/monetization/monetization_service.dart';
 import '../theme/app_colors.dart';
 
 /// Picture of a character with its evolution frame: かがやき = coloured aura,
-/// でんせつ = gold frame (SPEC §4.2).
+/// でんせつ = gold frame (SPEC §4.2), plus the chosen フレームパック frame.
 class CharacterPicture extends ConsumerWidget {
   const CharacterPicture({
     super.key,
@@ -36,6 +38,27 @@ class CharacterPicture extends ConsumerWidget {
       image = data == null
           ? const Icon(Icons.brush, size: 64, color: AppColors.disabled)
           : Image.memory(data, fit: BoxFit.contain, gaplessPlayback: true);
+    }
+    // フレームパック: only while the pack is owned (a refund removes it).
+    final frame = CardFrame.byId(character.cardFrame);
+    final owned =
+        ref
+            .watch(settingsProvider)
+            .value
+            ?.entitlements
+            .contains(Product.framePack.id) ??
+        false;
+    if (frame != null && owned) {
+      return CardFrameBorder(
+        frame: frame,
+        size: size,
+        child: EvolutionFrame(
+          stage: character.stage,
+          color: AppColors.element(character.element),
+          size: CardFrameBorder.innerSizeOf(size),
+          child: image,
+        ),
+      );
     }
     return EvolutionFrame(
       stage: character.stage,

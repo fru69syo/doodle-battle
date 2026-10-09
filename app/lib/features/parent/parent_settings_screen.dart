@@ -8,9 +8,7 @@ import 'ar_install_tile.dart';
 import 'consent_toggles.dart';
 import 'delete_all_data.dart';
 import 'parent_session.dart';
-
-/// Placeholder until the Compliance team publishes the policy.
-const privacyPolicyUrl = 'https://example.com/doodle-battle/privacy (準備中)';
+import 'policy_links.dart';
 
 /// 「おうちのひと」 (behind the parental gate; SPEC §7). Parent-facing text.
 class ParentSettingsScreen extends ConsumerStatefulWidget {
@@ -61,6 +59,9 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             ConsentToggles(
               value: settings.consents,
               serverAvailable: backend.isAvailable,
+              crashReportsAvailable: ref
+                  .watch(crashReporterProvider)
+                  .isAvailable,
               onChanged: (c) =>
                   ref.read(settingsProvider.notifier).updateConsents(c),
             ),
@@ -87,12 +88,9 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
               subtitle: const Text('端末とサーバーのデータをすべて削除します'),
               onTap: () => deleteAllData(context, ref),
             ),
+            const _Section('ポリシーとサポート'),
+            const PolicyLinks(),
             const _Section('その他'),
-            ListTile(
-              leading: const Icon(Icons.privacy_tip),
-              title: const Text('プライバシーポリシー'),
-              subtitle: const Text(privacyPolicyUrl),
-            ),
             ListTile(
               key: const Key('licenses'),
               leading: const Icon(Icons.description),

@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:doodle_battle/core/crash_reporting.dart';
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/backend/backend_api.dart';
 import 'package:doodle_battle/domain/battle/battle.dart';
@@ -11,6 +11,7 @@ import 'package:doodle_battle/features/draw/drawing_services.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 import 'package:doodle_battle/features/monetization/monetization_service.dart';
 import 'package:doodle_battle/features/parental_gate/parental_gate.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:image/image.dart' as img;
 
@@ -81,19 +82,63 @@ class FakeGate implements ParentalGate {
   }
 }
 
-class FakeMonetization implements MonetizationService {
+/// Scriptable [MonetizationService] for widget tests.
+class FakeMonetization extends ChangeNotifier implements MonetizationService {
   FakeMonetization({
     this.adResult = RewardedAdResult.rewarded,
     this.storeAvailable = true,
-  });
+    this.adState = AdState.ready,
+    Map<Product, String>? prices,
+  }) : prices =
+           prices ??
+           {
+             Product.slots24: '￥250',
+             Product.framePack: '￥160',
+             Product.ouenPass: '￥480',
+           };
 
   RewardedAdResult adResult;
+  PurchaseResult purchaseResult = PurchaseResult.purchased;
   int adsShown = 0;
+  int preloads = 0;
+  int refreshes = 0;
+  int restores = 0;
+  final adsAllowedCalls = <bool>[];
+  Set<Product>? startedWith;
   final purchases = <Product>[];
+  final Map<Product, String> prices;
   final _entitlements = StreamController<Set<Product>>.broadcast();
+  Set<Product> _owned = {};
 
   @override
-  bool get rewardedAdReady => true;
+  AdState adState;
+
+  void setAdState(AdState s) {
+    adState = s;
+    notifyListeners();
+  }
+
+  /// Simulates the store reporting owned products.
+  void emitOwned(Set<Product> owned) {
+    _owned = owned;
+    _entitlements.add(owned);
+  }
+
+  @override
+  Future<void> start(Set<Product> cachedEntitlements) async {
+    startedWith = cachedEntitlements;
+    _owned = {..._owned, ...cachedEntitlements};
+  }
+
+  @override
+  Future<void> setAdsAllowed(bool allowed) async =>
+      adsAllowedCalls.add(allowed);
+
+  @override
+  bool get rewardedAdReady => adState == AdState.ready;
+
+  @override
+  Future<void> preloadRewardedAd() async => preloads++;
 
   @override
   Future<RewardedAdResult> showRewardedAd() async {
@@ -102,19 +147,46 @@ class FakeMonetization implements MonetizationService {
   }
 
   @override
-  final bool storeAvailable;
+  bool storeAvailable;
+
+  @override
+  String? priceOf(Product product) => storeAvailable ? prices[product] : null;
+
+  @override
+  Future<void> refreshStore() async => refreshes++;
 
   @override
   Future<PurchaseResult> purchase(Product product) async {
     purchases.add(product);
-    return PurchaseResult.purchased;
+    if (purchaseResult == PurchaseResult.purchased) {
+      emitOwned({..._owned, product});
+    }
+    return purchaseResult;
   }
 
   @override
-  Future<void> restorePurchases() async {}
+  Future<bool> restorePurchases() async {
+    restores++;
+    return true;
+  }
+
+  @override
+  Set<Product> get owned => _owned;
 
   @override
   Stream<Set<Product>> get entitlements => _entitlements.stream;
+}
+
+/// Records consent changes.
+class FakeCrashReporter implements CrashReporter {
+  FakeCrashReporter({this.isAvailable = true});
+
+  @override
+  final bool isAvailable;
+  final calls = <bool>[];
+
+  @override
+  Future<void> setEnabled(bool enabled) async => calls.add(enabled);
 }
 
 /// Scriptable [BackendApi].
@@ -194,6 +266,24 @@ class FakeBackend implements BackendApi {
   Future<PollResult> pollMatch(String matchId) async {
     calls.add('pollMatch');
     return const PollResult(status: MatchStatus.active, turn: 1);
+  }
+
+  final displayNames = <(String, String)>[];
+  Object? displayNameError;
+
+  @override
+  Future<ChosenDisplayName> setDisplayName(
+    String adjectiveId,
+    String nounId,
+  ) async {
+    calls.add('setDisplayName');
+    if (displayNameError != null) throw displayNameError!;
+    displayNames.add((adjectiveId, nounId));
+    return ChosenDisplayName(
+      adjectiveId: adjectiveId,
+      nounId: nounId,
+      text: '$adjectiveId $nounId',
+    );
   }
 
   @override
