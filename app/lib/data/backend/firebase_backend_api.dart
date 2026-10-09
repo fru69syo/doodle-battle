@@ -14,27 +14,29 @@ import 'backend_api.dart';
 /// Cloud Functions region (docs/BACKEND.md §2).
 const functionsRegion = 'asia-northeast1';
 
-/// [BackendApi] on Firebase: Anonymous Auth (signed in lazily, only when a
-/// server feature is first used), callable functions with App Check, and
-/// read-only Firestore/Storage access.
+/// [BackendApi] on Firebase: Anonymous Auth, callable functions with App
+/// Check, and read-only Firestore/Storage access.
+///
+/// Nothing touches the network until a server feature is used: App Check is
+/// activated and the anonymous user is created on the first call, and the
+/// app only makes calls once a parent enabled cloud judging or online play
+/// (see `SettingsController.ensureConsentSynced`).
 class FirebaseBackendApi implements BackendApi {
   FirebaseBackendApi({
-    FirebaseAuth? auth,
-    FirebaseFunctions? functions,
-    FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
+    Future<void> Function()? activateAppCheck,
     this.callTimeout = const Duration(seconds: 30),
-  }) : _auth = auth ?? FirebaseAuth.instance,
-       _functions =
-           functions ?? FirebaseFunctions.instanceFor(region: functionsRegion),
-       _firestore = firestore ?? FirebaseFirestore.instance,
-       _storage = storage ?? FirebaseStorage.instance;
+  }) : _activateAppCheck = activateAppCheck ?? (() async {});
 
-  final FirebaseAuth _auth;
-  final FirebaseFunctions _functions;
-  final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
+  final Future<void> Function() _activateAppCheck;
   final Duration callTimeout;
+  Future<void>? _appCheck;
+
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  late final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: functionsRegion,
+  );
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  FirebaseStorage get _storage => FirebaseStorage.instance;
 
   @override
   bool get isAvailable => true;
@@ -43,12 +45,14 @@ class FirebaseBackendApi implements BackendApi {
   String? get supportId => _auth.currentUser?.uid;
 
   Future<String> _ensureSignedIn() async {
-    final current = _auth.currentUser;
-    if (current != null) return current.uid;
     try {
+      await (_appCheck ??= _activateAppCheck());
+      final current = _auth.currentUser;
+      if (current != null) return current.uid;
       final cred = await _auth.signInAnonymously().timeout(callTimeout);
       return cred.user!.uid;
     } on Object catch (e) {
+      _appCheck = null;
       throw BackendException(BackendCodes.network, '$e');
     }
   }

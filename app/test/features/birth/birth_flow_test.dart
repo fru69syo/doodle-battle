@@ -1,7 +1,6 @@
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/app_state.dart';
 import 'package:doodle_battle/data/backend/backend_api.dart';
-import 'package:doodle_battle/domain/drawing_analysis_result.dart';
 import 'package:doodle_battle/features/draw/drawing_services.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 import 'package:flutter/material.dart';

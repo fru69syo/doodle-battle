@@ -10,9 +10,20 @@ import '../../support/fakes.dart';
 import '../../support/harness.dart';
 
 const _allRejections = [
-  'LEVEL_TOO_LOW', 'STATS_INVALID', 'NAME_INVALID', 'NAME_NG', 'NAME_PERSONAL_INFO', //
-  'IMAGE_VIOLENCE', 'IMAGE_SEXUAL', 'IMAGE_HATE', 'IMAGE_COPYRIGHT', 'IMAGE_REAL_PERSON',
-  'IMAGE_PERSONAL_INFO', 'IMAGE_NOT_DRAWING', 'IMAGE_OTHER', 'TOO_MANY_CHARACTERS',
+  'LEVEL_TOO_LOW',
+  'STATS_INVALID',
+  'NAME_INVALID',
+  'NAME_NG',
+  'NAME_PERSONAL_INFO', //
+  'IMAGE_VIOLENCE',
+  'IMAGE_SEXUAL',
+  'IMAGE_HATE',
+  'IMAGE_COPYRIGHT',
+  'IMAGE_REAL_PERSON',
+  'IMAGE_PERSONAL_INFO',
+  'IMAGE_NOT_DRAWING',
+  'IMAGE_OTHER',
+  'TOO_MANY_CHARACTERS',
 ];
 
 Map<String, Object?> sideJson(String? uid, String name, {int level = 5}) => {
@@ -54,8 +65,14 @@ void main() {
     for (final r in _allRejections) {
       expect(registerRejectionMessages[r], isNotNull, reason: r);
     }
-    expect(registerRejectionMessage('IMAGE_REAL_PERSON'), 'ひとの しゃしんや かおは つかえないよ');
-    expect(backendErrorMessage(BackendCodes.rateLimited), isNot(contains('INTERNAL')));
+    expect(
+      registerRejectionMessage('IMAGE_REAL_PERSON'),
+      'ひとの しゃしんや かおは つかえないよ',
+    );
+    expect(
+      backendErrorMessage(BackendCodes.rateLimited),
+      isNot(contains('INTERNAL')),
+    );
   });
 
   test('match parsing picks my side by uid', () {
@@ -73,12 +90,20 @@ void main() {
     final events = parseTurnEvents([
       {'type': 'turnStart', 'turn': 1},
       {'type': 'somethingNew'},
-      {'type': 'damage', 'target': 'b', 'amount': 10, 'hp': 90, 'guarded': false},
+      {
+        'type': 'damage',
+        'target': 'b',
+        'amount': 10,
+        'hp': 90,
+        'guarded': false,
+      },
     ]);
     expect(events.map((e) => e.type), ['turnStart', 'damage']);
   });
 
-  testWidgets('register (name rejected → preset) → queue → battle → XP once', (tester) async {
+  testWidgets('register (name rejected → preset) → queue → battle → XP once', (
+    tester,
+  ) async {
     final backend = FakeBackend()
       ..registerOutcomes.addAll(const [
         RegisterRejected(reason: 'NAME_NG', presetNames: ['もこたん', 'ぴかりん']),
@@ -88,7 +113,9 @@ void main() {
     final app = await pumpApp(
       tester,
       backend: backend,
-      settings: setupDone.copyWith(consents: const ParentConsents(online: true)),
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(online: true),
+      ),
       characters: [testCharacter(level: 5)],
     );
     await tapVisible(tester, find.byKey(const Key('home-online')));
@@ -100,7 +127,14 @@ void main() {
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(backend.calls, containsAllInOrder(['registerCharacter:ねこまる', 'registerCharacter:もこたん', 'joinQueue']));
+    expect(
+      backend.calls,
+      containsAllInOrder([
+        'registerCharacter:ねこまる',
+        'registerCharacter:もこたん',
+        'joinQueue',
+      ]),
+    );
     var c = (await app.characters.loadAll()).single;
     expect((c.name, c.onlineId), ('もこたん', 'snap_1'));
     expect(app.settingsRepo.progress.onlineLevels['c_1'], 5);
@@ -136,12 +170,17 @@ void main() {
       FaintEvent(Side.b),
       BattleEndEvent(Side.a, EndReason.ko),
     ];
-    backend.matchController.add(snapshot(
-      turn: 1,
-      status: 'finished',
-      hpB: 0,
-      result: {'a': {'xp': 100, 'outcome': 'win', 'ratingDelta': 16}, 'b': {'xp': 40, 'outcome': 'lose'}},
-    ));
+    backend.matchController.add(
+      snapshot(
+        turn: 1,
+        status: 'finished',
+        hpB: 0,
+        result: {
+          'a': {'xp': 100, 'outcome': 'win', 'ratingDelta': 16},
+          'b': {'xp': 40, 'outcome': 'lose'},
+        },
+      ),
+    );
     for (var i = 0; i < 30; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -153,13 +192,19 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('an image rejection shows its kid message and no presets', (tester) async {
+  testWidgets('an image rejection shows its kid message and no presets', (
+    tester,
+  ) async {
     final backend = FakeBackend()
-      ..registerOutcomes.add(const RegisterRejected(reason: 'IMAGE_REAL_PERSON'));
+      ..registerOutcomes.add(
+        const RegisterRejected(reason: 'IMAGE_REAL_PERSON'),
+      );
     await pumpApp(
       tester,
       backend: backend,
-      settings: setupDone.copyWith(consents: const ParentConsents(online: true)),
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(online: true),
+      ),
       characters: [testCharacter(level: 6)],
     );
     await tapVisible(tester, find.byKey(const Key('home-online')));
@@ -172,13 +217,17 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('waiting in the queue sends heartbeats and leaves on cancel', (tester) async {
+  testWidgets('waiting in the queue sends heartbeats and leaves on cancel', (
+    tester,
+  ) async {
     final backend = FakeBackend()
       ..queueResults.add(const QueueStatus(QueueState.waiting, waitedMs: 0));
     await pumpApp(
       tester,
       backend: backend,
-      settings: setupDone.copyWith(consents: const ParentConsents(online: true)),
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(online: true),
+      ),
       progress: const GameProgress(onlineLevels: {'c_1': 6}),
       characters: [testCharacter(level: 6, onlineId: 'snap_9')],
     );
@@ -187,7 +236,10 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.byKey(const Key('online-waiting')), findsOneWidget);
-    expect(backend.calls.where((c) => c.startsWith('registerCharacter')), isEmpty);
+    expect(
+      backend.calls.where((c) => c.startsWith('registerCharacter')),
+      isEmpty,
+    );
     await tester.pump(const Duration(seconds: 21));
     expect(backend.calls.where((c) => c == 'joinQueue').length, 3);
     await tester.tap(find.text('やめる'));

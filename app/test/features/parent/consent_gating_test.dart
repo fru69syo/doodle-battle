@@ -20,8 +20,17 @@ Future<void> openParent(WidgetTester tester) async {
 void main() {
   group('router redirect', () {
     test('splash while loading, setup first, parent area needs the gate', () {
-      String? r(String loc, {bool needsSetup = false, bool unlocked = false, AsyncValue<Object?> s = const AsyncData(1)}) =>
-          redirectFor(location: loc, settingsState: s, needsSetup: needsSetup, parentUnlocked: unlocked);
+      String? r(
+        String loc, {
+        bool needsSetup = false,
+        bool unlocked = false,
+        AsyncValue<Object?> s = const AsyncData(1),
+      }) => redirectFor(
+        location: loc,
+        settingsState: s,
+        needsSetup: needsSetup,
+        parentUnlocked: unlocked,
+      );
       expect(r('/', s: const AsyncLoading()), Routes.splash);
       expect(r('/zukan', needsSetup: true), Routes.setup);
       expect(r(Routes.setup, needsSetup: true), isNull);
@@ -32,7 +41,9 @@ void main() {
     });
   });
 
-  testWidgets('first run shows the parent setup until it is completed', (tester) async {
+  testWidgets('first run shows the parent setup until it is completed', (
+    tester,
+  ) async {
     final app = await pumpApp(tester, settings: const AppSettings());
     expect(find.byKey(const Key('setup-start')), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('setup-start')));
@@ -49,12 +60,18 @@ void main() {
   });
 
   testWidgets('a failed gate keeps the child in the setup', (tester) async {
-    await pumpApp(tester, settings: const AppSettings(), gate: FakeGate(pass: false));
+    await pumpApp(
+      tester,
+      settings: const AppSettings(),
+      gate: FakeGate(pass: false),
+    );
     await tapVisible(tester, find.byKey(const Key('setup-start')));
     expect(find.byKey(const Key('setup-finish')), findsNothing);
   });
 
-  testWidgets('setup with a server writes consent to the backend', (tester) async {
+  testWidgets('setup with a server writes consent to the backend', (
+    tester,
+  ) async {
     final backend = FakeBackend();
     await pumpApp(tester, settings: const AppSettings(), backend: backend);
     await tapVisible(tester, find.byKey(const Key('setup-start')));
@@ -63,12 +80,68 @@ void main() {
     expect(backend.lastConsent, const ParentConsents(online: true));
   });
 
-  testWidgets('offline-only families never create a server account', (tester) async {
+  testWidgets('offline-only families never create a server account', (
+    tester,
+  ) async {
     final backend = FakeBackend();
     await pumpApp(tester, settings: const AppSettings(), backend: backend);
     await tapVisible(tester, find.byKey(const Key('setup-start')));
     await tapVisible(tester, find.byKey(const Key('setup-finish')));
     expect(backend.calls, isEmpty);
+  });
+
+  group('server consent sync (no backend contact while both are off)', () {
+    testWidgets('ads / purchases only: never contacts the backend', (
+      tester,
+    ) async {
+      final backend = FakeBackend();
+      final app = await pumpApp(tester, backend: backend);
+      await openParent(tester);
+      await tapVisible(tester, find.byKey(const Key('consent-ads')));
+      await tapVisible(tester, find.byKey(const Key('consent-purchases')));
+      expect(backend.calls, isEmpty);
+      expect(app.settingsRepo.settings.syncedConsent, isNull);
+    });
+
+    testWidgets(
+      'turning online on syncs; off again withdraws once, then silence',
+      (tester) async {
+        final backend = FakeBackend();
+        final app = await pumpApp(tester, backend: backend);
+        await openParent(tester);
+        await tapVisible(tester, find.byKey(const Key('consent-online')));
+        expect(backend.calls, ['syncConsent']);
+        expect(app.settingsRepo.settings.syncedConsent?.online, isTrue);
+        await tapVisible(tester, find.byKey(const Key('consent-online')));
+        expect(backend.calls, ['syncConsent', 'syncConsent']);
+        expect(backend.lastConsent?.online, isFalse);
+        // Further non-server changes do not call the backend.
+        await tapVisible(tester, find.byKey(const Key('consent-ads')));
+        await tapVisible(tester, find.byKey(const Key('playtime-30')));
+        expect(backend.calls, ['syncConsent', 'syncConsent']);
+      },
+    );
+
+    testWidgets('an already synced consent is not re-sent after a restart', (
+      tester,
+    ) async {
+      final backend = FakeBackend()..uid = 'uid-1';
+      await pumpApp(
+        tester,
+        backend: backend,
+        settings: setupDone.copyWith(
+          consents: const ParentConsents(cloudJudge: true),
+          syncedConsent: () => const ServerConsent(
+            cloudJudge: true,
+            online: false,
+            policyVersion: currentPolicyVersion,
+          ),
+        ),
+      );
+      await tapVisible(tester, find.byKey(const Key('home-draw')));
+      await tapVisible(tester, find.byKey(const Key('draw-gallery')));
+      expect(backend.calls, ['judgeDrawing']);
+    });
   });
 
   group('online gating', () {
@@ -78,7 +151,10 @@ void main() {
     });
 
     testWidgets('じゅんびちゅう when Firebase is not configured', (tester) async {
-      await pumpApp(tester, settings: withConsents(const ParentConsents(online: true)));
+      await pumpApp(
+        tester,
+        settings: withConsents(const ParentConsents(online: true)),
+      );
       expect(find.byKey(const Key('home-online')), findsOneWidget);
       expect(find.text('じゅんびちゅう'), findsOneWidget);
       await tester.tap(find.byKey(const Key('home-online')));
@@ -91,7 +167,10 @@ void main() {
         tester,
         backend: FakeBackend(),
         settings: withConsents(const ParentConsents(online: true)),
-        characters: [testCharacter(id: 'c_1', level: 4), testCharacter(id: 'c_2', name: 'つよまる', level: 5)],
+        characters: [
+          testCharacter(id: 'c_1', level: 4),
+          testCharacter(id: 'c_2', name: 'つよまる', level: 5),
+        ],
       );
       await tapVisible(tester, find.byKey(const Key('home-online')));
       expect(find.text('Lv5 に なったら あそべるよ'), findsOneWidget);
@@ -100,7 +179,9 @@ void main() {
       expect(find.byKey(const Key('online-registering')), findsNothing);
     });
 
-    testWidgets('direct navigation to the lobby is refused without consent', (tester) async {
+    testWidgets('direct navigation to the lobby is refused without consent', (
+      tester,
+    ) async {
       final app = await pumpApp(tester, backend: FakeBackend());
       app.container.read(routerProvider).push(Routes.online);
       await tester.pumpAndSettle();
@@ -135,17 +216,32 @@ void main() {
     testWidgets('shop hidden unless purchases are allowed', (tester) async {
       await pumpApp(tester);
       await openParent(tester);
-      await tester.scrollUntilVisible(find.byKey(const Key('shop-disabled')), 300, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('shop-disabled')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.byKey(const Key('shop')), findsNothing);
     });
 
-    testWidgets('shop shows the notice and gates every purchase', (tester) async {
+    testWidgets('shop shows the notice and gates every purchase', (
+      tester,
+    ) async {
       final gate = FakeGate();
       final store = FakeMonetization();
-      await pumpApp(tester, gate: gate, monetization: store, settings: withConsents(const ParentConsents(purchases: true)));
+      await pumpApp(
+        tester,
+        gate: gate,
+        monetization: store,
+        settings: withConsents(const ParentConsents(purchases: true)),
+      );
       await openParent(tester);
       expect(gate.calls, 1);
-      await tester.scrollUntilVisible(find.byKey(const Key('shop-notice')), 300, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('shop-notice')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(purchaseNoticeText), findsOneWidget);
       gate.pass = false;
       await tapVisible(tester, find.byKey(const Key('buy-slots_24')));
@@ -160,13 +256,23 @@ void main() {
     testWidgets('support id is shown once signed in', (tester) async {
       await pumpApp(tester, backend: FakeBackend()..uid = 'uid-9');
       await openParent(tester);
-      await tester.scrollUntilVisible(find.byKey(const Key('delete-all')), 300, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('delete-all')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('uid-9'), findsOneWidget);
     });
 
-    testWidgets('delete all data: server first, then local, back to setup', (tester) async {
+    testWidgets('delete all data: server first, then local, back to setup', (
+      tester,
+    ) async {
       final backend = FakeBackend()..uid = 'uid-9';
-      final app = await pumpApp(tester, backend: backend, characters: [testCharacter()]);
+      final app = await pumpApp(
+        tester,
+        backend: backend,
+        characters: [testCharacter()],
+      );
       await openParent(tester);
       await tapVisible(tester, find.byKey(const Key('delete-all')));
       await tester.tap(find.byKey(const Key('delete-confirm')));
@@ -179,7 +285,11 @@ void main() {
 
     testWidgets('server deletion failure keeps local data', (tester) async {
       final backend = FakeBackend()..deleteFails = true;
-      final app = await pumpApp(tester, backend: backend, characters: [testCharacter()]);
+      final app = await pumpApp(
+        tester,
+        backend: backend,
+        characters: [testCharacter()],
+      );
       await openParent(tester);
       await tapVisible(tester, find.byKey(const Key('delete-all')));
       await tester.tap(find.byKey(const Key('delete-confirm')));
@@ -191,9 +301,16 @@ void main() {
     testWidgets('licences include the bundled font', (tester) async {
       await pumpApp(tester);
       await openParent(tester);
-      await tester.scrollUntilVisible(find.byKey(const Key('licenses')), 300, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('licenses')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('uid-9'), findsNothing); // no account yet
-      Scrollable.ensureVisible(tester.element(find.byKey(const Key('licenses'))), alignment: 0.5);
+      Scrollable.ensureVisible(
+        tester.element(find.byKey(const Key('licenses'))),
+        alignment: 0.5,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('licenses')));
       await tester.pump();
@@ -206,7 +323,10 @@ void main() {
     await pumpApp(
       tester,
       settings: setupDone.copyWith(playTimeMinutes: () => 30),
-      progress: const GameProgress(playDate: '2026-10-09', playSecondsToday: 31 * 60),
+      progress: const GameProgress(
+        playDate: '2026-10-09',
+        playSecondsToday: 31 * 60,
+      ),
     );
     expect(find.byKey(const Key('playtime-banner')), findsOneWidget);
   });
@@ -215,7 +335,10 @@ void main() {
     await pumpApp(
       tester,
       settings: setupDone.copyWith(playTimeMinutes: () => 30),
-      progress: const GameProgress(playDate: '2026-10-09', playSecondsToday: 10 * 60),
+      progress: const GameProgress(
+        playDate: '2026-10-09',
+        playSecondsToday: 10 * 60,
+      ),
     );
     expect(find.byKey(const Key('playtime-banner')), findsNothing);
   });

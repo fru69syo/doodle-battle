@@ -13,21 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fakes.dart';
 import '../../support/harness.dart';
 
-/// Taps moves (ひっさつ when ready) until the result screen shows. Returns
-/// the number of turns played.
-Future<int> fightUntilResult(WidgetTester tester) async {
-  var turns = 0;
-  while (find.byKey(const Key('result-title')).evaluate().isEmpty) {
-    expect(turns, lessThan(40), reason: 'battle should end by the turn cap');
-    final special = find.byKey(const Key('move-special'));
-    final ready = tester.widget<ButtonStyleButton>(special).enabled;
-    await tester.tap(ready ? special : find.byKey(const Key('move-element')));
-    await tester.pumpAndSettle();
-    turns++;
-  }
-  return turns;
-}
-
 Future<void> openStage(WidgetTester tester, int stage) async {
   await tapVisible(tester, find.byKey(const Key('home-battle')));
   await tapVisible(tester, find.byKey(const Key('select-c_1')));

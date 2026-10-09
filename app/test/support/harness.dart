@@ -151,7 +151,11 @@ Future<TestApp> pumpApp(
 Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   if (finder.evaluate().isEmpty) {
     // Lazily built list items: scroll until built.
-    await tester.scrollUntilVisible(finder, 300, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      finder,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
   }
   // Centre it so neighbours stay built in lazy lists.
   final element = finder.evaluate().single;
@@ -165,4 +169,19 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
 Future<void> unmount(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox());
   await tester.pump();
+}
+
+/// Taps moves (ひっさつ when ready) until the result screen shows. Returns
+/// the number of turns played.
+Future<int> fightUntilResult(WidgetTester tester) async {
+  var turns = 0;
+  while (find.byKey(const Key('result-title')).evaluate().isEmpty) {
+    expect(turns, lessThan(40), reason: 'battle should end by the turn cap');
+    final special = find.byKey(const Key('move-special'));
+    final ready = tester.widget<ButtonStyleButton>(special).enabled;
+    await tester.tap(ready ? special : find.byKey(const Key('move-element')));
+    await tester.pumpAndSettle();
+    turns++;
+  }
+  return turns;
 }

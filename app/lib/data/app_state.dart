@@ -12,11 +12,9 @@ import 'app_settings.dart';
 import 'character_repository.dart';
 import 'game_progress.dart';
 
-/// Parent settings. Consent changes are mirrored to the server (best effort;
-/// retried by [ensureConsentSynced] before any server feature is used).
+/// Parent settings. Consent changes are mirrored to the server (best
+/// effort; retried by [ensureConsentSynced] before any server feature).
 class SettingsController extends AsyncNotifier<AppSettings> {
-  ParentConsents? _synced;
-
   @override
   Future<AppSettings> build() =>
       ref.watch(settingsRepositoryProvider).loadSettings();
@@ -56,29 +54,31 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     await _save(current.copyWith(entitlements: ids));
   }
 
-  /// Writes consent to the server if it changed since the last successful
-  /// sync. Skipped while every server feature is off and nothing was ever
-  /// synced (no account is created for offline-only families).
+  /// Writes consent to the server when it differs from what was last
+  /// synced. While cloud judging and online play were never enabled nothing
+  /// is sent (no account is created, the backend is never contacted). When a
+  /// parent turns both off again, the withdrawal is written once (the server
+  /// then hides the child's online characters); after that no more calls.
   Future<bool> ensureConsentSynced() async {
     final backend = ref.read(backendApiProvider);
     if (!backend.isAvailable) return false;
     final s = await future;
-    if (_synced == s.consents) return true;
-    final anyServer = s.consents.cloudJudge || s.consents.online;
-    if (!anyServer && backend.supportId == null) return true;
+    final desired = s.serverConsent;
+    if (s.syncedConsent == desired) return true;
+    if (!desired.anyServerFeature && s.syncedConsent == null) return true;
     try {
       await backend.syncConsent(s.consents, s.policyVersion);
-      _synced = s.consents;
-      return true;
     } on Object {
       return false;
     }
+    final latest = await future;
+    await _save(latest.copyWith(syncedConsent: () => desired));
+    return true;
   }
 
   /// Local wipe (after 「すべてのデータを削除」).
   Future<void> resetLocal() async {
     await ref.read(settingsRepositoryProvider).clear();
-    _synced = null;
     state = const AsyncData(AppSettings());
   }
 }

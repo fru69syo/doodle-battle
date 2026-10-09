@@ -65,6 +65,44 @@ class ParentConsents {
   int get hashCode => Object.hash(cloudJudge, online, ads, purchases);
 }
 
+/// The consent fields the server knows about (`users/{uid}.consent`).
+class ServerConsent {
+  const ServerConsent({
+    required this.cloudJudge,
+    required this.online,
+    required this.policyVersion,
+  });
+
+  final bool cloudJudge;
+  final bool online;
+  final int policyVersion;
+
+  /// Whether any server feature is allowed.
+  bool get anyServerFeature => cloudJudge || online;
+
+  Map<String, Object?> toJson() => {
+    'cloudJudge': cloudJudge,
+    'online': online,
+    'policyVersion': policyVersion,
+  };
+
+  factory ServerConsent.fromJson(Map<String, Object?> j) => ServerConsent(
+    cloudJudge: j['cloudJudge'] as bool? ?? false,
+    online: j['online'] as bool? ?? false,
+    policyVersion: j['policyVersion'] as int? ?? 0,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ServerConsent &&
+      other.cloudJudge == cloudJudge &&
+      other.online == online &&
+      other.policyVersion == policyVersion;
+
+  @override
+  int get hashCode => Object.hash(cloudJudge, online, policyVersion);
+}
+
 class AppSettings {
   const AppSettings({
     this.setupCompleted = false,
@@ -72,6 +110,7 @@ class AppSettings {
     this.consents = const ParentConsents(),
     this.playTimeMinutes,
     this.entitlements = const {},
+    this.syncedConsent,
   });
 
   /// First-run parent setup finished.
@@ -87,6 +126,17 @@ class AppSettings {
   /// Cached purchase entitlements (product ids) so limits work offline.
   final Set<String> entitlements;
 
+  /// Consent last written to the server successfully (null = never; then
+  /// no server account exists for this install).
+  final ServerConsent? syncedConsent;
+
+  /// What the server should currently know.
+  ServerConsent get serverConsent => ServerConsent(
+    cloudJudge: consents.cloudJudge,
+    online: consents.online,
+    policyVersion: policyVersion,
+  );
+
   /// Whether the parent must (re-)run the setup.
   bool get needsSetup =>
       !setupCompleted || policyVersion < currentPolicyVersion;
@@ -97,6 +147,7 @@ class AppSettings {
     ParentConsents? consents,
     int? Function()? playTimeMinutes,
     Set<String>? entitlements,
+    ServerConsent? Function()? syncedConsent,
   }) => AppSettings(
     setupCompleted: setupCompleted ?? this.setupCompleted,
     policyVersion: policyVersion ?? this.policyVersion,
@@ -105,6 +156,7 @@ class AppSettings {
         ? playTimeMinutes()
         : this.playTimeMinutes,
     entitlements: entitlements ?? this.entitlements,
+    syncedConsent: syncedConsent != null ? syncedConsent() : this.syncedConsent,
   );
 
   Map<String, Object?> toJson() => {
@@ -113,6 +165,7 @@ class AppSettings {
     'consents': consents.toJson(),
     'playTimeMinutes': playTimeMinutes,
     'entitlements': entitlements.toList()..sort(),
+    'syncedConsent': syncedConsent?.toJson(),
   };
 
   factory AppSettings.fromJson(Map<String, Object?> j) => AppSettings(
@@ -125,5 +178,10 @@ class AppSettings {
     entitlements: {
       for (final e in (j['entitlements'] as List?) ?? const []) e as String,
     },
+    syncedConsent: j['syncedConsent'] is Map
+        ? ServerConsent.fromJson(
+            (j['syncedConsent']! as Map).cast<String, Object?>(),
+          )
+        : null,
   );
 }

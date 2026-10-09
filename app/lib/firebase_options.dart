@@ -10,6 +10,9 @@
 // platform, and the app runs fully offline (online battles and cloud judging
 // show 「じゅんびちゅう」). Do NOT add the google-services Gradle plugin; the
 // app initialises Firebase from these options.
+//
+// Release safety: like the CI stub this file mentions `demo-doodle-battle`,
+// so `scripts/write_firebase_config.sh --require` refuses to ship it.
 // ============================================================================
 // ignore_for_file: type=lint
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;

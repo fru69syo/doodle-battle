@@ -18,13 +18,17 @@ Future<BackendApi> initBackend() async {
     return const UnavailableBackendApi();
   }
   try {
+    // Local only: no network until a server feature is used.
     await Firebase.initializeApp(options: options);
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode
-          ? const AndroidDebugProvider()
-          : const AndroidPlayIntegrityProvider(),
+    return FirebaseBackendApi(
+      // Deferred to the first server call (Play Integrity; debug provider in
+      // debug builds — register its token in the Firebase console).
+      activateAppCheck: () => FirebaseAppCheck.instance.activate(
+        providerAndroid: kDebugMode
+            ? const AndroidDebugProvider()
+            : const AndroidPlayIntegrityProvider(),
+      ),
     );
-    return FirebaseBackendApi();
   } on Object catch (e) {
     debugPrint('Firebase init failed, running offline: $e');
     return const UnavailableBackendApi();
