@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>データの削除 | らくがきバトル</title>
+<meta name="description" content="「らくがきバトル」のアカウントとデータを削除する方法">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><a href="index.html">らくがきバトル</a></header>
+<nav class="pages" aria-label="ページ">
+  <a href="index.html">サポート・よくある質問</a>
+  <a href="privacy.html">プライバシーポリシー</a>
+  <a href="terms.html">利用規約</a>
+  <a href="delete.html" aria-current="page">データの削除</a>
+</nav>
+<main>
+<h1>アカウントとデータの削除</h1>
+<p class="meta">アプリ「らくがきバトル」（Google Play）／デベロッパー: {{DEVELOPER_NAME}}</p>
+
+<p>「らくがきバトル」には ID やパスワードの登録はありません。保護者の方が「AI による絵の判定」か「オンライン対戦」を許可したときだけ、匿名の ID（アカウント）とサーバーのデータが作られます。次のどちらかの方法で、すべて削除できます。</p>
+
+<h2 id="in-app">方法 1: アプリの中で削除する（すぐに削除されます）</h2>
+<ol>
+  <li>ホーム画面の「おうちのひと」を押します。</li>
+  <li>保護者向けの確認（3秒の長押しと、かけ算の答えの入力）をします。</li>
+  <li>「すべてのデータを削除」→「削除する」を押します。</li>
+</ol>
+<p>サーバーのデータと匿名の ID を削除したあと、端末の中のデータも削除します。インターネットにつながっていないときは、サーバーのデータを削除できないため、端末のデータも消さずにお知らせします（つながる場所でもう一度お試しください）。</p>
+
+<h2 id="request">方法 2: ウェブ（メール）で削除を依頼する</h2>
+<div class="box important">
+<p>アプリを削除してしまった場合や、アプリを開けない場合は、次のメールアドレスにご連絡ください。</p>
+<p><strong>宛先:</strong> <a href="mailto:{{SUPPORT_EMAIL}}?subject=%E3%82%89%E3%81%8F%E3%81%8C%E3%81%8D%E3%83%90%E3%83%88%E3%83%AB%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E5%89%8A%E9%99%A4%E5%B8%8C%E6%9C%9B">{{SUPPORT_EMAIL}}</a><br>
+<strong>件名:</strong> らくがきバトルのデータ削除希望<br>
+<strong>本文:</strong> わかる場合は「サポート ID」（「おうちのひと」画面に表示されます）。わからない場合は、オンラインで使っていた表示名（例:「あおい ドラゴン」）と、キャラクターの名前をいくつか。</p>
+</div>
+<p>内容を確認して、<strong>30 日以内</strong>に削除し、完了をメールでお知らせします。ご本人（保護者）の確認のため、追加で質問をすることがあります。</p>
+
+<h2 id="deleted">削除されるデータ</h2>
+<ul>
+  <li>匿名の ID（Firebase の認証ユーザー）とプロフィール（表示名・レート・対戦成績・許可の設定）</li>
+  <li>オンラインに登録したキャラクター（絵の画像・名前・わざの名前・ステータス）</li>
+  <li>対戦の記録（ほかのプレイヤーの対戦記録に含まれるものも含みます）、通報の記録、待ち行列や回数制限の記録</li>
+  <li>方法 1 の場合は、端末の中のキャラクター・絵・進み具合・設定</li>
+</ul>
+
+<h2 id="retained">削除されない・しばらく残るデータ</h2>
+<ul>
+  <li><strong>クラッシュログ</strong>（「ふぐあいの じょうほうを おくる」をオンにしていた場合）: Firebase Crashlytics の保存期間（90 日）で自動的に削除されます。</li>
+  <li><strong>AI による絵の判定</strong>に送った画像: 当方ではもともと保存していません。Anthropic 側では、同社の方針に従い原則 30 日以内に削除されます。</li>
+  <li><strong>購入の記録</strong>: Google Play（保護者の Google アカウント）が管理しているため、当方では削除できません。データを削除したあとも、同じ Google アカウントなら購入した商品は使えます。</li>
+  <li><strong>広告に関する情報</strong>: Google（AdMob）の保存期間に従います。</li>
+  <li>法令で保存が必要な情報がある場合は、その期間だけ保存します。</li>
+</ul>
+<p>詳しくは<a href="privacy.html#retention">プライバシーポリシーの「保存期間」</a>をご覧ください。</p>
+</main>
+<footer>© {{DEVELOPER_NAME}}</footer>
+</body>
+</html>

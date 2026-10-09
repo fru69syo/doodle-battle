@@ -48,12 +48,14 @@ jobs:
               - 'app/**'
               - 'shared/battle_spec/**'
               - 'shared/ng_words/**'
+              - 'shared/names/**'
               - 'scripts/coverage_report.py'
               - '.github/workflows/ci.yml'
             android:
               - 'app/**'
               - 'scripts/check_release.sh'
               - 'scripts/write_firebase_config.sh'
+              - 'scripts/test_write_firebase_config.sh'
               - '.github/workflows/ci.yml'
             engine:
               - 'shared/battle_engine_ts/**'
@@ -221,6 +223,8 @@ jobs:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
+      - name: Release safety of the Firebase config script
+        run: scripts/test_write_firebase_config.sh
       - name: Firebase config (demo stub when no secrets)
         run: scripts/write_firebase_config.sh
       - name: Build debug APK

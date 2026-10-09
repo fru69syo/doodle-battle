@@ -1,0 +1,90 @@
+/* らくがきバトル: policy / support pages. Plain CSS, no web fonts, no trackers. */
+:root {
+  --ink: #1f1a3d;
+  --paper: #fff8e7;
+  --card: #ffffff;
+  --accent: #ff6b35;
+  --blue: #1e88e5;
+  --line: #e8dcc0;
+  --muted: #5b5670;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP",
+    "Yu Gothic", Meiryo, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+}
+header.site {
+  background: var(--accent);
+  color: #fff;
+  padding: 14px 16px;
+}
+header.site a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.2rem; }
+nav.pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 8px 16px;
+  background: #fff1d6;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+nav.pages a { color: var(--blue); }
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+}
+h1 { font-size: 1.6rem; line-height: 1.4; margin: 0.6em 0 0.4em; }
+h2 {
+  font-size: 1.25rem;
+  margin: 1.8em 0 0.5em;
+  padding-left: 10px;
+  border-left: 6px solid var(--accent);
+}
+h3 { font-size: 1.05rem; margin: 1.4em 0 0.3em; }
+p, li { overflow-wrap: anywhere; }
+a { color: var(--blue); }
+.meta { color: var(--muted); font-size: 0.9rem; }
+.box {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin: 1em 0;
+}
+.box.important { border: 2px solid var(--accent); }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 520px;
+  background: var(--card);
+  font-size: 0.92rem;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 8px;
+  vertical-align: top;
+  text-align: left;
+}
+th { background: #fff1d6; }
+dt { font-weight: 700; margin-top: 1em; }
+dd { margin: 0.2em 0 0 0; }
+footer {
+  max-width: 760px;
+  margin: 24px auto 0;
+  padding: 16px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+@media (min-width: 640px) {
+  body { font-size: 17px; }
+  main { padding: 24px; }
+}
