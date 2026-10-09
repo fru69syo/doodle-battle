@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // AR team: Compose compiler (SceneView's ARSceneView is a composable).
@@ -5,6 +8,19 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Release team: upload-key signing. `android/key.properties` (git-ignored) is written by
+// release.yml from GitHub secrets, or by hand for local signed builds (see docs/RELEASE.md).
+// Without it, release builds fall back to the debug key so `flutter run --release` still works;
+// such builds cannot be uploaded to Play (scripts/check_release.sh rejects them in CI).
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties =
+    Properties().apply {
+        if (keystorePropertiesFile.exists()) {
+            FileInputStream(keystorePropertiesFile).use { load(it) }
+        }
+    }
+val hasReleaseKey = keystorePropertiesFile.exists()
 
 android {
     namespace = "com.fru69syo.doodle_battle"
@@ -36,11 +52,31 @@ android {
         compose = true
     }
 
+    // Release team: versionCode/versionName come from `--build-number`/`--build-name`
+    // (scripts/version_from_tag.sh), see docs/RELEASE.md §versioning.
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig =
+                if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            // R8 + resource shrinking (Flutter enables these by default; stated explicitly so
+            // `--no-shrink` cannot silently ship an unshrunk build). Keep rules: proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

@@ -26,7 +26,7 @@
         tools:replace="android:required" />
     <!-- ===== /AR team ===== -->
     <application
-        android:label="doodle_battle"
+        android:label="らくがきバトル"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

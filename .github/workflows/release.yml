@@ -1,0 +1,184 @@
+# Signed release AAB -> Google Play INTERNAL testing track. See docs/RELEASE.md.
+#
+# Trigger: push a tag vX.Y.Z (production candidate) or vX.Y.Z-rc.N (release candidate),
+# or run manually ("Run workflow") on a tag / with the `tag` input.
+# Version: scripts/version_from_tag.sh  (v1.2.3 -> 1.2.3 / 1020399, v1.2.3-rc.4 -> 1.2.3-rc.4 / 1020304)
+# Promotion to closed testing / production is done with fastlane lanes, never automatically.
+name: Release (Play internal)
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build (vX.Y.Z or vX.Y.Z-rc.N). Empty = the ref this run was started on"
+        required: false
+        type: string
+      upload:
+        description: "Upload to the Play internal testing track"
+        required: false
+        type: boolean
+        default: true
+      release_status:
+        description: "Play release status (use draft until the app has been published once)"
+        required: false
+        type: choice
+        options: [completed, draft]
+        default: completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+  JAVA_VERSION: "21"
+  RUBY_VERSION: "3.3"
+
+jobs:
+  release:
+    name: Build signed AAB and upload to internal testing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # Environment secrets + (recommended) required reviewers. Created by the owner, see docs/RELEASE.md.
+    environment: play-release
+    env:
+      INPUT_TAG: ${{ inputs.tag }}
+      DO_UPLOAD: ${{ github.event_name == 'push' || inputs.upload }}
+      RELEASE_STATUS: ${{ inputs.release_status || 'completed' }}
+      AAB: app/build/app/outputs/bundle/release/app-release.aab
+      MAPPING: app/build/app/outputs/mapping/release/mapping.txt
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - name: Version from tag
+        id: version
+        run: |
+          tag="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          scripts/version_from_tag.sh "$tag"
+          echo "### Release ${tag}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check required secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          missing=()
+          for n in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [[ -n "${!n}" ]] || missing+=("$n")
+          done
+          if [[ "$DO_UPLOAD" == "true" && -z "$PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            missing+=(PLAY_SERVICE_ACCOUNT_JSON)
+          fi
+          if (( ${#missing[@]} )); then
+            echo "::error::Missing secrets in environment play-release: ${missing[*]} (docs/RELEASE.md)"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+          cache-dependency-path: |
+            app/android/*.gradle*
+            app/android/app/*.gradle*
+            app/android/gradle/wrapper/gradle-wrapper.properties
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Upload key (key.properties)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload-keystore.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/upload-keystore.jks"
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+          } > app/android/key.properties
+
+      - name: Firebase config (real project required)
+        env:
+          FIREBASE_OPTIONS_DART_B64: ${{ secrets.FIREBASE_OPTIONS_DART_B64 }}
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: scripts/write_firebase_config.sh --require
+
+      - name: Build release AAB
+        working-directory: app
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          flutter pub get
+          flutter build appbundle --release --build-name "$VERSION_NAME" --build-number "$VERSION_CODE"
+
+      - name: Verify signature, Families / Play compliance
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          jarsigner -verify "$AAB" > /dev/null
+          scripts/check_release.sh "$AAB" --require-upload-key \
+            --expect-version-code "$VERSION_CODE" --expect-version-name "$VERSION_NAME" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: 16 KB page alignment + size
+        run: scripts/check_16kb.sh "$AAB" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: doodle-battle-${{ steps.version.outputs.version_name }}-${{ steps.version.outputs.version_code }}
+          path: |
+            app/build/app/outputs/bundle/release/app-release.aab
+            app/build/app/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        if: env.DO_UPLOAD == 'true'
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/app/android/fastlane/Gemfile
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Upload to Play internal testing (fastlane supply)
+        if: env.DO_UPLOAD == 'true'
+        working-directory: app/android
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          BUNDLE_GEMFILE: ${{ github.workspace }}/app/android/fastlane/Gemfile
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"
+          LC_ALL: C.UTF-8
+          LANG: C.UTF-8
+        run: |
+          umask 077
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play-service-account.json"
+          export PLAY_JSON_KEY_PATH="$RUNNER_TEMP/play-service-account.json"
+          bundle exec fastlane android internal \
+            "aab:$GITHUB_WORKSPACE/$AAB" "mapping:$GITHUB_WORKSPACE/$MAPPING" "status:$RELEASE_STATUS"
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload-keystore.jks" "$RUNNER_TEMP/play-service-account.json" app/android/key.properties

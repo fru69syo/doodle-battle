@@ -1,0 +1,246 @@
+# CI for らくがきバトル: Flutter app, shared TS battle engine, Firebase Functions,
+# Android debug build + Play/Families manifest checks. See docs/RELEASE.md §CI.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+  NODE_VERSION: "22"
+  JAVA_VERSION: "21"
+
+jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    # Manual runs check everything; PRs and pushes only the areas that changed.
+    outputs:
+      app: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.app }}
+      android: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.android }}
+      engine: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.engine }}
+      functions: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.functions }}
+      workflows: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.workflows }}
+      store: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.store }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        with:
+          filters: |
+            app:
+              - 'app/**'
+              - 'shared/battle_spec/**'
+              - 'shared/ng_words/**'
+              - 'scripts/coverage_report.py'
+              - '.github/workflows/ci.yml'
+            android:
+              - 'app/**'
+              - 'scripts/check_release.sh'
+              - 'scripts/write_firebase_config.sh'
+              - '.github/workflows/ci.yml'
+            engine:
+              - 'shared/battle_engine_ts/**'
+              - 'shared/battle_spec/**'
+              - '.github/workflows/ci.yml'
+            functions:
+              - 'firebase/**'
+              - 'shared/**'
+              - '.github/workflows/ci.yml'
+            workflows:
+              - '.github/**'
+            store:
+              - 'store/**'
+              - 'scripts/check_listing.py'
+
+  actionlint:
+    name: actionlint
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      ACTIONLINT_VERSION: "1.7.12"
+      ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install actionlint
+        run: |
+          curl -fsSL -o /tmp/actionlint.tgz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tgz" | sha256sum -c -
+          tar -xzf /tmp/actionlint.tgz -C /tmp actionlint
+      - name: Lint workflows
+        run: /tmp/actionlint -color
+
+  store-listing:
+    name: Store listing limits
+    needs: changes
+    if: needs.changes.outputs.store == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check_listing.py store/metadata
+
+  flutter:
+    name: Flutter format / analyze / test
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Firebase config (demo stub when no secrets)
+        working-directory: .
+        run: scripts/write_firebase_config.sh
+      - run: flutter pub get
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed lib test tool
+      - run: flutter analyze
+      - run: flutter test --coverage
+      - name: Coverage (SPEC §9 gates for pure logic)
+        working-directory: .
+        run: >-
+          python3 scripts/coverage_report.py app/coverage/lcov.info
+          --min lib/domain/battle=80
+          --min lib/features/drawing_analysis=80
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: flutter-coverage
+          path: app/coverage/lcov.info
+          retention-days: 14
+
+  battle-engine-ts:
+    name: Battle engine (TS)
+    needs: changes
+    if: needs.changes.outputs.engine == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: shared/battle_engine_ts
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: shared/battle_engine_ts/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  functions:
+    name: Firebase Functions (lint / build / unit / emulator)
+    needs: changes
+    if: needs.changes.outputs.functions == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: firebase/functions
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: firebase/functions/package-lock.json
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Cache Firebase emulator binaries
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('firebase/functions/package-lock.json') }}
+          restore-keys: firebase-emulators-${{ runner.os }}-
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test:unit
+      - name: Emulator tests (Auth / Firestore / Storage + rules)
+        run: npm run test:emulator
+
+  android:
+    name: Android debug APK + release manifest checks
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+          cache-dependency-path: |
+            app/android/*.gradle*
+            app/android/app/*.gradle*
+            app/android/gradle/wrapper/gradle-wrapper.properties
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Firebase config (demo stub when no secrets)
+        run: scripts/write_firebase_config.sh
+      - name: Build debug APK
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter build apk --debug
+      - name: Merge release manifest
+        working-directory: app/android
+        run: ./gradlew --no-daemon -q :app:processReleaseMainManifest
+      - name: Families / Play compliance (release manifest)
+        run: scripts/check_release.sh app/build/app/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml
+      - name: Release AAB smoke build (main only; R8 + 16 KB check, debug-signed)
+        if: github.event_name == 'push'
+        run: |
+          (cd app && flutter build appbundle --release)
+          scripts/check_release.sh app/build/app/outputs/bundle/release/app-release.aab
+          scripts/check_16kb.sh app/build/app/outputs/bundle/release/app-release.aab | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-debug-apk
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
