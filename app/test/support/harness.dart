@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:doodle_battle/app.dart';
 import 'package:doodle_battle/core/providers.dart';
@@ -107,14 +108,19 @@ Future<TestApp> pumpApp(
   FakeCrashReporter? crash,
   int seed = 7,
   bool settle = true,
+  Map<String, Uint8List> images = const {},
+  Size physicalSize = const Size(1080, 2340),
+  double devicePixelRatio = 2.75,
+  Duration battleStep = const Duration(milliseconds: 20),
+  Widget Function(Widget app)? wrap,
 }) async {
-  tester.view.physicalSize = const Size(1080, 2340);
-  tester.view.devicePixelRatio = 2.75;
+  tester.view.physicalSize = physicalSize;
+  tester.view.devicePixelRatio = devicePixelRatio;
   addTearDown(tester.view.reset);
   final png = testPng();
   final app = TestApp(
     characters: InMemoryCharacterRepository([
-      for (final c in characters) (c, png),
+      for (final c in characters) (c, images[c.id] ?? png),
     ]),
     settingsRepo: InMemorySettingsRepository(
       settings: settings,
@@ -151,11 +157,13 @@ Future<TestApp> pumpApp(
         displayNameWordsProvider.overrideWithValue(
           AsyncData(testDisplayNameWords),
         ),
-        battleStepProvider.overrideWithValue(const Duration(milliseconds: 20)),
+        battleStepProvider.overrideWithValue(battleStep),
         queueHeartbeatProvider.overrideWithValue(const Duration(seconds: 10)),
         matchPollProvider.overrideWithValue(const Duration(seconds: 5)),
       ],
-      child: const DoodleBattleApp(),
+      child: wrap == null
+          ? const DoodleBattleApp()
+          : wrap(const DoodleBattleApp()),
     ),
   );
   app.container = ProviderScope.containerOf(

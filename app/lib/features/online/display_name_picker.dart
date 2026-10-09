@@ -62,26 +62,49 @@ class DisplayNameCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final name = ref.watch(progressProvider).value?.displayName;
+    // Custom row instead of ListTile: the tile's fixed paddings made the
+    // title and the name wrap mid-word on 411 dp phones.
     return Card(
       key: const Key('display-name-card'),
       color: const Color(0xFFFFF4D6),
-      child: ListTile(
-        leading: const Icon(Icons.badge, size: 36, color: AppColors.primary),
-        title: const Text('オンラインの なまえ'),
-        subtitle: Text(
-          name?.text ?? 'まだ きまって いないよ',
-          key: const Key('display-name-current'),
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-        trailing: FilledButton(
-          key: const Key('display-name-change'),
-          onPressed: () => showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            builder: (_) => const DisplayNamePicker(),
-          ),
-          child: const Text('かえる'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        child: Row(
+          children: [
+            const Icon(Icons.badge, size: 36, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('オンラインの なまえ', style: TextStyle(fontSize: 15)),
+                  Text(
+                    name?.text ?? 'まだ きまって いないよ',
+                    key: const Key('display-name-current'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              key: const Key('display-name-change'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(72, 56),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => const DisplayNamePicker(),
+              ),
+              child: const Text('かえる'),
+            ),
+          ],
         ),
       ),
     );

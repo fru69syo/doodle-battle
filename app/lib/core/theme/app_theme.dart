@@ -31,11 +31,24 @@ ThemeData buildAppTheme() {
     scaffoldBackgroundColor: AppColors.background,
   );
   return base.copyWith(
+    // Merge (not replace) the body styles so they keep the bundled font
+    // family and the ink colour; replacing them made DefaultTextStyle fall
+    // back to the platform font with no colour (white text on paper).
     textTheme: base.textTheme
-        .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink)
         .copyWith(
-          bodyLarge: const TextStyle(fontSize: 18, height: 1.5),
-          bodyMedium: const TextStyle(fontSize: 16, height: 1.5),
+          bodyLarge: base.textTheme.bodyLarge?.copyWith(
+            fontSize: 18,
+            height: 1.5,
+          ),
+          bodyMedium: base.textTheme.bodyMedium?.copyWith(
+            fontSize: 16,
+            height: 1.5,
+          ),
+        )
+        .apply(
+          fontFamily: appFontFamily,
+          bodyColor: AppColors.ink,
+          displayColor: AppColors.ink,
         ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.background,
