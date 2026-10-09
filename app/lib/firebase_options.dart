@@ -11,8 +11,11 @@
 // show 「じゅんびちゅう」). Do NOT add the google-services Gradle plugin; the
 // app initialises Firebase from these options.
 //
-// Release safety: like the CI stub this file mentions `demo-doodle-battle`,
-// so `scripts/write_firebase_config.sh --require` refuses to ship it.
+// Release safety: `scripts/write_firebase_config.sh --require` refuses to ship
+// this file. It detects the marker below (also present in the CI stub), the
+// `demo-` project id, and the absence of real Android options. Keep the
+// marker until the file is replaced by `flutterfire configure`.
+// DOODLE_BATTLE_FIREBASE_PLACEHOLDER (demo-doodle-battle)
 // ============================================================================
 // ignore_for_file: type=lint
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
