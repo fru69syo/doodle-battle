@@ -1,5 +1,7 @@
 plugins {
     id("com.android.application")
+    // AR team: Compose compiler (SceneView's ARSceneView is a composable).
+    id("org.jetbrains.kotlin.plugin.compose")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -29,6 +31,11 @@ android {
         versionName = flutter.versionName
     }
 
+    // AR team: needed for the ARSceneView composable hosted in a platform view.
+    buildFeatures {
+        compose = true
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -46,4 +53,13 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// AR team: ARCore + SceneView (Filament) for features/ar. See docs/AR.md.
+dependencies {
+    implementation("io.github.sceneview:arsceneview:4.34.0")
+    implementation("com.google.ar:core:1.54.0")
+    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.foundation:foundation")
 }
