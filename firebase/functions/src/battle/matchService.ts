@@ -7,7 +7,7 @@ import type { UserProfile } from "../lib/auth";
 import type { EndReason, MatchDoc, PendingActions, SideInfo, TurnDoc } from "../model";
 import { chooseGhostAction } from "./ghostAi";
 import { computeResults, RATING } from "./results";
-import { getEngine, TIMEOUT_ACTION, type ActionId, type BattleEngine, type Side } from "./engine";
+import { getEngine, TIMEOUT_ACTION, type ActionId, type SharedEngine, type Side } from "./engine";
 
 const SIDES: readonly Side[] = ["a", "b"];
 
@@ -18,7 +18,7 @@ function actionsRef(matchId: string): DocumentReference {
   return matchRef(matchId).collection(COL.matchPrivate).doc("actions");
 }
 
-function engineFor(match: MatchDoc): BattleEngine {
+function engineFor(match: MatchDoc): SharedEngine {
   const engine = getEngine();
   if (engine.id !== match.engineId) {
     // A deploy changed the engine while this match was running. Refuse rather
@@ -84,20 +84,22 @@ interface Resolution {
 
 /** Pure: resolves the current turn with the given actions. */
 function resolve(
-  engine: BattleEngine,
+  engine: SharedEngine,
   match: MatchDoc,
   actions: Record<Side, ActionId>,
   timedOut: Record<Side, boolean>,
   now: number,
 ): Resolution {
-  const { state, events } = engine.resolveTurn(match.state, actions.a, actions.b);
+  const { state, events } = engine.resolveTurn(match.state, actions.a, actions.b, timedOut);
   const view = engine.view(state);
   const timeouts = {
     a: timedOut.a ? match.timeouts.a + 1 : 0,
     b: timedOut.b ? match.timeouts.b + 1 : 0,
   };
   let winner: Side | "draw" | null = view.finished ? view.winner : null;
-  let endReason: EndReason | null = view.finished ? "ko" : null;
+  // The shared engine ends the battle itself: KO, or the turn cap (higher HP
+  // ratio wins; exact ties are broken by its rng, so there are no draws).
+  let endReason: EndReason | null = view.finished ? (view.endReason ?? "ko") : null;
 
   if (!view.finished) {
     const forfeits = SIDES.filter(
@@ -109,11 +111,6 @@ function resolve(
     } else if (forfeits.length === 1 && forfeits[0]) {
       winner = forfeits[0] === "a" ? "b" : "a";
       endReason = "forfeit_timeout";
-    } else if (match.turn >= LIMITS.maxTurns) {
-      const ra = view.a.hp / Math.max(1, view.a.maxHp);
-      const rb = view.b.hp / Math.max(1, view.b.maxHp);
-      winner = ra === rb ? "draw" : ra > rb ? "a" : "b";
-      endReason = "turn_limit";
     }
   }
   const finished = endReason !== null;
@@ -222,10 +219,7 @@ export async function submitAction(
     pending[side] = action;
     const opp: Side = side === "a" ? "b" : "a";
     if (match.sides[opp].isGhost && pending[opp] === null) {
-      pending[opp] = chooseGhostAction(engine, match.state, opp, {
-        a: match.sides.a.element,
-        b: match.sides.b.element,
-      });
+      pending[opp] = chooseGhostAction(engine, match.state, opp);
     }
     if (pending.a !== null && pending.b !== null) {
       const now = clock.now();
@@ -275,11 +269,10 @@ export async function enforceDeadline(matchId: string): Promise<boolean> {
     const pSnap = await tx.get(actionsRef(matchId));
     const pending = (pSnap.data() ?? { turn: match.turn, a: null, b: null }) as PendingActions;
     const current = pending.turn === match.turn ? pending : { turn: match.turn, a: null, b: null };
-    const elements = { a: match.sides.a.element, b: match.sides.b.element };
     const pick = (s: Side): { action: ActionId; timedOut: boolean } => {
       const a = current[s];
       if (a) return { action: a, timedOut: false };
-      if (match.sides[s].isGhost) return { action: chooseGhostAction(engine, match.state, s, elements), timedOut: false };
+      if (match.sides[s].isGhost) return { action: chooseGhostAction(engine, match.state, s), timedOut: false };
       const legal = engine.legalActions(match.state, s);
       return { action: legal.includes(TIMEOUT_ACTION) ? TIMEOUT_ACTION : (legal[0] ?? TIMEOUT_ACTION), timedOut: true };
     };

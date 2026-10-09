@@ -14,6 +14,7 @@
     "lint": "tsc -p tsconfig.json --noEmit && eslint .",
     "pretest": "npm run sync-shared",
     "test": "npm run test:unit && npm run test:emulator",
+    "pretest:unit": "npm run sync-shared",
     "test:unit": "vitest run --project unit",
     "test:emulator": "firebase emulators:exec --config ../firebase.json --project demo-doodle-battle --only auth,firestore,storage \"vitest run --project emulator\"",
     "emulators": "npm run build && firebase emulators:start --config ../firebase.json --project demo-doodle-battle",

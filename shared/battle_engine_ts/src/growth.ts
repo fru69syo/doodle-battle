@@ -6,10 +6,24 @@ import type { EvolutionStage, StatKind, Stats } from './types';
 export type SeedAllocations = Partial<Record<StatKind, number>>;
 const STAT_KINDS: readonly StatKind[] = ['hp', 'atk', 'def', 'spd'];
 
-/** floor(base * (100 + levelUpStatPct*(level-1) + seedStatPct*seeds) / 100), min 1. */
-export function statsAtLevel(spec: BattleSpec, base: Stats, level: number, seeds: SeedAllocations = {}): Stats {
+/** しょぼキャラ: skill > growth.shoboSkillAbove (75). */
+export function isShoboSkill(spec: BattleSpec, skill: number): boolean {
+  return skill > spec.growth.shoboSkillAbove;
+}
+
+/** Growth per level in percent of Lv1 stats (higher for しょぼキャラ). */
+export function levelUpPct(spec: BattleSpec, isShobo: boolean): number {
+  return isShobo ? spec.growth.shoboLevelUpStatPct : spec.growth.levelUpStatPct;
+}
+
+/**
+ * floor(base * (100 + g*(level-1) + seedStatPct*seeds) / 100), min 1,
+ * g = levelUpPct(spec, isShobo).
+ */
+export function statsAtLevel(spec: BattleSpec, base: Stats, level: number, seeds: SeedAllocations, isShobo: boolean): Stats {
+  const g = levelUpPct(spec, isShobo);
   const one = (k: StatKind): number => {
-    const pct = 100 + spec.growth.levelUpStatPct * (level - 1) + spec.growth.seedStatPct * (seeds[k] ?? 0);
+    const pct = 100 + g * (level - 1) + spec.growth.seedStatPct * (seeds[k] ?? 0);
     const v = idiv(base[k] * pct, 100);
     return v < 1 ? 1 : v;
   };
@@ -17,9 +31,9 @@ export function statsAtLevel(spec: BattleSpec, base: Stats, level: number, seeds
 }
 
 /** Upper bound of each stat at `level` (every seed in that stat): anti-tamper check. */
-export function maxStatsAtLevel(spec: BattleSpec, base: Stats, level: number): Stats {
+export function maxStatsAtLevel(spec: BattleSpec, base: Stats, level: number, isShobo: boolean): Stats {
   const n = (level - 1) * spec.growth.seedsPerLevel;
-  return statsAtLevel(spec, base, level, { hp: n, atk: n, def: n, spd: n });
+  return statsAtLevel(spec, base, level, { hp: n, atk: n, def: n, spd: n }, isShobo);
 }
 
 /** XP from `level` to level+1: 50 + 25 * level. */

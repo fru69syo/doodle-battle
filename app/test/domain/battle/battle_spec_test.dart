@@ -74,18 +74,40 @@ void main() {
     expect(spec.timeoutAction, BattleAction.tackle);
   });
 
-  test('CPU stage table covers 1..30 with known placeholder ids', () {
+  test('CPU stage table covers 1..30 with the bundled CPU doodles', () {
+    final roster = CpuRoster.fromManifestJson(readJson(cpuManifestPath));
     expect(
       [for (final s in spec.cpu.stages) s.stage],
       [for (var i = 1; i <= 30; i++) i],
     );
+    expect(spec.cpu.characterIds.toSet(), roster.byId.keys.toSet());
+    final used = <String>{};
     for (final s in spec.cpu.stages) {
-      expect(spec.cpu.characterIds, contains(s.cpuId));
+      expect(roster.byId, contains(s.cpuId));
+      used.add(s.cpuId);
       expect(s.level, inInclusiveRange(1, spec.growth.maxLevel));
+      expect(s.recommendedLevel, inInclusiveRange(1, spec.growth.maxLevel));
       expect(s.xpMultiplierPct, greaterThanOrEqualTo(100));
+      // Every stage's CPU can be built with the growth rules.
+      final f = cpuFighterSetup(spec, s, roster);
+      expect(f.level, s.level);
+      expect(f.element, roster[s.cpuId].element);
     }
-    expect(spec.cpu.stage(30).level, spec.growth.maxLevel);
+    expect(used, roster.byId.keys.toSet(), reason: 'every doodle appears');
+    // Consecutive stages never repeat an element.
+    for (var i = 1; i < spec.cpu.stages.length; i++) {
+      expect(
+        roster[spec.cpu.stages[i].cpuId].element,
+        isNot(roster[spec.cpu.stages[i - 1].cpuId].element),
+      );
+    }
+    expect(spec.cpu.stage(30).recommendedLevel, spec.growth.maxLevel);
     expect(spec.cpu.stage(1).aiTier, AiTier.weak);
     expect(spec.cpu.stage(30).aiTier, AiTier.strong);
+  });
+
+  test('CPU roster loads through the asset bundle', () async {
+    final roster = await loadCpuRoster();
+    expect(roster.byId.length, 12);
   });
 }

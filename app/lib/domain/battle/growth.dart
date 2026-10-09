@@ -7,20 +7,24 @@ import '../stats.dart';
 import 'battle_engine.dart';
 import 'battle_spec.dart';
 
+/// Whether a drawing with this じょうずさ is a しょぼキャラ (skill > 75).
+bool isShoboSkill(BattleSpec spec, num skill) =>
+    skill > spec.growth.shoboSkillAbove;
+
 /// Stats at [level] with [seeds] allocated, from Lv1 [base] stats:
-/// `floor(base * (100 + levelUpStatPct*(level-1) + seedStatPct*seeds) / 100)`,
-/// minimum 1.
+/// `floor(base * (100 + g*(level-1) + seedStatPct*seeds) / 100)`, minimum 1,
+/// where g = shoboLevelUpStatPct for しょぼキャラ, else levelUpStatPct.
 Stats statsAtLevel(
   BattleSpec spec,
   Stats base,
   int level,
-  Map<StatKind, int> seeds,
-) {
+  Map<StatKind, int> seeds, {
+  required bool isShobo,
+}) {
+  final growth = spec.growth.levelUpPct(isShobo: isShobo);
   int one(int b, StatKind k) {
     final pct =
-        100 +
-        spec.growth.levelUpStatPct * (level - 1) +
-        spec.growth.seedStatPct * (seeds[k] ?? 0);
+        100 + growth * (level - 1) + spec.growth.seedStatPct * (seeds[k] ?? 0);
     final v = (b * pct) ~/ 100;
     return v < 1 ? 1 : v;
   }
@@ -34,16 +38,26 @@ Stats statsAtLevel(
 }
 
 /// Current battle stats of [c] (level growth + seeds).
-Stats currentStats(BattleSpec spec, Character c) =>
-    statsAtLevel(spec, c.baseStats, c.level, c.seedAllocations);
+Stats currentStats(BattleSpec spec, Character c) => statsAtLevel(
+  spec,
+  c.baseStats,
+  c.level,
+  c.seedAllocations,
+  isShobo: c.isShobo,
+);
 
 /// Upper bound of each stat at [level] (all seeds in that stat). Used by the
 /// server to reject tampered stats.
-Stats maxStatsAtLevel(BattleSpec spec, Stats base, int level) {
+Stats maxStatsAtLevel(
+  BattleSpec spec,
+  Stats base,
+  int level, {
+  required bool isShobo,
+}) {
   final seeds = (level - 1) * spec.growth.seedsPerLevel;
   return statsAtLevel(spec, base, level, {
     for (final k in StatKind.values) k: seeds,
-  });
+  }, isShobo: isShobo);
 }
 
 /// Battle setup for a character.

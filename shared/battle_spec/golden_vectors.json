@@ -1,7 +1,7 @@
 {
- "specVersion": 1,
+ "specVersion": 2,
  "generatedBy": "app/tool/gen_golden_vectors.dart",
- "count": 105,
+ "count": 109,
  "vectors": [
   {
    "kind": "rng",
@@ -17584,7 +17584,8 @@
      "spd": 33
     },
     "level": 1,
-    "seeds": {}
+    "seeds": {},
+    "isShobo": false
    },
    "expected": {
     "stats": {
@@ -17617,7 +17618,8 @@
     "seeds": {
      "atk": 5,
      "hp": 4
-    }
+    },
+    "isShobo": false
    },
    "expected": {
     "stats": {
@@ -17649,7 +17651,8 @@
     "level": 20,
     "seeds": {
      "spd": 19
-    }
+    },
+    "isShobo": false
    },
    "expected": {
     "stats": {
@@ -17681,7 +17684,8 @@
     "level": 30,
     "seeds": {
      "def": 29
-    }
+    },
+    "isShobo": false
    },
    "expected": {
     "stats": {
@@ -17698,6 +17702,485 @@
     },
     "specialPower": 140,
     "stage": "densetsu"
+   }
+  },
+  {
+   "kind": "stats",
+   "name": "shobo Lv1",
+   "input": {
+    "base": {
+     "hp": 31,
+     "atk": 33,
+     "def": 30,
+     "spd": 32
+    },
+    "level": 1,
+    "seeds": {},
+    "isShobo": true
+   },
+   "expected": {
+    "stats": {
+     "hp": 31,
+     "atk": 33,
+     "def": 30,
+     "spd": 32
+    },
+    "maxStats": {
+     "hp": 31,
+     "atk": 33,
+     "def": 30,
+     "spd": 32
+    },
+    "specialPower": 120,
+    "stage": "normal"
+   }
+  },
+  {
+   "kind": "stats",
+   "name": "shobo Lv15 with seeds",
+   "input": {
+    "base": {
+     "hp": 31,
+     "atk": 33,
+     "def": 30,
+     "spd": 32
+    },
+    "level": 15,
+    "seeds": {
+     "atk": 7,
+     "spd": 7
+    },
+    "isShobo": true
+   },
+   "expected": {
+    "stats": {
+     "hp": 83,
+     "atk": 95,
+     "def": 80,
+     "spd": 92
+    },
+    "maxStats": {
+     "hp": 96,
+     "atk": 102,
+     "def": 93,
+     "spd": 99
+    },
+    "specialPower": 120,
+    "stage": "kagayaki"
+   }
+  },
+  {
+   "kind": "stats",
+   "name": "shobo Lv30",
+   "input": {
+    "base": {
+     "hp": 31,
+     "atk": 33,
+     "def": 30,
+     "spd": 32
+    },
+    "level": 30,
+    "seeds": {
+     "hp": 29
+    },
+    "isShobo": true
+   },
+   "expected": {
+    "stats": {
+     "hp": 165,
+     "atk": 147,
+     "def": 134,
+     "spd": 143
+    },
+    "maxStats": {
+     "hp": 165,
+     "atk": 176,
+     "def": 160,
+     "spd": 171
+    },
+    "specialPower": 140,
+    "stage": "densetsu"
+   }
+  },
+  {
+   "kind": "battle",
+   "name": "shobo Lv30 vs normal Lv15",
+   "description": "Grown しょぼキャラ vs a mid-level kid.",
+   "seed": 4,
+   "setup": {
+    "a": {
+     "element": "leaf",
+     "level": 30,
+     "stats": {
+      "hp": 138,
+      "atk": 176,
+      "def": 134,
+      "spd": 143
+     }
+    },
+    "b": {
+     "element": "water",
+     "level": 15,
+     "stats": {
+      "hp": 188,
+      "atk": 140,
+      "def": 132,
+      "spd": 140
+     }
+    }
+   },
+   "initialFromSetup": true,
+   "initial": {
+    "turn": 0,
+    "a": {
+     "element": "leaf",
+     "level": 30,
+     "maxHp": 414,
+     "hp": 414,
+     "atk": 176,
+     "def": 134,
+     "spd": 143,
+     "specialPower": 140,
+     "gauge": 0,
+     "guardStreak": 0,
+     "usage": {
+      "tackle": 0,
+      "element": 0,
+      "guard": 0,
+      "special": 0
+     },
+     "lastAction": null
+    },
+    "b": {
+     "element": "water",
+     "level": 15,
+     "maxHp": 564,
+     "hp": 564,
+     "atk": 140,
+     "def": 132,
+     "spd": 140,
+     "specialPower": 120,
+     "gauge": 0,
+     "guardStreak": 0,
+     "usage": {
+      "tackle": 0,
+      "element": 0,
+      "guard": 0,
+      "special": 0
+     },
+     "lastAction": null
+    },
+    "winner": null,
+    "endReason": null
+   },
+   "turns": [
+    [
+     "element",
+     "element"
+    ],
+    [
+     "element",
+     "element"
+    ],
+    [
+     "element",
+     "element"
+    ],
+    [
+     "element",
+     "guard"
+    ],
+    [
+     "special",
+     "special"
+    ]
+   ],
+   "expected": {
+    "events": [
+     [
+      {
+       "type": "turnStart",
+       "turn": 1
+      },
+      {
+       "type": "move",
+       "side": "a",
+       "move": "element",
+       "element": "leaf"
+      },
+      {
+       "type": "damage",
+       "target": "b",
+       "amount": 93,
+       "hp": 471,
+       "guarded": false
+      },
+      {
+       "type": "gauge",
+       "side": "a",
+       "delta": 20,
+       "value": 20
+      },
+      {
+       "type": "gauge",
+       "side": "b",
+       "delta": 13,
+       "value": 13
+      },
+      {
+       "type": "move",
+       "side": "b",
+       "move": "element",
+       "element": "water"
+      },
+      {
+       "type": "crit",
+       "side": "b"
+      },
+      {
+       "type": "damage",
+       "target": "a",
+       "amount": 101,
+       "hp": 313,
+       "guarded": false
+      },
+      {
+       "type": "gauge",
+       "side": "b",
+       "delta": 20,
+       "value": 33
+      },
+      {
+       "type": "gauge",
+       "side": "a",
+       "delta": 17,
+       "value": 37
+      }
+     ],
+     [
+      {
+       "type": "turnStart",
+       "turn": 2
+      },
+      {
+       "type": "move",
+       "side": "a",
+       "move": "element",
+       "element": "leaf"
+      },
+      {
+       "type": "crit",
+       "side": "a"
+      },
+      {
+       "type": "damage",
+       "target": "b",
+       "amount": 133,
+       "hp": 338,
+       "guarded": false
+      },
+      {
+       "type": "gauge",
+       "side": "a",
+       "delta": 20,
+       "value": 57
+      },
+      {
+       "type": "gauge",
+       "side": "b",
+       "delta": 16,
+       "value": 49
+      },
+      {
+       "type": "move",
+       "side": "b",
+       "move": "element",
+       "element": "water"
+      },
+      {
+       "type": "damage",
+       "target": "a",
+       "amount": 75,
+       "hp": 238,
+       "guarded": false
+      },
+      {
+       "type": "gauge",
+       "side": "b",
+       "delta": 20,
+       "value": 69
+      },
+      {
+       "type": "gauge",
+       "side": "a",
+       "delta": 14,
+       "value": 71
+      }
+     ],
+     [
+      {
+       "type": "turnStart",
+       "turn": 3
+      },
+      {
+       "type": "move",
+       "side": "a",
+       "move": "element",
+       "element": "leaf"
+      },
+      {
+       "type": "damage",
+       "target": "b",
+       "amount": 94,
+       "hp": 244,
+       "guarded": false
+      },
+      {
+       "type": "gauge",
+       "side": "a",
+       "delta": 20,
+       "value": 91
+      },
+      {
+       "type": "gauge",
+       "side": "b",
+       "delta": 13,
+       "value": 82
+      },
+      {
+       "type": "move",
+       "side": "b",
+       "move": "element",
+       "element": "water"
+      },
+      {
+       "type": "damage",
+       "target": "a",
+       "amount": 73,
+       "hp": 165,
+       "guarded": false
+      },
+      {
+       "type": "gauge",
+       "side": "b",
+       "delta": 18,
+       "value": 100
+      },
+      {
+       "type": "gauge",
+       "side": "a",
+       "delta": 9,
+       "value": 100
+      }
+     ],
+     [
+      {
+       "type": "turnStart",
+       "turn": 4
+      },
+      {
+       "type": "guard",
+       "side": "b",
+       "damageTakenPct": 50,
+       "weakened": false
+      },
+      {
+       "type": "move",
+       "side": "a",
+       "move": "element",
+       "element": "leaf"
+      },
+      {
+       "type": "crit",
+       "side": "a"
+      },
+      {
+       "type": "damage",
+       "target": "b",
+       "amount": 79,
+       "hp": 165,
+       "guarded": true
+      }
+     ],
+     [
+      {
+       "type": "turnStart",
+       "turn": 5
+      },
+      {
+       "type": "move",
+       "side": "a",
+       "move": "special",
+       "element": null
+      },
+      {
+       "type": "gauge",
+       "side": "a",
+       "delta": -100,
+       "value": 0
+      },
+      {
+       "type": "damage",
+       "target": "b",
+       "amount": 165,
+       "hp": 0,
+       "guarded": false
+      },
+      {
+       "type": "faint",
+       "side": "b"
+      },
+      {
+       "type": "battleEnd",
+       "winner": "a",
+       "reason": "ko"
+      }
+     ]
+    ],
+    "final": {
+     "turn": 5,
+     "a": {
+      "element": "leaf",
+      "level": 30,
+      "maxHp": 414,
+      "hp": 165,
+      "atk": 176,
+      "def": 134,
+      "spd": 143,
+      "specialPower": 140,
+      "gauge": 0,
+      "guardStreak": 0,
+      "usage": {
+       "tackle": 0,
+       "element": 4,
+       "guard": 0,
+       "special": 1
+      },
+      "lastAction": "special"
+     },
+     "b": {
+      "element": "water",
+      "level": 15,
+      "maxHp": 564,
+      "hp": 0,
+      "atk": 140,
+      "def": 132,
+      "spd": 140,
+      "specialPower": 120,
+      "gauge": 100,
+      "guardStreak": 0,
+      "usage": {
+       "tackle": 0,
+       "element": 3,
+       "guard": 1,
+       "special": 1
+      },
+      "lastAction": "special"
+     },
+     "winner": "a",
+     "endReason": "ko"
+    },
+    "rngState": 3471308039
    }
   }
  ]

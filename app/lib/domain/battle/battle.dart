@@ -10,5 +10,6 @@ export 'battle_spec.dart';
 export 'battle_state.dart';
 export 'battle_types.dart';
 export 'cpu_ai.dart';
+export 'cpu_roster.dart';
 export 'growth.dart';
 export 'rng.dart';

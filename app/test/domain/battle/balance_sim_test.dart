@@ -1,4 +1,5 @@
 import 'package:doodle_battle/domain/battle/balance_sim.dart';
+import 'package:doodle_battle/domain/battle/cpu_roster.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '_support.dart';
@@ -9,9 +10,24 @@ void main() {
   final results = {for (final r in standardScenarios(spec, n: 2000)) r.name: r};
   SimResult r(String name) => results[name]!;
 
-  test('kid scribble beats shobo at the same level >= 80%', () {
-    expect(r('kid vs shobo (Lv1)').winRateA, greaterThanOrEqualTo(0.80));
-    expect(r('kid vs shobo (Lv10)').winRateA, greaterThanOrEqualTo(0.80));
+  test('しょぼ stays < 20% against a kid scribble at the same level', () {
+    for (final lv in [1, 10, 20, 30]) {
+      expect(r('shobo vs kid, both Lv$lv').winRateA, lessThan(0.20));
+    }
+    for (final lv in [10, 20, 30]) {
+      expect(
+        r('shobo vs kid, both Lv$lv, seeds spent').winRateA,
+        lessThan(0.20),
+      );
+    }
+  });
+
+  test('「育てれば戦える」: Lv30 しょぼ vs Lv15 kid is 40-60%', () {
+    expect(r('shobo Lv30 vs kid Lv15').winRateA, inInclusiveRange(0.40, 0.60));
+    expect(
+      r('shobo Lv30 vs kid Lv15, seeds spent').winRateA,
+      inInclusiveRange(0.40, 0.60),
+    );
   });
 
   test('equal stats ~50%', () {
@@ -53,5 +69,24 @@ void main() {
     expect(r('strong AI vs normal AI').winRateA, greaterThan(0.5));
     expect(r('normal AI vs weak AI').winRateA, greaterThan(0.55));
     expect(r('strong AI vs weak AI').winRateA, greaterThan(0.6));
+  });
+
+  test('CPU stages form a difficulty curve at the recommended level', () {
+    final roster = CpuRoster.fromManifestJson(readJson(cpuManifestPath));
+    final rates = {
+      for (final st in spec.cpu.stages)
+        st.stage: simulateStage(spec, roster, st, n: 600).winRateA,
+    };
+    for (final e in rates.entries) {
+      final boss = e.key % 10 == 0;
+      expect(
+        e.value,
+        boss ? inInclusiveRange(0.30, 0.62) : inInclusiveRange(0.52, 0.95),
+        reason: 'stage ${e.key}',
+      );
+    }
+    double avg(Iterable<int> stages) =>
+        stages.map((s) => rates[s]!).reduce((a, b) => a + b) / stages.length;
+    expect(avg([1, 2, 3, 4, 5]), greaterThan(avg([25, 26, 27, 28, 29])));
   });
 }
