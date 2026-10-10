@@ -19,6 +19,7 @@ class NormalizedImage {
     required this.working,
     required this.hiRes,
     required this.hash,
+    this.native,
   });
 
   /// Longest side exactly [kWorkingSize]; orientation applied; alpha
@@ -33,6 +34,85 @@ class NormalizedImage {
 
   /// Pixels of [hiRes] per pixel of [working].
   double get hiResScale => hiRes.width / working.width;
+
+  /// The decoded input at its original resolution (before orientation), kept
+  /// for the authenticity checks that need fine detail (halftone dots, screen
+  /// pixel grids, sensor noise). Null for images built in tests.
+  final NativePixels? native;
+}
+
+/// Decoded pixels at the input's native resolution, in stored (not
+/// EXIF-rotated) orientation.
+class NativePixels {
+  NativePixels({
+    required this.raw,
+    required this.channels,
+    required this.width,
+    required this.height,
+    required this.orientation,
+  });
+
+  /// Interleaved 8-bit samples, [channels] (1-4) per pixel.
+  final Uint8List raw;
+  final int channels;
+  final int width;
+  final int height;
+
+  /// EXIF orientation (1-8) that turns the stored image upright.
+  final int orientation;
+
+  /// Width/height after applying [orientation].
+  int get orientedWidth => orientation >= 5 ? height : width;
+  int get orientedHeight => orientation >= 5 ? width : height;
+
+  /// Maps a point given in upright (oriented) pixel coordinates to stored
+  /// pixel coordinates.
+  ({double x, double y}) storedFromOriented(double x, double y) {
+    final w = width - 1.0;
+    final h = height - 1.0;
+    switch (orientation) {
+      case 2:
+        return (x: w - x, y: y);
+      case 3:
+        return (x: w - x, y: h - y);
+      case 4:
+        return (x: x, y: h - y);
+      case 5:
+        return (x: y, y: x);
+      case 6:
+        return (x: y, y: h - x);
+      case 7:
+        return (x: w - y, y: h - x);
+      case 8:
+        return (x: w - y, y: x);
+      default:
+        return (x: x, y: y);
+    }
+  }
+
+  /// RGB of the stored pixel (x, y) (alpha composited onto white).
+  void rgbAt(int x, int y, List<int> out) {
+    final j = (y * width + x) * channels;
+    final r = raw[j];
+    if (channels <= 2) {
+      final a = channels == 2 ? raw[j + 1] : 255;
+      final v = a == 255 ? r : (r * a + 255 * (255 - a)) ~/ 255;
+      out[0] = v;
+      out[1] = v;
+      out[2] = v;
+      return;
+    }
+    final a = channels == 4 ? raw[j + 3] : 255;
+    if (a == 255) {
+      out[0] = r;
+      out[1] = raw[j + 1];
+      out[2] = raw[j + 2];
+    } else {
+      out[0] = (r * a + 255 * (255 - a)) ~/ 255;
+      out[1] = (raw[j + 1] * a + 255 * (255 - a)) ~/ 255;
+      out[2] = (raw[j + 2] * a + 255 * (255 - a)) ~/ 255;
+    }
+  }
 }
 
 /// Thrown when the input bytes cannot be decoded as an image.
@@ -97,7 +177,18 @@ NormalizedImage normalizeImage(Uint8List bytes) {
     ..setUint32(4, working.height);
   hashed.setRange(8, hashed.length, working.data);
   final digest = sha256.convert(hashed);
-  return NormalizedImage(working: working, hiRes: hi, hash: digest.toString());
+  return NormalizedImage(
+    working: working,
+    hiRes: hi,
+    hash: digest.toString(),
+    native: NativePixels(
+      raw: px.raw,
+      channels: px.nc,
+      width: srcW,
+      height: srcH,
+      orientation: orientation.clamp(1, 8),
+    ),
+  );
 }
 
 /// Raw interleaved 8-bit pixels of [image] and their channel count (1-4).

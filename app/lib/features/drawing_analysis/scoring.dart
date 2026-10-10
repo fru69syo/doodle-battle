@@ -71,15 +71,42 @@ ElementType computeElement(DrawingFeatures f) {
   return ElementType.shadow;
 }
 
-/// Why a drawing should be redrawn rather than turned into a character.
+/// Gentle message for every picture that is not a drawing on paper
+/// (SPEC §11.1). It never blames the child.
+const String kPaperDrawingMessage = 'かみに かいた えを とってね';
+
+/// Why a picture should be redrawn / retaken rather than turned into a
+/// character. All "not a drawing on paper" reasons share
+/// [kPaperDrawingMessage]; the distinct values exist for diagnostics and
+/// calibration (docs/TRUST.md).
 enum DrawingRejectReason {
   /// Almost no ink (blank paper, a single dot or a tiny line).
-  nearlyEmpty('もうすこし かいてみよう');
+  nearlyEmpty('もうすこし かいてみよう'),
+
+  /// No sheet of paper could be found in the picture.
+  noPaper(kPaperDrawingMessage),
+
+  /// A photograph (of things, people or places) rather than a drawing.
+  photo(kPaperDrawingMessage),
+
+  /// A digital or AI-generated illustration (no camera noise, polished
+  /// digital finish).
+  digital(kPaperDrawingMessage),
+
+  /// A printed picture (halftone dot pattern).
+  printed(kPaperDrawingMessage),
+
+  /// A photo of a screen (pixel grid / sub-pixel moiré).
+  screen(kPaperDrawingMessage);
 
   const DrawingRejectReason(this.message);
 
   /// Hiragana message for children.
   final String message;
+
+  /// True for every reason except [nearlyEmpty]: the picture is not a
+  /// drawing on paper, so the child should take a photo of their paper.
+  bool get isNotPaperDrawing => this != nearlyEmpty;
 }
 
 /// Returns a reason when the drawing is too empty to play with.
