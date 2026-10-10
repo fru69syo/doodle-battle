@@ -99,6 +99,14 @@ class CharacterDetailScreen extends ConsumerWidget {
               onPressed: () => context.push(Routes.characterAr(c.id)),
             ),
             const SizedBox(height: 12),
+            FilledButton.icon(
+              key: const Key('detail-card'),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.pink),
+              icon: const Icon(Icons.style),
+              label: const Text('カードに する'),
+              onPressed: () => context.push(Routes.cardPrint([c.id])),
+            ),
+            const SizedBox(height: 12),
             VideoExportButton(characterId: c.id),
             const SizedBox(height: 24),
             TextButton.icon(

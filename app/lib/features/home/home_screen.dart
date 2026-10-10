@@ -61,6 +61,15 @@ class HomeScreen extends ConsumerWidget {
               color: AppColors.secondary,
               onPressed: () => context.push(Routes.battle),
             ),
+            const SizedBox(height: 14),
+            BigActionButton(
+              key: const Key('home-family'),
+              icon: Icons.groups,
+              label: 'かぞくで たいせん',
+              subtitle: '1だいで いっしょに あそぼう',
+              color: AppColors.pink,
+              onPressed: () => context.push(Routes.family),
+            ),
             if (onlineAllowed) ...[
               const SizedBox(height: 14),
               BigActionButton(
