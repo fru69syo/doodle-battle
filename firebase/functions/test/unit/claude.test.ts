@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import { ClaudeAiService, type MessagesClient } from "../../src/ai/claude";
-import { AiRefusalError, AiUnavailableError } from "../../src/ai/types";
+import { AiRefusalError, AiUnavailableError, originRejectCode } from "../../src/ai/types";
 import { JUDGE_SYSTEM_PROMPT, MODERATION_SYSTEM_PROMPT, moderationUserText } from "../../src/ai/prompts";
 import { makePng } from "../helpers/png";
 
@@ -150,8 +150,7 @@ describe("prompts", () => {
 });
 
 describe("origin (AI-generated / not hand-drawn, SPEC §11.1)", () => {
-  it("only confident verdicts map to reject codes", async () => {
-    const { originRejectCode } = await import("../../src/ai/types");
+  it("only confident verdicts map to reject codes", () => {
     expect(originRejectCode("ai_generated")).toBe("IMAGE_AI_GENERATED");
     expect(originRejectCode("photo_print_or_screen")).toBe("IMAGE_NOT_DRAWING");
     expect(originRejectCode("unsure")).toBeNull();

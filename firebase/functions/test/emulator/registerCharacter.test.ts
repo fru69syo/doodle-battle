@@ -90,7 +90,6 @@ describe("registerCharacter", () => {
       env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({
         imageCategory: category,
         isHandDrawn: true,
-      origin: "hand_drawn" as const,
         origin: "hand_drawn" as const,
         names: names.map(() => ({ ok: true, category: "ok" as const })),
         skillEstimate: 20,
