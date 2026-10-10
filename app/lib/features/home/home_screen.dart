@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -114,9 +115,15 @@ class _Title extends StatelessWidget {
       children: [
         Icon(Icons.draw, size: 44, color: AppColors.primary),
         SizedBox(width: 8),
-        Text(
-          'らくがきバトル',
-          style: TextStyle(fontSize: 36, fontWeight: FontWeight.w700),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              appDisplayName,
+              key: Key('home-title'),
+              style: TextStyle(fontSize: 36, fontWeight: FontWeight.w700),
+            ),
+          ),
         ),
       ],
     ),

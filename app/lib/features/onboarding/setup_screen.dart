@@ -49,9 +49,12 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       children: [
         const Icon(Icons.brush, size: 96, color: AppColors.primary),
         const SizedBox(height: 12),
-        const Text(
-          'らくがきバトル',
-          style: TextStyle(fontSize: 40, fontWeight: FontWeight.w700),
+        const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            appDisplayName,
+            style: TextStyle(fontSize: 40, fontWeight: FontWeight.w700),
+          ),
         ),
         const SizedBox(height: 24),
         const Text(
@@ -85,7 +88,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          '「らくがきバトル」は、お子さまが紙にかいた絵を撮影してキャラクターにし、'
+          '「$appDisplayName」は、お子さまが紙にかいた絵を撮影してキャラクターにし、'
           'バトルで育てるゲームです。絵の解析は端末の中で行われます。\n'
           '以下の機能は、許可した場合だけ使われます（あとから「おうちのひと」'
           '画面でいつでも変更できます）。',

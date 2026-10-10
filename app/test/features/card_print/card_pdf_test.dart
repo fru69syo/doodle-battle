@@ -85,7 +85,7 @@ void main() {
     expect(String.fromCharCodes(bytes), contains('/MediaBox[0 0 178.58'));
     final texts = pdfTexts(bytes);
     expect(texts.any((t) => t.contains('ねこまる')), isTrue);
-    expect(texts.any((t) => t.contains('らくがきバトル')), isTrue);
+    expect(texts.any((t) => t.contains('おえかきファイターズ')), isTrue);
     expect(texts.any((t) => t.contains('たいりょく')), isTrue);
     expect(texts.any((t) => t.contains('Lv1')), isTrue);
     // Nothing about skill or raw numbers.

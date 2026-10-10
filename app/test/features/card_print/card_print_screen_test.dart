@@ -118,7 +118,7 @@ void main() {
     expect(gate.calls, 1);
     expect(out.shared, hasLength(1));
     final (pdf, filename) = out.shared.single;
-    expect(filename, 'rakugaki_cards_20261009.pdf');
+    expect(filename, 'oekaki_fighters_cards_20261009.pdf');
     expect(String.fromCharCodes(pdf.take(5)), '%PDF-');
 
     // 1まいずつ: one card-sized page each.

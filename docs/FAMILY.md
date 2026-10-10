@@ -61,7 +61,7 @@ SPEC §11.2 の 2（親子・兄弟で対戦、ローカル）と 4（キャラ�
 ### 印刷・共有とゲート
 - プレビューは子どもも自由に見られる。「いんさつ する」「PDFで おくる・ほぞん」は**押すたびに保護者ゲート**（`parentalGateProvider`）→ 通ったときだけ PDF を作り、`Printing.layoutPdf`（Android の印刷ダイアログ）/ `Printing.sharePdf`（共有シート）へ渡す。ゲートを通らなければ PDF も作らない
 - 失敗時は「うまく できなかったよ。もういちど ためしてね」
-- ファイル名は `rakugaki_cards_YYYYMMDD.pdf`（子どもの名前やキャラ名を入れない）
+- ファイル名は `oekaki_fighters_cards_YYYYMMDD.pdf`（子どもの名前やキャラ名を入れない）
 
 ### パッケージ
 - `pdf: ^3.13.1`（2026-09-19、Dart >=3.12）、`printing: ^5.15.1`（同日、Flutter >=3.41）。どちらも DavBfr/dart_pdf、Apache-2.0

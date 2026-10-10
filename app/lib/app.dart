@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/monetization/monetization_sync.dart';
@@ -15,7 +16,7 @@ class DoodleBattleApp extends ConsumerWidget {
     ref.watch(monetizationSyncProvider);
     return PlayTimeTracker(
       child: MaterialApp.router(
-        title: 'らくがきバトル',
+        title: appDisplayName,
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         locale: const Locale('ja'),

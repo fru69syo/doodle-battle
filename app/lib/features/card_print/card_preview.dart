@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/element_badge.dart';
 import '../../domain/character.dart';
@@ -204,14 +205,21 @@ class _CardBody extends StatelessWidget {
             const SizedBox(height: 1.2 * _u),
             Row(
               children: [
-                const Text(
-                  'らくがきバトル',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+                const Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      appDisplayName,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ),
+                const SizedBox(width: 4),
                 const Spacer(),
                 Text(
                   'うまれた ひ ${cardDateLabel(card.date)}',

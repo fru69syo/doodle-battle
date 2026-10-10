@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../core/config/app_config.dart';
 import '../../domain/character.dart';
 import '../../domain/element_type.dart';
 import '../../domain/stats.dart';
@@ -109,9 +110,9 @@ Future<Uint8List> buildCardPdf(
   if (cards.isEmpty) throw ArgumentError('no cards');
   final doc = pw.Document(
     compress: compress,
-    title: 'らくがきバトル キャラカード',
-    author: 'らくがきバトル',
-    creator: 'らくがきバトル',
+    title: '$appDisplayName キャラカード',
+    author: appDisplayName,
+    creator: appDisplayName,
     theme: pw.ThemeData.withFont(
       base: pw.Font.ttf(fonts.regular),
       bold: pw.Font.ttf(fonts.bold),
@@ -155,7 +156,7 @@ pw.Widget _sheet(List<CardContent> cards) {
         left: left,
         top: top - 9 * _mm,
         child: pw.Text(
-          'らくがきバトル キャラカード ・ せんに そって きってね',
+          '$appDisplayName キャラカード ・ せんに そって きってね',
           style: pw.TextStyle(
             fontSize: 10,
             color: _ink,
@@ -456,7 +457,7 @@ pw.Widget _footer(CardContent c) => pw.Row(
   crossAxisAlignment: pw.CrossAxisAlignment.end,
   children: [
     pw.Text(
-      'らくがきバトル',
+      appDisplayName,
       style: pw.TextStyle(
         fontSize: 7.5,
         fontWeight: pw.FontWeight.bold,
