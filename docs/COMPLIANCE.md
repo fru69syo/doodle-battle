@@ -26,9 +26,9 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 | C1 | 広告は**リワード広告だけ**。保護者が許可するまで SDK を**初期化しない**（`MobileAds.initialize()` は最初に許可されたときに 1 回だけ）。許可を取り消すと読み込み済みの広告を破棄する | SPEC §7。子どもに同意なしで広告 SDK の通信をさせない |
 | C2 | すべてのリクエストに `ageRestrictedTreatment = child`、`tagForChildDirectedTreatment = yes`、`tagForUnderAgeOfConsent = yes`、`maxAdContentRating = G`、`AdRequest(nonPersonalizedAds: true)`。メディエーションは初期化しない | `tagForChildDirectedTreatment` は SDK で非推奨になり `ageRestrictedTreatment` が後継。両方の信号があると SDK は最も厳しい扱いにするので、両方を設定した（§10 [A1]） |
 | C3 | `AD_ID` と Privacy Sandbox の 3 権限（`ACCESS_ADSERVICES_AD_ID / ATTRIBUTION / TOPICS`）をマニフェストで `tools:node="remove"`。`DELAY_APP_MEASUREMENT_INIT=true` | 子ども向けアプリは広告 ID を送ってはいけない（[F1][F2]）。`check_release.sh` がどれか 1 つでも残っていたら失敗する |
-| C4 | 広告で経験値 2 倍にできるのは **1 日 3 回**（端末の日付で数える、`dailyAdBoostCap`）。おうえんパスは広告なしで毎回 | 広告の見すぎを防ぐ（Teacher Approved の評価観点「しつこい広告」）。上限に達したら「きょうの どうがは おしまい。また あした みてね」 |
+| C4 | 広告で経験値 2 倍にできるのは **1 日 3 回**（端末の日付で数える、`dailyAdBoostCap`）。こうこくなしパス（`no_ads_pass`）は広告なしで 2 倍になるが、**同じ 1 日 3 回の上限**を共有する（SPEC §11.4: お金を払うと早く強くなる、という差を作らない） | 広告の見すぎを防ぐ（Teacher Approved の評価観点「しつこい広告」）。上限に達したら「きょうの どうがは おしまい。また あした みてね」 |
 | C5 | 広告の読み込みに失敗したら、ボタンを消して「いまは どうがが ないみたい。また こんど みてね」。再試行は 1 分あけて、結果画面を開いたときに行う | オフラインや在庫切れで子どもを待たせない・連打させない |
-| C6 | 商品は 3 つとも**買い切り（消費しない）**: `slots_24`、`frame_pack_1`、`ouen_pass`。価格は Play Console で決め、アプリは**ストアから取得した価格**だけを表示する（取得できないと「買う」は押せない） | SPEC §10（おうえんパスは買い切り）。価格をアプリに書かないので、価格改定でアプリの更新が要らない |
+| C6 | 商品は 3 つとも**買い切り（消費しない）**: `slots_24`、`frame_pack_1`、`no_ads_pass`。価格は Play Console で決め、アプリは**ストアから取得した価格**だけを表示する（取得できないと「買う」は押せない） | SPEC §10・§11.4（パスは買い切り）。価格をアプリに書かないので、価格改定でアプリの更新が要らない |
 | C7 | 購入ごとに: 保護者ゲート → 確認ダイアログ（商品名・**価格**・「1回だけの購入（定期購入ではありません）」・「おかねが かかるよ。おうちのひとと いっしょに かってね」）→ Google Play の購入画面 | SPEC §7、ファミリーポリシー（仮想通貨と現金の区別、強引な誘導の禁止） |
 | C8 | 購入権を付けるのは Play の状態が **PURCHASED** のときだけ。**PENDING**（コンビニ払いなど）では付けず、確認（acknowledge）もしない。確認に失敗しても購入権は付け、次の「復元」で確認し直す | Play Billing の要件（3 日以内に確認しないと自動返金）[B1]。in_app_purchase_android は復元した PENDING の購入も `restored` として返すので、`PlayStoreGateway` が Play の purchaseState で上書きする |
 | C9 | 起動時に毎回、静かに「復元」（Play の所持リストの取得）を行い、**その結果を正とする**（返金された商品は消える）。ストアに届かないときはキャッシュ（`settings.entitlements`）を使い続ける | オフラインでもずかんの枠などが使える。返金・別アカウントにも正しく追従する |
@@ -52,7 +52,8 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 結果画面 ──► 上限チェック（GameProgress）──► 「どうがを みて けいけんち 2ばい」（読み込み中は押せない／失敗なら案内）
         ──► 注意書き「おうちのひとに きいてから みてね / こうこくが ながれるよ」──► みる ──► show() ──► 最後まで見たら XP 差分を加算 + 回数を記録
 ```
-- 1 バトルに 1 回。おうえんパスがあれば広告なしで 2 倍（上限なし）。
+- 1 バトルに 1 回。
+- **こうこくなしパス**（SPEC §11.4）を持っていると: 広告の入口（結果画面の広告ボタン・注意書き）を出さず、`monetizationSyncProvider` が `setAdsAllowed(false)` にするので**広告 SDK も初期化・読み込みしない**（保護者が広告を許可していても）。結果画面は「こうこくなしパスで けいけんち 2ばい」→ 押すとすぐ 2 倍。回数は広告と同じ `GameProgress.adBoostsToday` に数え、**1 日 3 回まで**（上限では「きょうの 2ばいは おしまい。また あした ね」）。おうちのひとの「広告の視聴」スイッチは押せなくなり、理由を表示する。返金されてパスが無くなると、広告の許可の設定どおりに戻る。
 - 子どもが押さない限り広告は出ない（起動時・画面遷移時のインタースティシャルやバナーは無い）。リワード広告は 5 秒以内に閉じられる形式（Google 側）。
 
 ### 2.2 マニフェストとビルド
@@ -79,7 +80,7 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 |---|---|---|---|
 | `slots_24` | アプリ内アイテム（1 回限り） | ずかんの ほぞんわく +24 | 250 円 |
 | `frame_pack_1` | 同上 | カードの フレームパック | 160 円 |
-| `ouen_pass` | 同上 | おうえんパス | 480 円 |
+| `no_ads_pass` | 同上 | こうこくなしパス（説明:「こうこくを みないで けいけんち 2ばい（1にち 3かいまで）」） | 320 円 |
 - Play Console → 収益化 → 商品 → アプリ内アイテム。ID は**あとから変えられない**ので上の綴りのまま。説明文は保護者向けに、「1 回だけの購入」と書く。
 - ライセンス テスター（設定 → ライセンス テスト）に QA のアカウントを登録し、テストカード（常に承認／常に拒否／遅れて承認＝pending）で QA_CHECKLIST §8 を行う。
 
@@ -129,7 +130,7 @@ python3 scripts/build_site.py --out /tmp/_site --var DEVELOPER_NAME='…' --var 
 # fru69syo.github.io の clone で
 mkdir -p doodle-battle && cp /tmp/_site/*.html /tmp/_site/style.css doodle-battle/
 cp /tmp/_site/app-ads.txt ./app-ads.txt          # ← ドメインの直下（§5.3）
-git add -A && git commit -m "らくがきバトル: policy pages" && git push
+git add -A && git commit -m "おえかきファイターズ: policy pages" && git push
 ```
 Settings → Pages → Deploy from a branch（`main` / root）。URL は A と同じ `https://fru69syo.github.io/doodle-battle/…` になるので、アプリの既定値のままでよい。別のドメインにするなら release の変数 `POLICY_BASE_URL` を設定する。
 
@@ -160,7 +161,7 @@ AdMob は Play に登録した「ウェブサイト」の**ドメインの直下
 
 ## 9. PM に確認したいこと（未決定）
 
-1. 商品の価格（§3.2 の案: 250 / 160 / 480 円）。
+1. 商品の価格（§3.2 の案: 250 / 160 / 320 円。320 円はこうこくなしパスの目安として SPEC §11.4 で決定）。
 2. 広告の 1 日の上限（3 回）でよいか。
 3. v1.1 のサーバー検証（§3.3）を入れる時期。入れると購入に Firebase（保護者の同意）が必要になる。
 4. ターゲット年齢に「5 歳以下」を含めるか（含めるなら広告と文言の見直し。STORE_LISTING §5）。

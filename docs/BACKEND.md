@@ -1,4 +1,4 @@
-# らくがきバトル Backend (Firebase)
+# おえかきファイターズ Backend (Firebase)
 
 Owner: Backend team (`feat/backend`). Source of truth for product rules is `docs/SPEC.md`; this
 document describes how the backend implements SPEC §3.3, §5 and the server side of §7.

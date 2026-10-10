@@ -114,7 +114,7 @@ R8（release）は警告なしで通りました。
 
 1. **ARCore のインストール案内**: `needsInstall` のとき、Play ストアで「Google Play 開発者サービス for AR」を入れる案内を出しています（ボタンの文言は「おうちのひとと いれる」）。ファミリーポリシーの観点から保護者ゲートの後ろに置くか、出さないか（`allowArCoreInstallPrompt: false`）を決めてください。
 2. compileSdk を 37 に上げるかどうか（上げれば SceneView と Compose を最新にできます。AGP 9.1 の推奨上限は 36）。
-3. 写真の保存先: アルバムは作らず `Pictures/` に保存します（`rakugaki_ar_YYYYMMDD_HHMMSS.jpg`）。「らくがきバトル」アルバムを作る場合、Android 10 では保存に権限が必要になります。
+3. 写真の保存先: アルバムは作らず `Pictures/` に保存します（`rakugaki_ar_YYYYMMDD_HHMMSS.jpg`）。アプリ名（「おえかきファイターズ」）のアルバムを作る場合、Android 10 では保存に権限が必要になります。
 4. 共通モデル（domain）: 変更は不要です。GLB は画面を開くたびに作り直し、`<tmp>/ar/standee_<imageHash 先頭16桁>_<stage>_<element>.glb` に書き出しています。
 
 ## 10. 実機でしか確かめられないこと（QA 用チェックリスト）

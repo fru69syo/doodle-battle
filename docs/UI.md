@@ -81,7 +81,7 @@ lib/
 
 - `MonetizationService`（`features/monetization/monetization_service.dart`、`Listenable`）: `start(cached)`、`setAdsAllowed`/`adState`/`preloadRewardedAd`/`showRewardedAd`、`refreshStore`/`priceOf`/`purchase`/`restorePurchases`、`owned`/`entitlements`。本番は `AppMonetizationService`（AdMob + Play Billing、`main.dart` で Android のときだけ）、既定とテスト以外のプラットフォームは `NoopMonetizationService`、テストは `FakeMonetization`。
 - `monetizationSyncProvider`（`app.dart` で watch）: 起動時にキャッシュした購入権で `start`、ストアの購入権 → `settings.entitlements`、広告の同意 → `setAdsAllowed`、ふぐあいの情報の同意 → `CrashReporter.setEnabled`。
-- 商品 ID: `slots_24`（ずかん 36 体）、`frame_pack_1`（ずかんのカードの枠: ほし・はな・にじ。`Character.cardFrame`）、`ouen_pass`（結果画面の「おうえんパスで けいけんち 2ばい」）。すべて買い切り。
+- 商品 ID: `slots_24`（ずかん 36 体）、`frame_pack_1`（ずかんのカードの枠: ほし・はな・にじ。`Character.cardFrame`）、`no_ads_pass`（こうこくなしパス: 広告の入口を消し、結果画面の「こうこくなしパスで けいけんち 2ばい」。広告と同じ 1 日 3 回まで。SPEC §11.4）。すべて買い切り。
 - 結果画面の「どうがを みて けいけんち 2ばい」: 広告の許可があるときだけ。1 日 3 回（`GameProgress.adBoostsToday`）。読み込み中は押せず、失敗時は「いまは どうがが ないみたい…」。押すと必ず注意書き → 「みる」のときだけ `showRewardedAd()`。
 - ショップ: 課金の許可があるときだけ。購入ごとに保護者ゲート → 価格と注意書きの確認 → Play。「購入を復元する」。
 - オンラインのロビー: 「オンラインの なまえ」（`features/online/display_name_picker.dart`、`setDisplayName`、語彙は `shared/names/`）。
