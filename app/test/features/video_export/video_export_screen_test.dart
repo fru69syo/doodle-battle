@@ -83,7 +83,17 @@ Future<void> settleAsync(WidgetTester tester, Finder until) async {
 Future<void> openFromDetail(WidgetTester tester, TestApp app) async {
   app.container.read(routerProvider).go(Routes.character('c_1'));
   await tester.pumpAndSettle();
-  await tapVisible(tester, find.byKey(const Key('video-open')));
+  final open = find.byKey(const Key('video-open'));
+  await tester.scrollUntilVisible(
+    open,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(open);
+  // The preview spinner never settles while loading: pump instead.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
   await settleAsync(tester, find.byKey(const Key('video-make')));
 }
 
@@ -228,6 +238,11 @@ void main() {
     expect(kept?.jpeg, photo.jpeg);
     expect(kept?.inkRect, photo.inkRect);
     expect(find.byKey(const Key('video-open-card')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('video-open')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('video-open')), findsOneWidget);
     await unmount(tester);
   });
@@ -255,6 +270,11 @@ void main() {
           ),
         );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('video-open')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('video-open')), findsOneWidget);
     expect(find.byKey(const Key('video-open-card')), findsNothing);
     await unmount(tester);
