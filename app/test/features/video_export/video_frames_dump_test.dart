@@ -23,6 +23,7 @@ void main() {
       final composer = await sampleComposer(
         withBefore: withBefore,
         seed: withBefore ? 1 : 2,
+        drawnEffect: !withBefore,
       );
       final r = VideoFrameRenderer(composer);
       final tl = composer.timeline;

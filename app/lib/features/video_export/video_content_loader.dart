@@ -23,14 +23,18 @@ class VideoContentException implements Exception {
 
 /// Builds the [VideoContent] for [character].
 ///
-/// [displayPng] is the character's display image — today the cut-out; once
-/// drawn-on parts are composited into it they appear in the video
-/// automatically. [before] is the stored paper photo; characters made
-/// before it was kept get the cut-out on a generated sheet of paper.
+/// [displayPng] is the character's display image (with drawn-on parts,
+/// `DisplayImageService.displayImageFor`); [originalPng] the plain cut-out
+/// of the paper drawing (defaults to [displayPng]). [before] is the stored
+/// paper photo; characters made before it was kept get the cut-out on a
+/// generated sheet of paper. [moveEffectPngs] are the child's drawn move
+/// effects (used as the projectile).
 Future<VideoContent> loadVideoContent({
   required Character character,
   required Uint8List displayPng,
   required BeforePhoto? before,
+  Uint8List? originalPng,
+  Map<BattleAction, Uint8List> moveEffectPngs = const {},
   required BattleSpec spec,
   required CpuRoster roster,
   required Future<Uint8List> Function(String asset) loadAsset,
@@ -44,6 +48,17 @@ Future<VideoContent> loadVideoContent({
     throw const VideoContentException('no battle highlight');
   }
   final charImage = await decodeImage(displayPng);
+  final original = originalPng == null || identical(originalPng, displayPng)
+      ? charImage
+      : await decodeImage(originalPng);
+  final effects = <BattleAction, ui.Image>{};
+  for (final e in moveEffectPngs.entries) {
+    try {
+      effects[e.key] = await decodeImage(e.value);
+    } on Object {
+      // A broken drawing falls back to the default effect.
+    }
+  }
   final cpuImage = await decodeImage(await loadAsset(highlight.cpu.asset));
   ui.Image? beforeImage;
   NormRect? inkRect;
@@ -56,14 +71,16 @@ Future<VideoContent> loadVideoContent({
     }
   }
   if (beforeImage == null) {
-    final paper = await paperFallback(charImage);
+    final paper = await paperFallback(original);
     beforeImage = paper.$1;
     inkRect = paper.$2;
   }
   return VideoContent(
     before: beforeImage,
-    inkRect: inkRect ?? centeredInkRect(beforeImage, charImage),
+    inkRect: inkRect ?? centeredInkRect(beforeImage, original),
     character: charImage,
+    original: identical(original, charImage) ? null : original,
+    moveEffects: effects,
     name: character.name,
     element: character.element,
     highlight: highlight,

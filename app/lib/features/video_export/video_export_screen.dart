@@ -4,6 +4,7 @@ library;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,9 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
+import '../../domain/battle/battle.dart' show BattleAction;
+import '../../domain/cosmetics.dart' show DrawnMove;
+import '../drawing_loop/display_image.dart';
 import 'video_composer.dart';
 import 'video_content_loader.dart';
 import 'video_encoder.dart';
@@ -122,13 +126,26 @@ class _VideoExportScreenState extends ConsumerState<VideoExportScreen>
       final id = widget.characterId;
       final c = ref.read(characterByIdProvider(id));
       final repo = ref.read(characterRepositoryProvider);
-      final png = await ref.read(characterImageProvider(id).future);
-      if (c == null || png == null) {
-        throw const VideoContentException('character not found');
+      if (c == null) throw const VideoContentException('character not found');
+      final display = ref.read(displayImageServiceProvider);
+      final png = await display.displayImageFor(c);
+      final original = await repo.readImage(id);
+      if (png == null) {
+        throw const VideoContentException('character image not found');
+      }
+      final effects = <BattleAction, Uint8List>{};
+      for (final (action, move) in [
+        (BattleAction.element, DrawnMove.element),
+        (BattleAction.special, DrawnMove.special),
+      ]) {
+        final drawn = await display.effectImageFor(c, move);
+        if (drawn != null) effects[action] = drawn;
       }
       final content = await loadVideoContent(
         character: c,
         displayPng: png,
+        originalPng: original,
+        moveEffectPngs: effects,
         before: await repo.readBeforePhoto(id),
         spec: await ref.read(battleSpecProvider.future),
         roster: await ref.read(cpuRosterProvider.future),

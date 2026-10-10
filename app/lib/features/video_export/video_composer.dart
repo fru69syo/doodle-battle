@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/before_photo.dart';
+import '../../domain/battle/battle.dart' show BattleAction;
 import '../../domain/element_type.dart';
 import 'battle_highlight.dart';
 import 'video_timeline.dart';
@@ -29,7 +30,8 @@ class VideoContent {
     required this.element,
     required this.highlight,
     required this.cpuImage,
-    this.moveEffect,
+    this.original,
+    this.moveEffects = const {},
   });
 
   /// The paper photo (or the generated paper fallback).
@@ -46,9 +48,15 @@ class VideoContent {
   final BattleHighlight highlight;
   final ui.Image cpuImage;
 
-  /// Optional drawn move effect (Loop team); drawn as the projectile when
-  /// set, otherwise an element-coloured energy ball.
-  final ui.Image? moveEffect;
+  /// The plain cut-out of the paper drawing (without drawn-on parts), used
+  /// where the character still sits on the paper. Null = [character].
+  final ui.Image? original;
+
+  /// The child's drawn move effects by move (Loop feature); drawn as the
+  /// projectile, otherwise an element-coloured energy ball.
+  final Map<BattleAction, ui.Image> moveEffects;
+
+  ui.Image get drawing => original ?? character;
 }
 
 /// Paints frames of the video for one [VideoContent].
@@ -242,7 +250,7 @@ class VideoComposer {
         canvas.rotate(start.angle);
         _drawImage(
           canvas,
-          content.character,
+          content.drawing,
           Rect.fromCenter(
             center: Offset.zero,
             width: start.size.width,
@@ -320,9 +328,13 @@ class VideoComposer {
       width: size.width,
       height: size.height,
     );
+    // The paper drawing turns into the character (with any drawn-on parts).
+    final morph = identical(content.drawing, content.character)
+        ? 1.0
+        : _phase(t, 0.5, 0.9);
     if (lift > 0.02) {
       // Soft white rim so the cut-out pops off the dark background.
-      _drawImage(
+      _drawContain(
         canvas,
         content.character,
         r.inflate(6),
@@ -330,7 +342,10 @@ class VideoComposer {
         opacity: 0.85 * _phase(t, 0.5, 0.9),
       );
     }
-    _drawImage(canvas, content.character, r);
+    if (morph < 1) {
+      _drawContain(canvas, content.drawing, r, opacity: 1 - morph);
+    }
+    if (morph > 0) _drawContain(canvas, content.character, r, opacity: morph);
     canvas.restore();
 
     _paintSparkles(canvas, center, _phase(t, 0.95, 2.2));
@@ -505,12 +520,17 @@ class VideoComposer {
         final q = (p - i * 0.06).clamp(0.0, 1.0);
         final pos = Offset.lerp(from, _cpuCenter, _ease(q))!;
         final r = 34.0 - i * 5;
-        if (content.moveEffect != null && i == 0) {
-          _drawImage(
+        final drawn = content.moveEffects[hit.action];
+        if (drawn != null && i == 0) {
+          canvas.save();
+          canvas.translate(pos.dx, pos.dy);
+          canvas.rotate(p * math.pi);
+          _drawContain(
             canvas,
-            content.moveEffect!,
-            Rect.fromCenter(center: pos, width: 120, height: 120),
+            drawn,
+            Rect.fromCenter(center: Offset.zero, width: 150, height: 150),
           );
+          canvas.restore();
           continue;
         }
         canvas.drawCircle(
@@ -1109,6 +1129,24 @@ class VideoComposer {
     canvas.drawParagraph(stroke, o);
     canvas.drawParagraph(fill, o);
     canvas.restore();
+  }
+
+  /// Draws [image] fitted (contain) and centred in [box].
+  void _drawContain(
+    Canvas canvas,
+    ui.Image image,
+    Rect box, {
+    Color? tint,
+    double opacity = 1,
+  }) {
+    final fit = _fit(image.width.toDouble(), image.height.toDouble(), box.size);
+    _drawImage(
+      canvas,
+      image,
+      Rect.fromCenter(center: box.center, width: fit.width, height: fit.height),
+      tint: tint,
+      opacity: opacity,
+    );
   }
 
   void _drawImage(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_state.dart';
 import '../../domain/character.dart';
+import '../../features/drawing_loop/display_image.dart';
 import '../../features/monetization/card_frames.dart';
 import '../../features/monetization/monetization_service.dart';
 import '../theme/app_colors.dart';
@@ -34,7 +35,13 @@ class CharacterPicture extends ConsumerWidget {
     } else if (character.imagePath.startsWith('assets/')) {
       image = Image.asset(character.imagePath, fit: BoxFit.contain);
     } else {
-      final data = ref.watch(characterImageProvider(character.id)).value;
+      // Base drawing + drawn parts (docs/LOOP.md); the plain cut-out while
+      // the composite loads.
+      final data =
+          ref
+              .watch(characterDisplayImageProvider(displayKeyOf(character)))
+              .value ??
+          ref.watch(characterImageProvider(character.id)).value;
       image = data == null
           ? const Icon(Icons.brush, size: 64, color: AppColors.disabled)
           : Image.memory(data, fit: BoxFit.contain, gaplessPlayback: true);

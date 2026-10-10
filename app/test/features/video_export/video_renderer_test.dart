@@ -1,10 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:doodle_battle/domain/battle/battle.dart' show BattleAction;
 import 'package:doodle_battle/features/video_export/video_composer.dart';
+import 'package:doodle_battle/features/video_export/video_content_loader.dart';
 import 'package:doodle_battle/features/video_export/video_frame_renderer.dart';
 import 'package:doodle_battle/features/video_export/video_timeline.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/harness.dart';
 import 'video_fixtures.dart';
 
 bool _opaque(Uint8List rgba) {
@@ -20,7 +23,11 @@ void main() {
 
   setUpAll(() async {
     composer = await sampleComposer();
-    fallback = await sampleComposer(withBefore: false, seed: 2);
+    fallback = await sampleComposer(
+      withBefore: false,
+      seed: 2,
+      drawnEffect: true,
+    );
   });
 
   test('frames are 720×1280 opaque RGBA', () async {
@@ -76,8 +83,43 @@ void main() {
     expect(_opaque(rgba), isTrue);
   });
 
-  test('uses the display image it is given (drawn-on parts appear)', () async {
-    expect(composer.content.character.width, greaterThan(8));
-    expect(composer.content.name, 'ぐるぐるまる');
+  test('drawn move effect is used as the projectile', () async {
+    expect(fallback.content.moveEffects.keys, [BattleAction.element]);
+    expect(composer.content.moveEffects, isEmpty);
+    // Mid-flight frame of the first hit renders with and without it.
+    final tl = fallback.timeline;
+    final t = tl.starts[VideoScene.battle]! + BattleBeats.intro + 0.35;
+    final withEffect = await VideoFrameRenderer(
+      fallback,
+      width: 180,
+      height: 320,
+    ).renderRgba((t * tl.fps).round());
+    expect(_opaque(withEffect), isTrue);
+  });
+
+  test('display image with parts lifts off the plain paper drawing', () async {
+    final shot = photographedKidDrawing();
+    final cut = shot.report.result.cutoutPng;
+    // A "composite" that differs from the paper cut-out.
+    final parts = await readAssetFile('assets/cpu/cpu_fire_blob.png');
+    final content = await loadVideoContent(
+      character: characterFrom(shot.report.result),
+      displayPng: parts,
+      originalPng: cut,
+      before: null,
+      spec: testSpec,
+      roster: testRoster,
+      loadAsset: readAssetFile,
+    );
+    expect(content.original, isNotNull);
+    expect(content.drawing, same(content.original));
+    expect(content.character.width, isNot(content.original!.width));
+    final c = VideoComposer(content);
+    final rgba = await VideoFrameRenderer(
+      c,
+      width: 90,
+      height: 160,
+    ).renderRgba((3.7 * 30).round());
+    expect(_opaque(rgba), isTrue);
   });
 }
