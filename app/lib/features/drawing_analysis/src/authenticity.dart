@@ -459,9 +459,14 @@ double periodicLattice(
     }
   }
   final ringMedian = Float64List(rMax + 2);
+  // Noise-free synthetic patterns (perfect stripes) leave most bins at
+  // floating-point round-off; without a floor, two round-off "peaks" would
+  // look like a strong lattice. Real camera pixels are always far above it
+  // (8-bit quantisation alone is ~0.3 levels).
+  final floor = 1e-6 * math.sqrt(energy);
   for (var r = 0; r < rings.length; r++) {
     final ring = rings[r]..sort();
-    ringMedian[r] = ring.isEmpty ? 0 : ring[ring.length ~/ 2];
+    ringMedian[r] = math.max(floor, ring.isEmpty ? 0 : ring[ring.length ~/ 2]);
   }
 
   // Candidate peaks: local maxima in the half plane kx >= 0.

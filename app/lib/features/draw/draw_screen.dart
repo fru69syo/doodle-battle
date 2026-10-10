@@ -33,9 +33,14 @@ class _DrawScreenState extends ConsumerState<DrawScreen> {
   @override
   void initState() {
     super.initState();
-    if (ref.read(albumImportArmProvider.notifier).consume()) {
+    // Providers can not be modified while the tree builds: consume the
+    // one-shot album import after the first frame.
+    if (ref.read(albumImportArmProvider)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _pick(PhotoSource.gallery);
+        if (!mounted) return;
+        if (ref.read(albumImportArmProvider.notifier).consume()) {
+          _pick(PhotoSource.gallery);
+        }
       });
     }
   }

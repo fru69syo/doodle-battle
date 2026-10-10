@@ -68,7 +68,7 @@ void main() {
       expect(periodicLattice(dots, n, maxPeriod: 12), greaterThan(20));
       expect(periodicLattice(noise, n, maxPeriod: 12), lessThan(8));
       expect(periodicLattice(edge, n, maxPeriod: 12), lessThan(8));
-      // Ruled lines (1D, 5.3 px) are not a 2D lattice.
+      // Ruled lines (1D, period 16 px, noise-free) are not a 2D lattice.
       final lines = Float64List(n * n);
       for (var i = 0; i < n * n; i++) {
         lines[i] = (i ~/ n) % 16 < 2 ? 120 : 230;

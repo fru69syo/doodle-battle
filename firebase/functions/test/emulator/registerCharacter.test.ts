@@ -104,7 +104,12 @@ describe("registerCharacter", () => {
       skillEstimate: 95,
     }));
     expect(await register()).toEqual({ ok: false, reason: "IMAGE_NOT_DRAWING" });
-    // SPEC §11.1: confidently AI-generated / digital pictures get their own code.
+    expect(await storageFiles()).toEqual([]);
+    expect((await db().collection(COL.snapshots).get()).size).toBe(0);
+  });
+
+  it("refuses confidently AI-generated / non-drawing pictures (SPEC §11.1)", async () => {
+    await seedUser("kid");
     env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({
       imageCategory: "ok",
       isHandDrawn: false,
@@ -122,7 +127,6 @@ describe("registerCharacter", () => {
     }));
     expect(await register()).toEqual({ ok: false, reason: "IMAGE_NOT_DRAWING" });
     expect(await storageFiles()).toEqual([]);
-    expect((await db().collection(COL.snapshots).get()).size).toBe(0);
   });
 
   it("rejects names the AI flags; drops flagged move names", async () => {
