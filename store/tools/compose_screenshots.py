@@ -25,6 +25,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+sys.dont_write_bytecode = True  # no __pycache__ in store/tools
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_graphics as g  # noqa: E402  (crayon helpers + pinned font)
 
