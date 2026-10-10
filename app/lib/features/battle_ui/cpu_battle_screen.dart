@@ -8,6 +8,7 @@ import '../../core/widgets/character_picture.dart';
 import '../../data/app_state.dart';
 import '../../domain/battle/battle.dart';
 import '../../domain/character.dart';
+import '../drawing_loop/display_image.dart';
 import 'battle_arena.dart';
 import 'battle_display.dart';
 import 'battle_outcome.dart';
@@ -147,6 +148,7 @@ class _CpuBattleViewState extends ConsumerState<_CpuBattleView> {
                     Side.a: CharacterPicture(character: _s.player, size: 140),
                     Side.b: CharacterPicture(character: _s.cpu, size: 120),
                   },
+                  effectImages: {Side.a: watchMoveEffects(ref, _s.player)},
                 ),
               ),
             ),

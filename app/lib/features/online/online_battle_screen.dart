@@ -20,6 +20,7 @@ import '../battle_ui/battle_display.dart';
 import '../battle_ui/battle_outcome.dart';
 import '../battle_ui/cpu_battle_screen.dart' show battleStepProvider;
 import '../battle_ui/move_labels.dart';
+import '../drawing_loop/display_image.dart';
 import 'report_sheet.dart';
 
 /// Turn time limit (SPEC §5).
@@ -308,6 +309,8 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
                         bytes: _oppImage,
                       ),
                     },
+                    // Own drawn effects are local cosmetics (never sent).
+                    effectImages: {me: watchMoveEffects(ref, widget.character)},
                   ),
                 ),
               ),

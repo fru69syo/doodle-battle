@@ -1,3 +1,4 @@
+import 'cosmetics.dart';
 import 'element_type.dart';
 import 'stats.dart';
 
@@ -25,6 +26,7 @@ class Character {
     this.specialMoveName,
     this.onlineId,
     this.cardFrame,
+    this.cosmetics = CharacterCosmetics.none,
   });
 
   final String id;
@@ -63,6 +65,10 @@ class Character {
   /// only (never sent to the server). Null = none.
   final String? cardFrame;
 
+  /// Drawn parts, drawn move effects and the daily-theme badge (local only,
+  /// never sent to the server, no effect on stats). See docs/LOOP.md.
+  final CharacterCosmetics cosmetics;
+
   bool get isShobo => skill > 75;
 
   EvolutionStage get stage => level >= 20
@@ -83,6 +89,7 @@ class Character {
     String? specialMoveName,
     String? onlineId,
     String? Function()? cardFrame,
+    CharacterCosmetics? cosmetics,
   }) => Character(
     id: id,
     name: name ?? this.name,
@@ -102,6 +109,7 @@ class Character {
     specialMoveName: specialMoveName ?? this.specialMoveName,
     onlineId: onlineId ?? this.onlineId,
     cardFrame: cardFrame != null ? cardFrame() : this.cardFrame,
+    cosmetics: cosmetics ?? this.cosmetics,
   );
 
   Map<String, Object?> toJson() => {
@@ -125,6 +133,8 @@ class Character {
     'specialMoveName': specialMoveName,
     'onlineId': onlineId,
     'cardFrame': cardFrame,
+    // Additive (v1.1). Omitted when empty so v1.0 files stay unchanged.
+    if (!cosmetics.isEmpty) 'cosmetics': cosmetics.toJson(),
   };
 
   factory Character.fromJson(Map<String, Object?> json) => Character(
@@ -151,5 +161,6 @@ class Character {
     specialMoveName: json['specialMoveName'] as String?,
     onlineId: json['onlineId'] as String?,
     cardFrame: json['cardFrame'] as String?,
+    cosmetics: CharacterCosmetics.fromJson(json['cosmetics']),
   );
 }
