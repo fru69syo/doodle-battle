@@ -22,8 +22,10 @@ class InMemoryCharacterRepository implements CharacterRepository {
 
   @override
   Future<List<Character>> loadAll() async =>
-      _chars.values.toList()
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      _chars.values.toList()..sort((a, b) {
+        final byDate = a.createdAt.compareTo(b.createdAt);
+        return byDate != 0 ? byDate : a.id.compareTo(b.id);
+      });
 
   @override
   Future<void> add(
