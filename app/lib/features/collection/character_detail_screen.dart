@@ -43,30 +43,15 @@ class CharacterDetailScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            if (!justBorn)
-              Center(child: CharacterPicture(character: c, size: 220))
-            else
-              // Right after naming: invite to make the video, over the
-              // picture's bottom edge (the page layout does not move).
+            Center(child: CharacterPicture(character: c, size: 220)),
+            if (justBorn) ...[
+              // Right after naming: invite to make the video, just below the
+              // picture (never over the drawing).
+              const SizedBox(height: 12),
               Center(
-                child: SizedBox(
-                  width: 320,
-                  height: 220,
-                  child: Stack(
-                    alignment: Alignment.topCenter,
-                    children: [
-                      CharacterPicture(character: c, size: 220),
-                      Positioned(
-                        bottom: 0,
-                        child: VideoExportButton(
-                          characterId: c.id,
-                          prominent: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: VideoExportButton(characterId: c.id, prominent: true),
               ),
+            ],
             const SizedBox(height: 12),
             _Header(c: c),
             const SizedBox(height: 8),

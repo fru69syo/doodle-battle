@@ -75,6 +75,13 @@ void main() {
       final c = (await app.characters.loadAll()).single;
       expect(c.cosmetics.odai!.date, '2026-10-09');
       expect(c.cosmetics.odai!.text, theme.text);
+      // The badge is further down the character page: scroll to it instead
+      // of relying on the page height.
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('loop-odai-badge')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.byKey(const Key('loop-odai-badge')), findsOneWidget);
       final card = OdaiStampCard.fromJson(store.stampCard);
       expect(card.total, 1);
