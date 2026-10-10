@@ -10,6 +10,7 @@ import '../../data/app_state.dart';
 import '../../data/character_repository.dart';
 import '../../domain/character.dart';
 import '../ng_filter/name_rules.dart';
+import '../video_export/video_export_entry.dart';
 import 'pending_birth.dart';
 
 /// Naming with the offline NG filter (SPEC §2-3).
@@ -70,8 +71,11 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
       await showKidMessage(context, 'ずかんが いっぱい！ ずかんで おわかれ する キャラを えらんでね');
       return;
     }
+    await keepBeforePhoto(repo, id, birth.beforePhoto);
     if (!mounted) return;
     ref.read(pendingBirthProvider.notifier).clear();
+    // Video export: the detail page offers 「どうがに する」 prominently.
+    ref.read(justBornCharacterProvider.notifier).set(id);
     context.go(Routes.character(id));
   }
 

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../domain/character.dart';
+import 'before_photo.dart';
 import 'character_repository.dart';
 
 /// In-memory [CharacterRepository] for tests and previews.
@@ -16,6 +17,7 @@ class InMemoryCharacterRepository implements CharacterRepository {
 
   final Map<String, Character> _chars = {};
   final Map<String, Uint8List> _images = {};
+  final Map<String, BeforePhoto> _before = {};
 
   @override
   String imagePathFor(String id) => 'memory://characters/$id.png';
@@ -48,14 +50,27 @@ class InMemoryCharacterRepository implements CharacterRepository {
   Future<void> delete(String id) async {
     _chars.remove(id);
     _images.remove(id);
+    _before.remove(id);
   }
 
   @override
   Future<void> deleteAll() async {
     _chars.clear();
     _images.clear();
+    _before.clear();
   }
 
   @override
   Future<Uint8List?> readImage(String id) async => _images[id];
+
+  @override
+  Future<void> saveBeforePhoto(String id, BeforePhoto photo) async {
+    if (!_chars.containsKey(id)) {
+      throw StateError('unknown character $id');
+    }
+    _before[id] = photo;
+  }
+
+  @override
+  Future<BeforePhoto?> readBeforePhoto(String id) async => _before[id];
 }

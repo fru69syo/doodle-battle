@@ -5,3 +5,7 @@ tags:
   # font-independent); regenerate with `tool/screenshots.sh`.
   screenshots:
     skip: "store screenshots: run tool/screenshots.sh"
+  # Before/After video frame dumps for visual review (debug tool,
+  # tool/video_frames.sh).
+  video_frames:
+    skip: "video frame dump: run tool/video_frames.sh"

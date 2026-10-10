@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../data/app_state.dart';
 import '../../data/backend/backend_api.dart';
+import '../../data/before_photo.dart';
 import '../../domain/drawing_analysis_result.dart';
 import '../birth/pending_birth.dart';
 import '../drawing_analysis/drawing_analyzer.dart'
@@ -42,9 +43,11 @@ class DrawFlow {
 
   Future<DrawOutcome> process(Uint8List imageBytes) async {
     final AnalysisOutcomeLike outcome;
+    final Future<BeforePhoto?>? beforePhoto;
     try {
       final o = await _ref.read(drawingAnalyzerProvider).analyze(imageBytes);
       outcome = (o.result, o.rejectReason?.message);
+      beforePhoto = o.beforePhoto;
     } on UndecodableImageException {
       return const DrawUnreadable();
     }
@@ -57,6 +60,7 @@ class DrawFlow {
             ? result
             : applyCloudSkill(result, cloud.skillEstimate.toDouble()),
         cloud: cloud,
+        beforePhoto: beforePhoto,
       ),
     );
   }

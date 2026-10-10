@@ -16,6 +16,7 @@ import '../../domain/stats.dart';
 import '../battle_ui/move_labels.dart';
 import '../monetization/card_frames.dart';
 import '../monetization/monetization_service.dart';
+import '../video_export/video_export_entry.dart';
 import 'xp_bar.dart';
 
 /// Character page: stats, level, XP, evolution, パワーのたね, AR, battle.
@@ -34,6 +35,7 @@ class CharacterDetailScreen extends ConsumerWidget {
       );
     }
     final seeds = seedsAvailable(spec, c);
+    final justBorn = ref.watch(justBornCharacterProvider) == c.id;
     return Scaffold(
       appBar: AppBar(title: Text(c.name)),
       body: SafeArea(
@@ -42,6 +44,7 @@ class CharacterDetailScreen extends ConsumerWidget {
           children: [
             Center(child: CharacterPicture(character: c, size: 220)),
             const SizedBox(height: 12),
+            if (justBorn) VideoExportButton(characterId: c.id, prominent: true),
             _Header(c: c),
             const SizedBox(height: 8),
             XpBar(spec: spec, character: c),
@@ -70,6 +73,8 @@ class CharacterDetailScreen extends ConsumerWidget {
               label: const Text('AR で みる'),
               onPressed: () => context.push(Routes.characterAr(c.id)),
             ),
+            const SizedBox(height: 12),
+            VideoExportButton(characterId: c.id),
             const SizedBox(height: 24),
             TextButton.icon(
               key: const Key('detail-release'),

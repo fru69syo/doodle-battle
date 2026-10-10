@@ -10,6 +10,7 @@ import '../../data/app_state.dart';
 import '../../domain/character.dart';
 import '../collection/xp_bar.dart';
 import '../monetization/rewarded_ad_button.dart';
+import '../video_export/video_export_entry.dart';
 import 'battle_outcome.dart';
 
 /// After a battle: win/lose, XP, level-up, evolution, seeds (SPEC §4.2).
@@ -93,6 +94,10 @@ class _BattleResultScreenState extends ConsumerState<BattleResultScreen> {
             const SizedBox(height: 16),
             RewardedAdButton(onRewarded: _onAdReward),
             const SizedBox(height: 16),
+            if (c != null) ...[
+              VideoExportButton(characterId: c.id),
+              const SizedBox(height: 12),
+            ],
             ..._buttons(context, c),
           ],
         ),
