@@ -1,6 +1,7 @@
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/app_state.dart';
 import 'package:doodle_battle/data/backend/backend_api.dart';
+import 'package:doodle_battle/features/birth/ai_report.dart';
 import 'package:doodle_battle/features/draw/album_import.dart';
 import 'package:doodle_battle/features/draw/drawing_services.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
@@ -229,6 +230,95 @@ void main() {
     expect(c.skill, 44);
     expect(c.subject, 'ねこ');
     expect(c.specialMoveName, 'ねこびーむ');
+  });
+
+  CloudJudgement catJudgement() => const CloudJudgement(
+    subject: 'ねこ',
+    suggestedNames: ['にゃんた', 'みけまる', 'ねこりん'],
+    elementMoveName: 'にゃんにゃんぱんち',
+    specialMoveName: 'ねこびーむ',
+    skillEstimate: 20,
+    appropriate: true,
+  );
+
+  testWidgets('AI-suggested names and moves can be reported (preset reason)', (
+    tester,
+  ) async {
+    final backend = FakeBackend()..judgement = catJudgement();
+    final store = MemoryAiReportStore();
+    final app = await pumpApp(
+      tester,
+      backend: backend,
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(cloudJudge: true),
+      ),
+      overrides: [aiReportStoreProvider.overrideWithValue(store)],
+    );
+    await drawWithCamera(tester);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const Key('birth-name')));
+    expect(find.byKey(const Key('name-suggestion-にゃんた')), findsOneWidget);
+
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-ねこびーむ')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-scary')));
+    expect(find.textContaining('おしえて くれて ありがとう'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    expect(backend.aiReports.single, (
+      AiSuggestionKind.specialMove,
+      'ねこびーむ',
+      AiReportReason.scary,
+    ));
+
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-にゃんた')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-mean')));
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    // Reported suggestions disappear and are never used.
+    expect(find.byKey(const Key('name-suggestion-にゃんた')), findsNothing);
+    expect(store.entries.map((e) => e.sent), [true, true]);
+    await nameAndSave(tester, 'みけまる');
+    final c = (await app.characters.loadAll()).single;
+    expect(c.specialMoveName, isNull);
+    expect(c.elementMoveName, 'にゃんにゃんぱんち');
+  });
+
+  testWidgets('offline AI reports are logged and sent with the next one', (
+    tester,
+  ) async {
+    final backend = FakeBackend()
+      ..judgement = catJudgement()
+      ..aiReportError = const BackendException(BackendCodes.network);
+    final store = MemoryAiReportStore();
+    await pumpApp(
+      tester,
+      backend: backend,
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(cloudJudge: true),
+      ),
+      overrides: [aiReportStoreProvider.overrideWithValue(store)],
+    );
+    await drawWithCamera(tester);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const Key('birth-name')));
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-みけまる')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-strange')));
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    expect(store.entries.single.sent, isFalse);
+    expect(store.entries.single.text, 'みけまる');
+
+    backend.aiReportError = null;
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-ねこりん')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-other')));
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    expect(backend.aiReports.map((r) => r.$2), ['みけまる', 'ねこりん']);
+    expect(store.entries.every((e) => e.sent), isTrue);
   });
 
   testWidgets('cloud failure silently falls back to the local result', (

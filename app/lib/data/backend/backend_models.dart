@@ -409,6 +409,31 @@ enum ReportReason {
   final String label;
 }
 
+/// Which AI-suggested text is reported (`reportAiSuggestion`).
+enum AiSuggestionKind {
+  name('name'),
+  elementMove('element_move'),
+  specialMove('special_move');
+
+  const AiSuggestionKind(this.code);
+  final String code;
+}
+
+/// Preset reasons for reporting an AI suggestion (no free text; Google
+/// Play AI-generated content policy).
+enum AiReportReason {
+  mean('mean', 'いやな ことば'),
+  scary('scary', 'こわい ことば'),
+  strange('strange', 'へんな ことば'),
+  other('other', 'そのほか');
+
+  const AiReportReason(this.code, this.label);
+  final String code;
+
+  /// Hiragana label shown to children.
+  final String label;
+}
+
 /// Parses one turn log's events; events this client does not understand are
 /// skipped (e.g. from a newer server engine).
 List<BattleEvent> parseTurnEvents(Object? raw) {
