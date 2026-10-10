@@ -14,7 +14,12 @@ import '../../features/birth/naming_screen.dart';
 import '../../features/collection/character_ar_screen.dart';
 import '../../features/collection/character_detail_screen.dart';
 import '../../features/collection/collection_screen.dart';
+import '../../features/card_print/card_print_screen.dart';
+import '../../features/card_print/card_select_screen.dart';
 import '../../features/draw/draw_screen.dart';
+import '../../features/family_battle/family_battle_screen.dart';
+import '../../features/family_battle/family_setup.dart';
+import '../../features/family_battle/family_setup_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/setup_screen.dart';
 import '../../features/online/online_battle_screen.dart';
@@ -75,6 +80,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'zukan',
             builder: (_, _) => const CollectionScreen(),
             routes: [
+              // Before ':id' so 'cards' is not taken for a character id.
+              GoRoute(
+                path: 'cards',
+                builder: (_, _) => const CardSelectScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'print',
+                    builder: (_, s) => CardPrintScreen(
+                      characterIds: (s.uri.queryParameters['ids'] ?? '')
+                          .split(',')
+                          .where((id) => id.isNotEmpty)
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
               GoRoute(
                 path: ':id',
                 builder: (_, s) =>
@@ -133,6 +154,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                     character: c,
                   ),
                 ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'family',
+            builder: (_, _) => const FamilySetupScreen(),
+            routes: [
+              GoRoute(
+                path: 'battle',
+                builder: (_, s) => s.extra is FamilyBattleConfig
+                    ? FamilyBattleScreen(config: s.extra! as FamilyBattleConfig)
+                    : const FamilySetupScreen(),
               ),
             ],
           ),

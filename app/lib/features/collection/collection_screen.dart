@@ -18,7 +18,18 @@ class CollectionScreen extends ConsumerWidget {
     final chars = ref.watch(charactersProvider).value;
     final limit = ref.watch(collectionLimitProvider);
     return Scaffold(
-      appBar: AppBar(title: Text('ずかん  ${chars?.length ?? 0} / $limit')),
+      appBar: AppBar(
+        title: Text('ずかん  ${chars?.length ?? 0} / $limit'),
+        actions: [
+          if (chars != null && chars.isNotEmpty)
+            IconButton(
+              key: const Key('zukan-cards'),
+              tooltip: 'カードを つくる',
+              icon: const Icon(Icons.style, size: 32),
+              onPressed: () => context.push(Routes.cardSelect),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: chars == null
             ? const Center(child: CircularProgressIndicator())
