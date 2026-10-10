@@ -9,6 +9,10 @@ import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
 import '../../data/character_repository.dart';
 import '../../domain/character.dart';
+import '../../domain/cosmetics.dart';
+import '../drawing_loop/drawing_loop.dart';
+import '../drawing_loop/loop_labels.dart' show showOdaiStampMessage;
+import '../drawing_loop/odai/stamp_card.dart' show StampKind;
 import '../ng_filter/name_rules.dart';
 import 'pending_birth.dart';
 
@@ -47,6 +51,8 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
     final repo = ref.read(characterRepositoryProvider);
     final id = _newId();
     final r = birth.result;
+    // Drawn for today's おだい → cosmetic badge (docs/LOOP.md §1).
+    final odai = ref.read(activeOdaiProvider);
     final c = Character(
       id: id,
       name: canonicalName(_controller.text),
@@ -61,6 +67,9 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
       subject: birth.cloud?.subject,
       elementMoveName: birth.cloud?.elementMoveName,
       specialMoveName: birth.cloud?.specialMoveName,
+      cosmetics: odai == null
+          ? CharacterCosmetics.none
+          : CharacterCosmetics(odai: odai),
     );
     try {
       await ref.read(charactersProvider.notifier).add(c, r.cutoutPng);
@@ -70,6 +79,13 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
       await showKidMessage(context, 'ずかんが いっぱい！ ずかんで おわかれ する キャラを えらんでね');
       return;
     }
+    final stamp = await completeActiveOdai(
+      ref.read,
+      kind: StampKind.character,
+      characterId: id,
+    );
+    if (!mounted) return;
+    if (stamp != null) await showOdaiStampMessage(context, stamp);
     if (!mounted) return;
     ref.read(pendingBirthProvider.notifier).clear();
     context.go(Routes.character(id));

@@ -11,6 +11,7 @@ import 'core/crash_reporting.dart';
 import 'core/licenses.dart';
 import 'core/providers.dart';
 import 'data/backend/firebase_bootstrap.dart';
+import 'data/drawing_loop_storage.dart';
 import 'data/file_character_repository.dart';
 import 'data/settings_repository.dart';
 import 'features/monetization/admob_gateway.dart';
@@ -47,6 +48,9 @@ Future<void> main() async {
         ),
         settingsRepositoryProvider.overrideWithValue(
           FileSettingsRepository(docs),
+        ),
+        drawingLoopStorageProvider.overrideWithValue(
+          FileDrawingLoopStorage(docs),
         ),
         backendApiProvider.overrideWithValue(backend),
         crashReporterProvider.overrideWithValue(crash),

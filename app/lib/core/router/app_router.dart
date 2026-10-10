@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
 import '../../domain/character.dart';
+import '../../domain/cosmetics.dart';
 import '../../features/battle_ui/battle_outcome.dart';
 import '../../features/battle_ui/battle_result_screen.dart';
 import '../../features/battle_ui/battle_select_screen.dart';
@@ -15,6 +16,7 @@ import '../../features/collection/character_ar_screen.dart';
 import '../../features/collection/character_detail_screen.dart';
 import '../../features/collection/collection_screen.dart';
 import '../../features/draw/draw_screen.dart';
+import '../../features/drawing_loop/drawing_loop.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/setup_screen.dart';
 import '../../features/online/online_battle_screen.dart';
@@ -64,6 +66,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const HomeScreen(),
         routes: [
           GoRoute(path: 'draw', builder: (_, _) => const DrawScreen()),
+          GoRoute(path: 'odai', builder: (_, _) => const StampCardScreen()),
           GoRoute(
             path: 'birth',
             builder: (_, _) => const BirthScreen(),
@@ -84,6 +87,30 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'ar',
                     builder: (_, s) =>
                         CharacterArScreen(characterId: s.pathParameters['id']!),
+                  ),
+                  GoRoute(
+                    path: 'parts',
+                    builder: (_, s) =>
+                        PartStudioScreen(characterId: s.pathParameters['id']!),
+                    routes: [
+                      GoRoute(
+                        path: 'new',
+                        builder: (_, s) => PartStudioScreen(
+                          characterId: s.pathParameters['id']!,
+                          addNew: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'effect/:move',
+                    builder: (_, s) => EffectDrawScreen(
+                      characterId: s.pathParameters['id']!,
+                      move: DrawnMove.values.firstWhere(
+                        (m) => m.name == s.pathParameters['move'],
+                        orElse: () => DrawnMove.element,
+                      ),
+                    ),
                   ),
                 ],
               ),

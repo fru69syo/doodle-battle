@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers.dart';
 import '../../data/app_state.dart';
 import '../ar/ar.dart';
+import '../drawing_loop/drawing_loop.dart';
 
 /// Opens the AR team's [ArViewScreen]. The ARCore install prompt is never
 /// offered here (children's screen); parents can install ARCore from
@@ -21,13 +21,16 @@ class CharacterArScreen extends ConsumerWidget {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    final repo = ref.read(characterRepositoryProvider);
     return ArViewScreen(
       character: c,
       allowArCoreInstallPrompt: false,
       dependencies: ArViewDependencies(
+        // The standee is built from the display picture (base drawing +
+        // drawn parts), regenerated whenever the screen opens.
         readImage: (_) async {
-          final bytes = await repo.readImage(c.id);
+          final bytes = await ref
+              .read(displayImageServiceProvider)
+              .displayImageFor(c);
           if (bytes == null) throw StateError('missing image');
           return bytes;
         },
