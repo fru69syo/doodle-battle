@@ -22,10 +22,10 @@ class CollectionScreen extends ConsumerWidget {
         title: Text('ずかん  ${chars?.length ?? 0} / $limit'),
         actions: [
           if (chars != null && chars.isNotEmpty)
-            IconButton(
+            TextButton.icon(
               key: const Key('zukan-cards'),
-              tooltip: 'カードを つくる',
-              icon: const Icon(Icons.style, size: 32),
+              icon: const Icon(Icons.style, size: 28),
+              label: const Text('カード', style: TextStyle(fontSize: 18)),
               onPressed: () => context.push(Routes.cardSelect),
             ),
         ],

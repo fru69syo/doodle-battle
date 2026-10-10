@@ -252,7 +252,14 @@ class _Arena extends StatelessWidget {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  _TeamTag(side: Side.b, label: c.b.label),
+                  // あか fights at the bottom, あお at the top.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _TeamTag(side: Side.a, label: c.a.label),
+                      _TeamTag(side: Side.b, label: c.b.label),
+                    ],
+                  ),
                   BattleArena(
                     display: display,
                     gaugeMax: session.spec.gauge.max,
@@ -267,7 +274,6 @@ class _Arena extends StatelessWidget {
                       ),
                     },
                   ),
-                  _TeamTag(side: Side.a, label: c.a.label),
                 ],
               ),
             ),
@@ -302,24 +308,32 @@ class _TeamTag extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Align(
-    alignment: side == Side.a ? Alignment.centerLeft : Alignment.centerRight,
-    child: Container(
-      key: Key('family-tag-${side.name}'),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: familyColour(side),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
+  Widget build(BuildContext context) => Container(
+    key: Key('family-tag-${side.name}'),
+    margin: const EdgeInsets.only(bottom: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: familyColour(side),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          side == Side.a ? Icons.arrow_downward : Icons.arrow_upward,
           color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
+          size: 18,
         ),
-      ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     ),
   );
 }
