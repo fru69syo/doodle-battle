@@ -1,20 +1,25 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/element_badge.dart';
 import '../../domain/battle/battle.dart';
+import '../drawing_loop/effects/move_effect_layer.dart';
 import 'battle_display.dart';
 
-/// The battle field: opponent top, player bottom, message box.
-class BattleArena extends StatelessWidget {
+/// The battle field: opponent top, player bottom, message box. ぞくせいわざ
+/// and ひっさつ play a flying effect: the child's drawn one from
+/// [effectImages] when there is one, otherwise a default (docs/LOOP.md §3).
+class BattleArena extends StatefulWidget {
   const BattleArena({
     super.key,
     required this.display,
     required this.pictures,
     required this.gaugeMax,
     this.playerSide = Side.a,
+    this.effectImages = const {},
   });
 
   final BattleDisplay display;
@@ -22,54 +27,101 @@ class BattleArena extends StatelessWidget {
   final int gaugeMax;
   final Side playerSide;
 
+  /// Drawn move effects by side and move (missing → default effect).
+  final Map<Side, Map<BattleAction, Uint8List>> effectImages;
+
+  @override
+  State<BattleArena> createState() => _BattleArenaState();
+}
+
+class _BattleArenaState extends State<BattleArena> {
+  final _stackKey = GlobalKey();
+  final _spriteKeys = {Side.a: GlobalKey(), Side.b: GlobalKey()};
+
+  Offset? _centerOf(Side side) {
+    final sprite = _spriteKeys[side]!.currentContext?.findRenderObject();
+    final stack = _stackKey.currentContext?.findRenderObject();
+    if (sprite is! RenderBox || stack is! RenderBox) return null;
+    if (!sprite.hasSize || !stack.hasSize) return null;
+    return stack.globalToLocal(
+      sprite.localToGlobal(sprite.size.center(Offset.zero)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final me = playerSide;
-    final opp = playerSide.other;
-    return Column(
+    final display = widget.display;
+    final me = widget.playerSide;
+    final opp = me.other;
+    return Stack(
+      key: _stackKey,
       children: [
-        Row(
+        Column(
           children: [
-            Expanded(
-              child: FighterStatus(
-                side: opp,
-                f: display[opp],
-                gaugeMax: gaugeMax,
-              ),
-            ),
-            FighterSprite(f: display[opp], picture: pictures[opp]!, size: 130),
-          ],
-        ),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            const SizedBox(height: 8, width: double.infinity),
-            if (display.banner != null)
-              Text(
-                display.banner!,
-                key: const Key('battle-banner'),
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.danger,
+            Row(
+              children: [
+                Expanded(
+                  child: FighterStatus(
+                    side: opp,
+                    f: display[opp],
+                    gaugeMax: widget.gaugeMax,
+                  ),
                 ),
-              ),
-          ],
-        ),
-        Row(
-          children: [
-            FighterSprite(f: display[me], picture: pictures[me]!, size: 150),
-            Expanded(
-              child: FighterStatus(
-                side: me,
-                f: display[me],
-                gaugeMax: gaugeMax,
-              ),
+                FighterSprite(
+                  key: _spriteKeys[opp],
+                  f: display[opp],
+                  picture: widget.pictures[opp]!,
+                  size: 130,
+                ),
+              ],
             ),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                const SizedBox(height: 8, width: double.infinity),
+                if (display.banner != null)
+                  Text(
+                    display.banner!,
+                    key: const Key('battle-banner'),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.danger,
+                    ),
+                  ),
+              ],
+            ),
+            Row(
+              children: [
+                FighterSprite(
+                  key: _spriteKeys[me],
+                  f: display[me],
+                  picture: widget.pictures[me]!,
+                  size: 150,
+                ),
+                Expanded(
+                  child: FighterStatus(
+                    side: me,
+                    f: display[me],
+                    gaugeMax: widget.gaugeMax,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _MessageBox(text: display.message),
           ],
         ),
-        const SizedBox(height: 8),
-        _MessageBox(text: display.message),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: MoveEffectLayer(
+              cue: display.effectCue,
+              centerOf: _centerOf,
+              elementOf: (s) => display[s].element,
+              drawn: widget.effectImages,
+            ),
+          ),
+        ),
       ],
     );
   }

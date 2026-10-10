@@ -9,6 +9,14 @@ abstract final class Routes {
   static const zukan = '/zukan';
   static String character(String id) => '/zukan/$id';
   static String characterAr(String id) => '/zukan/$id/ar';
+
+  /// Drawing loop (docs/LOOP.md): move the parts / draw a new part / draw
+  /// a move effect (`move` = `DrawnMove.name`), and the おだい calendar.
+  static String characterParts(String id) => '/zukan/$id/parts';
+  static String characterNewPart(String id) => '/zukan/$id/parts/new';
+  static String characterEffect(String id, String move) =>
+      '/zukan/$id/effect/$move';
+  static const odai = '/odai';
   static const battle = '/battle';
   static String stages(String characterId) => '/battle/$characterId/stages';
   static String cpuBattle(String characterId, int stage) =>

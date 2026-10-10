@@ -7,6 +7,7 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/big_button.dart';
 import '../../data/app_state.dart';
+import '../drawing_loop/drawing_loop.dart';
 import '../parent/parent_session.dart';
 import '../parent/play_time.dart';
 
@@ -27,14 +28,20 @@ class HomeScreen extends ConsumerWidget {
           children: [
             const _Title(),
             const _PlayTimeBanner(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            const OdaiHomeCard(),
+            const SizedBox(height: 12),
             BigActionButton(
               key: const Key('home-draw'),
               icon: Icons.brush,
               label: 'かく',
               subtitle: 'えを しゃしんに とって キャラに しよう',
               color: AppColors.primary,
-              onPressed: () => context.push(Routes.draw),
+              onPressed: () {
+                // A plain drawing, not for today's theme.
+                ref.read(activeOdaiProvider.notifier).clear();
+                context.push(Routes.draw);
+              },
             ),
             const SizedBox(height: 14),
             BigActionButton(

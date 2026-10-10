@@ -10,6 +10,7 @@ import '../core/providers.dart';
 import '../domain/character.dart';
 import 'app_settings.dart';
 import 'character_repository.dart';
+import 'drawing_loop_storage.dart';
 import 'game_progress.dart';
 
 /// Parent settings. Consent changes are mirrored to the server (best
@@ -117,14 +118,19 @@ class CharactersController extends AsyncNotifier<List<Character>> {
 
   Future<void> delete(String id) async {
     await _repo.delete(id);
+    // Drawn parts / effects / composite of this character (docs/LOOP.md).
+    await ref.read(drawingLoopStorageProvider).deleteCharacter(id);
     state = AsyncData([
       for (final x in await future)
         if (x.id != id) x,
     ]);
   }
 
+  /// Removes every character, its drawing-loop assets and the stamp card
+  /// (「すべてのデータを削除」).
   Future<void> deleteAll() async {
     await _repo.deleteAll();
+    await ref.read(drawingLoopStorageProvider).deleteAll();
     state = const AsyncData([]);
   }
 }

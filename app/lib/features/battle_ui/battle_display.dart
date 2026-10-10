@@ -1,5 +1,6 @@
 import '../../domain/battle/battle.dart';
 import '../../domain/element_type.dart';
+import '../drawing_loop/effects/move_effect_layer.dart';
 
 /// Mutable view model of one fighter while events are animated.
 class FighterDisplay {
@@ -44,6 +45,10 @@ class BattleDisplay {
 
   /// Big banner (e.g. 「こうかは ばつぐんだ！」), cleared on the next message.
   String? banner;
+
+  /// Flying move effect to play (ぞくせいわざ / ひっさつ; docs/LOOP.md §3).
+  MoveEffectCue? effectCue;
+  int _effectTick = 0;
 
   FighterDisplay operator [](Side s) => fighters[s]!;
 
@@ -94,6 +99,13 @@ Duration applyBattleEvent(
       );
     case MoveEvent(:final side, :final move):
       d[side].hopTick++;
+      if (movePlaysEffect(move)) {
+        d.effectCue = MoveEffectCue(
+          side: side,
+          move: move,
+          tick: ++d._effectTick,
+        );
+      }
       say('${name(side)}の ${moveName(side, move)}！');
     case MissEvent():
       say(texts['miss'] ?? 'でも はずれた！');
