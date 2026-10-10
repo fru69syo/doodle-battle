@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../domain/character.dart';
+import 'before_photo.dart';
 
 /// Free collection size (SPEC §2-4). Purchases add [extraSlotsPerPack].
 const int freeCollectionLimit = 12;
@@ -41,4 +42,11 @@ abstract interface class CharacterRepository {
 
   /// Cut-out PNG bytes, or null if missing.
   Future<Uint8List?> readImage(String id);
+
+  /// Stores the "Before" paper photo of an existing character (video
+  /// export, docs/VIDEO.md). Removed by [delete] and [deleteAll].
+  Future<void> saveBeforePhoto(String id, BeforePhoto photo);
+
+  /// The "Before" photo, or null (older characters, or nothing kept).
+  Future<BeforePhoto?> readBeforePhoto(String id);
 }

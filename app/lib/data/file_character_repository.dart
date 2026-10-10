@@ -2,11 +2,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../domain/character.dart';
+import 'before_photo.dart';
 import 'character_repository.dart';
 import 'json_file.dart';
 
 /// Stores each character as `<root>/characters/<id>.json` + `<id>.png`
-/// (root = app documents directory in the app).
+/// (root = app documents directory in the app). The optional "Before" paper
+/// photo lives in `<root>/characters/before/<id>.jpg` + `<id>.json`.
 class FileCharacterRepository implements CharacterRepository {
   FileCharacterRepository(Directory root)
     : _dir = Directory('${root.path}/characters');
@@ -17,6 +19,9 @@ class FileCharacterRepository implements CharacterRepository {
 
   File _json(String id) => File('${_dir.path}/$id.json');
   File _png(String id) => File('${_dir.path}/$id.png');
+  Directory get _beforeDir => Directory('${_dir.path}/before');
+  File _beforeJpg(String id) => File('${_beforeDir.path}/$id.jpg');
+  File _beforeMeta(String id) => File('${_beforeDir.path}/$id.json');
 
   void _checkId(String id) {
     if (!_validId.hasMatch(id)) throw ArgumentError.value(id, 'id');
@@ -73,7 +78,7 @@ class FileCharacterRepository implements CharacterRepository {
   @override
   Future<void> delete(String id) async {
     _checkId(id);
-    for (final f in [_json(id), _png(id)]) {
+    for (final f in [_json(id), _png(id), _beforeJpg(id), _beforeMeta(id)]) {
       if (await f.exists()) await f.delete();
     }
   }
@@ -88,5 +93,28 @@ class FileCharacterRepository implements CharacterRepository {
     _checkId(id);
     final f = _png(id);
     return await f.exists() ? f.readAsBytes() : null;
+  }
+
+  @override
+  Future<void> saveBeforePhoto(String id, BeforePhoto photo) async {
+    _checkId(id);
+    if (!await _json(id).exists()) {
+      throw StateError('unknown character $id');
+    }
+    await _beforeDir.create(recursive: true);
+    await _beforeJpg(id).writeAsBytes(photo.jpeg, flush: true);
+    await writeJsonFile(_beforeMeta(id), photo.metaJson());
+  }
+
+  @override
+  Future<BeforePhoto?> readBeforePhoto(String id) async {
+    _checkId(id);
+    final jpg = _beforeJpg(id);
+    if (!await jpg.exists()) return null;
+    final meta = await readJsonFile(_beforeMeta(id));
+    return BeforePhoto(
+      jpeg: await jpg.readAsBytes(),
+      inkRect: BeforePhoto.inkRectFromMeta(meta),
+    );
   }
 }

@@ -45,6 +45,8 @@ dependencies:
   collection: ^1.19.1
   camera: ^0.12.1
   gal: ^2.3.3
+  # Video team: share the exported Before/After video (parent-gated).
+  share_plus: 13.3.0
   firebase_core: ^4.15.0
   firebase_auth: ^6.7.0
   cloud_functions: ^6.5.0

@@ -72,6 +72,7 @@ class DrawFlow {
             ? result
             : applyCloudSkill(result, cloud.skillEstimate.toDouble()),
         cloud: cloud,
+        beforePhoto: outcome.beforePhoto,
       ),
     );
   }
