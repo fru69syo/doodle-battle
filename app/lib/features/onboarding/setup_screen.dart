@@ -92,6 +92,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           style: TextStyle(fontSize: 16),
         ),
         const SizedBox(height: 12),
+        const NoAiTrainingNotice(),
+        const SizedBox(height: 12),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(8),

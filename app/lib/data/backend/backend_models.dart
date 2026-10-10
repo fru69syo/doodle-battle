@@ -56,7 +56,14 @@ class CloudJudgement {
     required this.skillEstimate,
     required this.appropriate,
     this.reasons = const [],
+    this.rejectCode,
   });
+
+  /// `IMAGE_AI_GENERATED` / `IMAGE_NOT_DRAWING` when the judge is confident
+  /// the picture is not a hand drawing on paper (SPEC §11.1); the app then
+  /// asks for a new photo with 「かみに かいた えを とってね」.
+  static const aiGenerated = 'IMAGE_AI_GENERATED';
+  static const notDrawing = 'IMAGE_NOT_DRAWING';
 
   final String? subject;
   final List<String> suggestedNames;
@@ -65,6 +72,7 @@ class CloudJudgement {
   final int skillEstimate;
   final bool appropriate;
   final List<String> reasons;
+  final String? rejectCode;
 
   factory CloudJudgement.fromJson(Map<String, Object?> j) {
     final moves = (j['moveNames'] as Map?)?.cast<String, Object?>() ?? {};
@@ -80,6 +88,11 @@ class CloudJudgement {
       reasons: [
         for (final r in (j['reasons'] as List?) ?? const []) r as String,
       ],
+      rejectCode: switch (j['rejectCode']) {
+        aiGenerated => aiGenerated,
+        notDrawing => notDrawing,
+        _ => null,
+      },
     );
   }
 }
@@ -390,6 +403,31 @@ enum ReportReason {
   other('other', 'そのほか');
 
   const ReportReason(this.code, this.label);
+  final String code;
+
+  /// Hiragana label shown to children.
+  final String label;
+}
+
+/// Which AI-suggested text is reported (`reportAiSuggestion`).
+enum AiSuggestionKind {
+  name('name'),
+  elementMove('element_move'),
+  specialMove('special_move');
+
+  const AiSuggestionKind(this.code);
+  final String code;
+}
+
+/// Preset reasons for reporting an AI suggestion (no free text; Google
+/// Play AI-generated content policy).
+enum AiReportReason {
+  mean('mean', 'いやな ことば'),
+  scary('scary', 'こわい ことば'),
+  strange('strange', 'へんな ことば'),
+  other('other', 'そのほか');
+
+  const AiReportReason(this.code, this.label);
   final String code;
 
   /// Hiragana label shown to children.

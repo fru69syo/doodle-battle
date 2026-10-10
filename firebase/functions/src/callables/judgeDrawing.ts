@@ -1,7 +1,14 @@
 import { logger } from "firebase-functions/v2";
 import { onCall, type CallableRequest } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { AiRefusalError, AiUnavailableError, getAiService, type ImageConcern } from "../ai";
+import {
+  AiRefusalError,
+  AiUnavailableError,
+  getAiService,
+  originRejectCode,
+  type ImageConcern,
+  type JudgeRejectCode,
+} from "../ai";
 import { RATE_LIMITS } from "../config";
 import { requireUserWithConsent } from "../lib/auth";
 import { clock } from "../lib/clock";
@@ -21,8 +28,15 @@ export interface JudgeDrawingResponse {
   moveNames: { element: string; special: string };
   skillEstimate: number;
   appropriate: boolean;
-  reasons: ImageConcern[];
+  /** `ai_generated` is added when the picture is not hand-drawn (see rejectCode). */
+  reasons: (ImageConcern | "ai_generated")[];
+  /**
+   * Set when the judge is confident the picture is not a hand drawing on
+   * paper (SPEC §11.1): the app asks for a new photo 「かみに かいた えを とってね」.
+   */
+  rejectCode: JudgeRejectCode | null;
 }
+
 
 export const DEFAULT_SUBJECT = "ふしぎな いきもの";
 export const DEFAULT_MOVES = { element: "きらきらあたっく", special: "すーぱーびーむ" } as const;
@@ -59,7 +73,10 @@ export async function judgeDrawingHandler(req: CallableRequest<unknown>): Promis
   const started = clock.now();
   try {
     const j = await getAiService().judgeDrawing(png.bytes);
-    const concerns = [...new Set(j.concerns)];
+    const rejectCode = originRejectCode(j.origin);
+    const concerns: JudgeDrawingResponse["reasons"] = [...new Set(j.concerns)];
+    if (rejectCode === "IMAGE_AI_GENERATED") concerns.push("ai_generated");
+    if (rejectCode === "IMAGE_NOT_DRAWING" && !concerns.includes("not_drawing")) concerns.push("not_drawing");
     const appropriate = j.appropriate && concerns.length === 0;
     const res: JudgeDrawingResponse = {
       subject: sanitizeSubject(j.subject) ?? DEFAULT_SUBJECT,
@@ -71,8 +88,16 @@ export async function judgeDrawingHandler(req: CallableRequest<unknown>): Promis
       skillEstimate: clampSkill(j.skillEstimate),
       appropriate,
       reasons: appropriate ? [] : concerns.length > 0 ? concerns : ["other"],
+      rejectCode,
     };
-    logger.info("judgeDrawing ok", { uid, w: png.width, h: png.height, ms: clock.now() - started, appropriate });
+    logger.info("judgeDrawing ok", {
+      uid,
+      w: png.width,
+      h: png.height,
+      ms: clock.now() - started,
+      appropriate,
+      rejectCode,
+    });
     return res;
   } catch (err) {
     if (err instanceof AiRefusalError) {
@@ -84,6 +109,7 @@ export async function judgeDrawingHandler(req: CallableRequest<unknown>): Promis
         skillEstimate: 50,
         appropriate: false,
         reasons: ["other"],
+        rejectCode: null,
       };
     }
     if (err instanceof AiUnavailableError) {

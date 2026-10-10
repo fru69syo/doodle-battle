@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../data/app_state.dart';
 import '../../data/backend/backend_api.dart';
-import '../../data/before_photo.dart';
 import '../../domain/drawing_analysis_result.dart';
 import '../birth/pending_birth.dart';
+import 'drawing_services.dart';
 import '../drawing_analysis/drawing_analyzer.dart'
-    show UndecodableImageException, applyCloudSkill;
+    show UndecodableImageException, applyCloudSkill, kPaperDrawingMessage;
 
 sealed class DrawOutcome {
   const DrawOutcome();
@@ -21,10 +21,15 @@ class DrawReady extends DrawOutcome {
   final PendingBirth birth;
 }
 
-/// The drawing is too empty (「もうすこし かいてみよう」).
-class DrawTooEmpty extends DrawOutcome {
-  const DrawTooEmpty(this.message);
+/// The picture can not become a character; the child is gently asked to
+/// take a new photo: the drawing is too empty (「もうすこし かいてみよう」) or
+/// it is not a drawing on paper ([notPaperDrawing], 「かみに かいた えを
+/// とってね」 — AI / digital / printed / screen / photo, on device or by the
+/// cloud judge).
+class DrawRetake extends DrawOutcome {
+  const DrawRetake(this.message, {this.notPaperDrawing = false});
   final String message;
+  final bool notPaperDrawing;
 }
 
 /// The file could not be decoded.
@@ -42,31 +47,40 @@ class DrawFlow {
   final Ref _ref;
 
   Future<DrawOutcome> process(Uint8List imageBytes) async {
-    final AnalysisOutcomeLike outcome;
-    final Future<BeforePhoto?>? beforePhoto;
+    final AnalysisOutcome outcome;
     try {
-      final o = await _ref.read(drawingAnalyzerProvider).analyze(imageBytes);
-      outcome = (o.result, o.rejectReason?.message);
-      beforePhoto = o.beforePhoto;
+      outcome = await _ref.read(drawingAnalyzerProvider).analyze(imageBytes);
     } on UndecodableImageException {
       return const DrawUnreadable();
     }
-    final (result, reject) = outcome;
-    if (reject != null) return DrawTooEmpty(reject);
-    final cloud = await _judge(result);
+    final result = outcome.result;
+    final reject = outcome.rejectReason;
+    if (reject != null) {
+      return DrawRetake(
+        reject.message,
+        notPaperDrawing: reject.isNotPaperDrawing,
+      );
+    }
+    final judged = await _judge(result);
+    if (judged != null && judged.rejectCode != null) {
+      return const DrawRetake(kPaperDrawingMessage, notPaperDrawing: true);
+    }
+    final cloud = judged != null && judged.appropriate ? judged : null;
     return DrawReady(
       PendingBirth(
         result: cloud == null
             ? result
             : applyCloudSkill(result, cloud.skillEstimate.toDouble()),
         cloud: cloud,
-        beforePhoto: beforePhoto,
+        beforePhoto: outcome.beforePhoto,
       ),
     );
   }
 
-  /// Cloud judgement, or null when not allowed / unavailable / failed /
-  /// inappropriate (the local result is used silently).
+  /// Cloud judgement, or null when not allowed / unavailable / failed (the
+  /// local result is used silently). An inappropriate judgement is returned
+  /// so that a "not hand-drawn" verdict ([CloudJudgement.rejectCode]) can
+  /// ask for a new photo; otherwise it is ignored.
   Future<CloudJudgement?> _judge(DrawingAnalysisResult result) async {
     final settings = await _ref.read(settingsProvider.future);
     final backend = _ref.read(backendApiProvider);
@@ -77,13 +91,11 @@ class DrawFlow {
       final judgement = await backend
           .judgeDrawing(result.cutoutPng)
           .timeout(cloudJudgeTimeout);
-      return judgement.appropriate ? judgement : null;
+      return judgement;
     } on Object {
       return null;
     }
   }
 }
-
-typedef AnalysisOutcomeLike = (DrawingAnalysisResult, String?);
 
 final drawFlowProvider = Provider<DrawFlow>(DrawFlow.new);

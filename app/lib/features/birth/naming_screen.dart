@@ -7,6 +7,7 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
+import '../../data/backend/backend_models.dart' show AiSuggestionKind;
 import '../../data/character_repository.dart';
 import '../../domain/character.dart';
 import '../../domain/cosmetics.dart';
@@ -14,6 +15,7 @@ import '../drawing_loop/drawing_loop.dart';
 import '../drawing_loop/loop_labels.dart' show showOdaiStampMessage;
 import '../drawing_loop/odai/stamp_card.dart' show StampKind;
 import '../ng_filter/name_rules.dart';
+import 'ai_report.dart';
 import '../video_export/video_export_entry.dart';
 import 'pending_birth.dart';
 
@@ -28,6 +30,32 @@ class NamingScreen extends ConsumerStatefulWidget {
 class _NamingScreenState extends ConsumerState<NamingScreen> {
   final _controller = TextEditingController();
   bool _saving = false;
+
+  /// AI suggestions the child reported: never shown or used again.
+  final _reported = <String>{};
+
+  String? _unlessReported(String? s) =>
+      s == null || _reported.contains(s) ? null : s;
+
+  /// Names and move names the cloud AI suggested for this drawing.
+  List<(AiSuggestionKind, String)> _aiSuggestions(PendingBirth birth) {
+    final cloud = birth.cloud;
+    if (cloud == null) return const [];
+    return [
+      for (final n in cloud.suggestedNames) (AiSuggestionKind.name, n),
+      if (cloud.elementMoveName != null)
+        (AiSuggestionKind.elementMove, cloud.elementMoveName!),
+      if (cloud.specialMoveName != null)
+        (AiSuggestionKind.specialMove, cloud.specialMoveName!),
+    ].where((s) => !_reported.contains(s.$2)).toList();
+  }
+
+  Future<void> _reportAi(PendingBirth birth) async {
+    final done = await showAiReportSheet(context, ref, _aiSuggestions(birth));
+    if (done == null || !mounted) return;
+    setState(() => _reported.add(done.$2));
+    if (_controller.text == done.$2) _controller.clear();
+  }
 
   @override
   void initState() {
@@ -66,8 +94,8 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
       features: r.features,
       createdAt: ref.read(clockProvider)(),
       subject: birth.cloud?.subject,
-      elementMoveName: birth.cloud?.elementMoveName,
-      specialMoveName: birth.cloud?.specialMoveName,
+      elementMoveName: _unlessReported(birth.cloud?.elementMoveName),
+      specialMoveName: _unlessReported(birth.cloud?.specialMoveName),
       cosmetics: odai == null
           ? CharacterCosmetics.none
           : CharacterCosmetics(odai: odai),
@@ -106,10 +134,15 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
       );
     }
     final problem = checkCharacterName(_controller.text, filter);
-    final suggestions = {
-      ...?birth.cloud?.suggestedNames,
-      ...presetNamesFor(birth.result.imageHash),
-    }.where((n) => checkCharacterName(n, filter) == null).take(5);
+    final suggestions =
+        {
+              ...?birth.cloud?.suggestedNames,
+              ...presetNamesFor(birth.result.imageHash),
+            }
+            .where((n) => !_reported.contains(n))
+            .where((n) => checkCharacterName(n, filter) == null)
+            .take(5);
+    final aiSuggestions = _aiSuggestions(birth);
     return Scaffold(
       appBar: AppBar(title: const Text('なまえを つけよう')),
       body: SafeArea(
@@ -167,6 +200,15 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
                   ),
               ],
             ),
+            if (aiSuggestions.isNotEmpty)
+              Center(
+                child: TextButton.icon(
+                  key: const Key('ai-report'),
+                  icon: const Icon(Icons.flag_outlined),
+                  label: const Text('いやな ことばを おしえる'),
+                  onPressed: () => _reportAi(birth),
+                ),
+              ),
             const SizedBox(height: 24),
             FilledButton.icon(
               key: const Key('name-save'),

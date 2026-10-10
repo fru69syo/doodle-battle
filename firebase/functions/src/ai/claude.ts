@@ -6,6 +6,7 @@ import {
   AiUnavailableError,
   IMAGE_CATEGORIES,
   IMAGE_CONCERNS,
+  IMAGE_ORIGINS,
   NAME_CATEGORIES,
   type AiService,
   type DrawingJudgement,
@@ -31,11 +32,13 @@ const JudgeSchema = z.object({
   skillEstimate: z.number().describe("integer 0-100"),
   appropriate: z.boolean(),
   concerns: z.array(z.enum(IMAGE_CONCERNS as [string, ...string[]])),
+  origin: z.enum(IMAGE_ORIGINS),
 });
 
 const ModerationSchema = z.object({
   imageCategory: z.enum(IMAGE_CATEGORIES),
   isHandDrawn: z.boolean(),
+  origin: z.enum(IMAGE_ORIGINS),
   names: z.array(z.object({ ok: z.boolean(), category: z.enum(NAME_CATEGORIES) })),
   skillEstimate: z.number().describe("integer 0-100"),
 });

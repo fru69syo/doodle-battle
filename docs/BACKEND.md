@@ -86,6 +86,7 @@ can be faked in tests.
 | `reports/{snapshotId}__{reporterUid}` | functions | – | One per reporter and snapshot. |
 | `moderationQueue/{snapshotId}` | functions / ops | – | `{snapshotId, ownerUid, reportCount, reasons{}, hidden, state: pending, createdAtMs, updatedAtMs}` |
 | `moderationLog/{auto}` | functions | – | `{uid, kind, reason, atMs}` for rejected registrations (no image, no text). |
+| `aiSuggestionReports/{auto}` | functions | – | `{uid, kind, text, reasonCode, state, atMs}`: reports of AI-suggested names / move names (`reportAiSuggestion`). |
 | `rateLimits/{uid}` | functions | – | Fixed-window counters. |
 
 `SideInfo` (what a player sees about the opponent): `uid (null for ghosts), isGhost, snapshotId,
@@ -112,13 +113,22 @@ All are **callable** functions (`firebase_functions` `httpsCallable`), region `a
   "moveNames": { "element": "ほのおぱんち", "special": "にゃんにゃんびーむ" }, // kana, ≤10 chars
   "skillEstimate": 22,                                     // integer 0–100
   "appropriate": true,
-  "reasons": []    // when !appropriate: subset of violence|sexual|hate|copyright|real_person|personal_info|not_drawing|other
+  "reasons": [],   // when !appropriate: subset of violence|sexual|hate|copyright|real_person|personal_info|not_drawing|ai_generated|other
+  "rejectCode": null // "IMAGE_AI_GENERATED" | "IMAGE_NOT_DRAWING" | null (SPEC §11.1, see below)
 }
 ```
+- **Origin check (SPEC §11.1, docs/TRUST.md §4).** The model also returns
+  `origin: hand_drawn | unsure | ai_generated | photo_print_or_screen`. Only the two confident
+  values reject: `ai_generated` → `rejectCode: "IMAGE_AI_GENERATED"` (+ reason `ai_generated`),
+  `photo_print_or_screen` → `"IMAGE_NOT_DRAWING"` (+ `not_drawing`); both set `appropriate:
+  false`. `unsure` never rejects. The prompt tells the model that the picture is a cut-out
+  (background removed, colours normalised — not a sign of a digital image) and that wrongly
+  refusing a real child's drawing is the worst mistake. The app shows 「かみに かいた えを とってね」
+  and offers a retake; any other `appropriate: false` is still ignored silently.
 - The image is only held in memory; nothing is written except the rate-limit counter.
 - AI output is sanitised: anything that is not kana, too long, or hits the NG filter is replaced
   with presets/defaults; skill is clamped. If the model refuses, the response is
-  `appropriate: false, reasons: ["other"], skillEstimate: 50` with preset names.
+  `appropriate: false, reasons: ["other"], skillEstimate: 50, rejectCode: null` with preset names.
 - Errors: `UNAUTHENTICATED, CONSENT_REQUIRED, INVALID_ARGUMENT, IMAGE_INVALID, IMAGE_TOO_LARGE,
   RATE_LIMITED (30/h, 100/day), AI_UNAVAILABLE` → app continues with device-only judging.
 
@@ -153,7 +163,9 @@ Pipeline (cheap checks first, AI last, fail-closed):
 4. name: NFKC, 1–10 chars of hiragana/katakana/ー/・/latin/digits/kanji, ≤2 digits → `NAME_INVALID`;
    NG dictionary → `NAME_NG` / `NAME_PERSONAL_INFO`
 5. ≤ 40 active snapshots per user (other local characters) → `TOO_MANY_CHARACTERS`
-6. Claude moderation of image + names → `IMAGE_*` / `NAME_*`
+6. Claude moderation of image + names → `IMAGE_*` / `NAME_*`; a confident `origin` of
+   `ai_generated` → `IMAGE_AI_GENERATED`, `photo_print_or_screen` → `IMAGE_NOT_DRAWING`
+   (checked after `imageCategory`, before `isHandDrawn`)
 7. Storage upload + Firestore transaction (supersede previous snapshot of the same `localCharacterId`).
 
 The server recomputes `stats` (effective at level), `isShobo`, `evolution`; it never trusts client
@@ -219,6 +231,21 @@ your own (`CANNOT_REPORT_SELF`), 20/day. One report per reporter and snapshot. A
 reporters** the snapshot becomes `hidden` (unmatchable, image unreadable); every reported snapshot
 gets a `moderationQueue` entry for a human.
 
+### `reportAiSuggestion` (Google Play AI-generated content policy)
+
+```jsonc
+{ "kind": "name", "text": "にゃんた", "reasonCode": "mean" }
+// kind: name | element_move | special_move | subject; text: kana (+ー/space), 1–12 chars
+// reasonCode: mean | scary | strange | other   (preset, no free text)
+→ { "ok": true }
+```
+A child flags a name / move name the AI suggested (naming screen 「いやな ことばを おしえる」).
+Requires `consent.cloudJudge` (suggestions only exist with it), 20/day. Stored in
+`aiSuggestionReports/{auto}` = `{uid, kind, text, reasonCode, state: "pending", atMs}` for human
+review; never shown to anyone; deleted by `deleteMyData`. The app logs every report locally first
+(`ai_reports.json`) and sends unsent ones when online and consented. Errors: `UNAUTHENTICATED,
+CONSENT_REQUIRED, INVALID_ARGUMENT, RATE_LIMITED`.
+
 ### `deleteMyData`
 
 ```jsonc
@@ -266,7 +293,8 @@ after data deletion; safe to retry).
 messages, e.g. `IMAGE_REAL_PERSON` → 「ひとの しゃしんや かおは つかえないよ」):
 `LEVEL_TOO_LOW, STATS_INVALID, NAME_INVALID, NAME_NG, NAME_PERSONAL_INFO, IMAGE_VIOLENCE,
 IMAGE_SEXUAL, IMAGE_HATE, IMAGE_COPYRIGHT, IMAGE_REAL_PERSON, IMAGE_PERSONAL_INFO,
-IMAGE_NOT_DRAWING, IMAGE_OTHER, TOO_MANY_CHARACTERS`.
+IMAGE_NOT_DRAWING, IMAGE_AI_GENERATED, IMAGE_OTHER, TOO_MANY_CHARACTERS` (`IMAGE_AI_GENERATED` and
+`IMAGE_NOT_DRAWING` both map to 「かみに かいた えを とってね」).
 
 ## 7. Battles, ghosts and timeouts
 

@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import { ClaudeAiService, type MessagesClient } from "../../src/ai/claude";
-import { AiRefusalError, AiUnavailableError } from "../../src/ai/types";
+import { AiRefusalError, AiUnavailableError, originRejectCode } from "../../src/ai/types";
 import { JUDGE_SYSTEM_PROMPT, MODERATION_SYSTEM_PROMPT, moderationUserText } from "../../src/ai/prompts";
 import { makePng } from "../helpers/png";
 
@@ -37,6 +37,7 @@ const judgement = {
   skillEstimate: 22,
   appropriate: true,
   concerns: [],
+  origin: "hand_drawn",
 };
 
 describe("ClaudeAiService.judgeDrawing", () => {
@@ -52,7 +53,7 @@ describe("ClaudeAiService.judgeDrawing", () => {
     expect(req.output_config.effort).toBe("low");
     expect(req.output_config.format.type).toBe("json_schema");
     expect(Object.keys(req.output_config.format.schema.properties)).toEqual(
-      expect.arrayContaining(["subject", "suggestedNames", "skillEstimate", "appropriate", "concerns"]),
+      expect.arrayContaining(["subject", "suggestedNames", "skillEstimate", "appropriate", "concerns", "origin"]),
     );
     // No sampling parameters (rejected by current Haiku-class models), no prefill.
     expect(req).not.toHaveProperty("temperature");
@@ -109,6 +110,7 @@ describe("ClaudeAiService.moderateCharacter", () => {
   const verdict = {
     imageCategory: "ok",
     isHandDrawn: true,
+    origin: "hand_drawn",
     names: [{ ok: true, category: "ok" }],
     skillEstimate: 30,
   };
@@ -144,5 +146,24 @@ describe("prompts", () => {
     }
     expect(MODERATION_SYSTEM_PROMPT).toMatch(/real_person/);
     expect(MODERATION_SYSTEM_PROMPT).toMatch(/personal_info/);
+  });
+});
+
+describe("origin (AI-generated / not hand-drawn, SPEC §11.1)", () => {
+  it("only confident verdicts map to reject codes", () => {
+    expect(originRejectCode("ai_generated")).toBe("IMAGE_AI_GENERATED");
+    expect(originRejectCode("photo_print_or_screen")).toBe("IMAGE_NOT_DRAWING");
+    expect(originRejectCode("unsure")).toBeNull();
+    expect(originRejectCode("hand_drawn")).toBeNull();
+    expect(originRejectCode(undefined)).toBeNull();
+  });
+
+  it("both prompts ask for the origin and protect real children's drawings", () => {
+    for (const p of [JUDGE_SYSTEM_PROMPT, MODERATION_SYSTEM_PROMPT]) {
+      expect(p).toContain("ai_generated");
+      expect(p).toContain("unsure");
+      expect(p).toMatch(/wrongly refusing a real child's drawing is the worst/);
+      expect(p).toMatch(/background was removed/);
+    }
   });
 });

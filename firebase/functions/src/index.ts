@@ -10,6 +10,7 @@ export { setDisplayName } from "./callables/setDisplayName";
 export { joinQueue, leaveQueue } from "./callables/matchmaking";
 export { submitAction, pollMatch } from "./callables/battle";
 export { reportCharacter } from "./callables/reportCharacter";
+export { reportAiSuggestion } from "./callables/reportAiSuggestion";
 export { deleteMyData } from "./callables/deleteMyData";
 export { sweepMatches } from "./scheduled/sweep";
 export { onUserConsentChanged } from "./triggers/consent";

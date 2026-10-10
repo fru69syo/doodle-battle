@@ -232,6 +232,19 @@ class FirebaseBackendApi implements BackendApi {
   }
 
   @override
+  Future<void> reportAiSuggestion(
+    AiSuggestionKind kind,
+    String text,
+    AiReportReason reason,
+  ) async {
+    await _call('reportAiSuggestion', {
+      'kind': kind.code,
+      'text': text,
+      'reasonCode': reason.code,
+    });
+  }
+
+  @override
   Future<Uint8List?> loadSnapshotImage(String imagePath) async {
     try {
       await _ensureSignedIn();

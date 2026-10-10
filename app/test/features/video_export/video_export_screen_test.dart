@@ -226,8 +226,10 @@ void main() {
       analyzer: _AnalyzerWithPhoto(photo),
       wrap: v.wrap,
     );
+    // Children capture with the camera only (SPEC §11.1): guide → shoot.
     await tapVisible(tester, find.byKey(const Key('home-draw')));
-    await tapVisible(tester, find.byKey(const Key('draw-gallery')));
+    await tapVisible(tester, find.byKey(const Key('draw-camera')));
+    await tapVisible(tester, find.byKey(const Key('guide-shoot')));
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byKey(const Key('birth-name')));
     await tester.enterText(find.byKey(const Key('name-field')), 'ほのおまる');

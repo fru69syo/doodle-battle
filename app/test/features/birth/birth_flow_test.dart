@@ -1,6 +1,9 @@
+import 'package:doodle_battle/core/router/app_router.dart';
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/app_state.dart';
 import 'package:doodle_battle/data/backend/backend_api.dart';
+import 'package:doodle_battle/features/birth/ai_report.dart';
+import 'package:doodle_battle/features/draw/album_import.dart';
 import 'package:doodle_battle/features/draw/drawing_services.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 import 'package:flutter/material.dart';
@@ -9,9 +12,16 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fakes.dart';
 import '../../support/harness.dart';
 
-Future<void> drawFromGallery(WidgetTester tester) async {
+/// Camera capture (the only input for children): draw → capture guide →
+/// shoot.
+Future<void> drawWithCamera(WidgetTester tester) async {
   await tapVisible(tester, find.byKey(const Key('home-draw')));
-  await tapVisible(tester, find.byKey(const Key('draw-gallery')));
+  await tapVisible(tester, find.byKey(const Key('draw-camera')));
+  expect(find.byKey(const Key('capture-guide')), findsOneWidget);
+  expect(find.text('しろい かみ'), findsWidgets);
+  expect(find.text('ふとい せん'), findsWidgets);
+  expect(find.text('あかるい ばしょ'), findsWidgets);
+  await tapVisible(tester, find.byKey(const Key('guide-shoot')));
 }
 
 Future<void> nameAndSave(WidgetTester tester, String name) async {
@@ -23,12 +33,12 @@ Future<void> nameAndSave(WidgetTester tester, String name) async {
 void main() {
   testWidgets('draw → reveal → name → saved in ずかん', (tester) async {
     final app = await pumpApp(tester);
-    await drawFromGallery(tester);
-    expect(app.imageSource.picked, [PhotoSource.gallery]);
+    await drawWithCamera(tester);
+    expect(app.imageSource.picked, [PhotoSource.camera]);
     expect(app.analyzer.calls, 1);
     await tester.pumpAndSettle(); // reveal animation
     expect(find.text('うまれたよ！'), findsOneWidget);
-    expect(find.byKey(const Key('birth-shobo')), findsNothing);
+    expect(find.byKey(const Key('birth-traits')), findsOneWidget);
     expect(find.text('めらめらパンチ'), findsOneWidget); // default fire move
     await tapVisible(tester, find.byKey(const Key('birth-name')));
 
@@ -41,21 +51,21 @@ void main() {
     expect(find.text('ほのおまる'), findsWidgets);
   });
 
-  testWidgets('しょぼキャラ gets the げいじゅつか message and the growth hint', (
+  testWidgets('a polished drawing looks exactly like any other birth', (
     tester,
   ) async {
     await pumpApp(
       tester,
       analyzer: FakeAnalyzer(result: fakeAnalysis(skill: 90)),
     );
-    await drawFromGallery(tester);
+    await drawWithCamera(tester);
     await tester.pumpAndSettle();
-    expect(find.text('げいじゅつか すぎて しょぼキャラに なっちゃった！'), findsOneWidget);
-    final growth = tester
-        .widget<Text>(find.byKey(const Key('birth-shobo-growth')))
-        .data!;
-    expect(growth, contains('3ばい はやい'));
-    expect(find.text('げいじゅつか'), findsOneWidget); // title badge
+    expect(find.text('うまれたよ！'), findsOneWidget);
+    expect(find.byKey(const Key('birth-traits')), findsOneWidget);
+    // No score, no label, no "weak" hint anywhere (SPEC §11.1).
+    for (final word in ['しょぼ', 'げいじゅつ', 'じょうず', 'ばい はやい', 'のびのび']) {
+      expect(find.textContaining(word), findsNothing, reason: word);
+    }
   });
 
   testWidgets('a nearly empty drawing asks to draw more', (tester) async {
@@ -63,17 +73,89 @@ void main() {
       tester,
       analyzer: FakeAnalyzer(reject: DrawingRejectReason.nearlyEmpty),
     );
-    await drawFromGallery(tester);
+    await drawWithCamera(tester);
+    expect(find.byKey(const Key('retake-drawMore')), findsOneWidget);
     expect(find.text('もうすこし かいてみよう'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.tap(find.byKey(const Key('retake-later')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('draw-gallery')), findsOneWidget);
+    expect(find.byKey(const Key('draw-camera')), findsOneWidget);
     expect(await app.characters.loadAll(), isEmpty);
+  });
+
+  testWidgets('a non-paper picture gets the gentle retake flow', (
+    tester,
+  ) async {
+    final app = await pumpApp(
+      tester,
+      analyzer: FakeAnalyzer(reject: DrawingRejectReason.digital),
+    );
+    await drawWithCamera(tester);
+    expect(find.byKey(const Key('retake-notPaper')), findsOneWidget);
+    expect(find.text('かみに かいた えを とってね'), findsOneWidget);
+    expect(find.byKey(const Key('capture-tips')), findsWidgets);
+    // Retake: the guide is shown again, then the camera opens again.
+    await tapVisible(tester, find.byKey(const Key('retake-again')));
+    expect(find.byKey(const Key('capture-guide')), findsOneWidget);
+    await tapVisible(tester, find.byKey(const Key('guide-shoot')));
+    expect(app.imageSource.picked, [PhotoSource.camera, PhotoSource.camera]);
+    expect(app.analyzer.calls, 2);
+    await tester.tap(find.byKey(const Key('retake-later')));
+    await tester.pumpAndSettle();
+    expect(await app.characters.loadAll(), isEmpty);
+  });
+
+  testWidgets('the cloud judge can refuse AI-generated pictures', (
+    tester,
+  ) async {
+    final backend = FakeBackend()
+      ..judgement = const CloudJudgement(
+        subject: 'ねこ',
+        suggestedNames: ['にゃんた', 'みけまる', 'ねこりん'],
+        elementMoveName: 'にゃんにゃんぱんち',
+        specialMoveName: 'ねこびーむ',
+        skillEstimate: 95,
+        appropriate: false,
+        reasons: ['ai_generated'],
+        rejectCode: CloudJudgement.aiGenerated,
+      );
+    final app = await pumpApp(
+      tester,
+      backend: backend,
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(cloudJudge: true),
+      ),
+    );
+    await drawWithCamera(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('かみに かいた えを とってね'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('retake-later')));
+    await tester.pumpAndSettle();
+    expect(await app.characters.loadAll(), isEmpty);
+  });
+
+  testWidgets('children have no album button; parents can import one', (
+    tester,
+  ) async {
+    final app = await pumpApp(tester);
+    await tapVisible(tester, find.byKey(const Key('home-draw')));
+    expect(find.byKey(const Key('draw-gallery')), findsNothing);
+    expect(find.textContaining('アルバム'), findsNothing);
+    app.container.read(routerProvider).go('/');
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const Key('home-parent')));
+    await tapVisible(tester, find.byKey(const Key('parent-album-import')));
+    await tester.pumpAndSettle();
+    // Same checks as the camera: here the fake analyzer accepts it.
+    expect(app.imageSource.picked, [PhotoSource.gallery]);
+    expect(app.analyzer.calls, 1);
+    expect(find.text('うまれたよ！'), findsOneWidget);
+    // The import was one-shot.
+    expect(app.container.read(albumImportArmProvider), isFalse);
   });
 
   testWidgets('an unreadable photo shows a gentle message', (tester) async {
     await pumpApp(tester, analyzer: FakeAnalyzer(undecodable: true));
-    await drawFromGallery(tester);
+    await drawWithCamera(tester);
     expect(find.textContaining('しゃしんが よめなかったよ'), findsOneWidget);
   });
 
@@ -81,7 +163,7 @@ void main() {
     tester,
   ) async {
     final app = await pumpApp(tester);
-    await drawFromGallery(tester);
+    await drawWithCamera(tester);
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byKey(const Key('birth-name')));
 
@@ -136,7 +218,7 @@ void main() {
         consents: const ParentConsents(cloudJudge: true),
       ),
     );
-    await drawFromGallery(tester);
+    await drawWithCamera(tester);
     await tester.pumpAndSettle();
     expect(backend.calls, containsAllInOrder(['syncConsent', 'judgeDrawing']));
     expect(find.text('にゃんにゃんぱんち'), findsOneWidget);
@@ -151,6 +233,95 @@ void main() {
     expect(c.specialMoveName, 'ねこびーむ');
   });
 
+  CloudJudgement catJudgement() => const CloudJudgement(
+    subject: 'ねこ',
+    suggestedNames: ['にゃんた', 'みけまる', 'ねこりん'],
+    elementMoveName: 'にゃんにゃんぱんち',
+    specialMoveName: 'ねこびーむ',
+    skillEstimate: 20,
+    appropriate: true,
+  );
+
+  testWidgets('AI-suggested names and moves can be reported (preset reason)', (
+    tester,
+  ) async {
+    final backend = FakeBackend()..judgement = catJudgement();
+    final store = MemoryAiReportStore();
+    final app = await pumpApp(
+      tester,
+      backend: backend,
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(cloudJudge: true),
+      ),
+      overrides: [aiReportStoreProvider.overrideWithValue(store)],
+    );
+    await drawWithCamera(tester);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const Key('birth-name')));
+    expect(find.byKey(const Key('name-suggestion-にゃんた')), findsOneWidget);
+
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-ねこびーむ')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-scary')));
+    expect(find.textContaining('おしえて くれて ありがとう'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    expect(backend.aiReports.single, (
+      AiSuggestionKind.specialMove,
+      'ねこびーむ',
+      AiReportReason.scary,
+    ));
+
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-にゃんた')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-mean')));
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    // Reported suggestions disappear and are never used.
+    expect(find.byKey(const Key('name-suggestion-にゃんた')), findsNothing);
+    expect(store.entries.map((e) => e.sent), [true, true]);
+    await nameAndSave(tester, 'みけまる');
+    final c = (await app.characters.loadAll()).single;
+    expect(c.specialMoveName, isNull);
+    expect(c.elementMoveName, 'にゃんにゃんぱんち');
+  });
+
+  testWidgets('offline AI reports are logged and sent with the next one', (
+    tester,
+  ) async {
+    final backend = FakeBackend()
+      ..judgement = catJudgement()
+      ..aiReportError = const BackendException(BackendCodes.network);
+    final store = MemoryAiReportStore();
+    await pumpApp(
+      tester,
+      backend: backend,
+      settings: setupDone.copyWith(
+        consents: const ParentConsents(cloudJudge: true),
+      ),
+      overrides: [aiReportStoreProvider.overrideWithValue(store)],
+    );
+    await drawWithCamera(tester);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const Key('birth-name')));
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-みけまる')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-strange')));
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    expect(store.entries.single.sent, isFalse);
+    expect(store.entries.single.text, 'みけまる');
+
+    backend.aiReportError = null;
+    await tapVisible(tester, find.byKey(const Key('ai-report')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-target-ねこりん')));
+    await tapVisible(tester, find.byKey(const Key('ai-report-other')));
+    await tester.tap(find.byKey(const Key('kid-message-ok')));
+    await tester.pumpAndSettle();
+    expect(backend.aiReports.map((r) => r.$2), ['みけまる', 'ねこりん']);
+    expect(store.entries.every((e) => e.sent), isTrue);
+  });
+
   testWidgets('cloud failure silently falls back to the local result', (
     tester,
   ) async {
@@ -163,7 +334,7 @@ void main() {
         consents: const ParentConsents(cloudJudge: true),
       ),
     );
-    await drawFromGallery(tester);
+    await drawWithCamera(tester);
     await tester.pumpAndSettle();
     expect(find.text('うまれたよ！'), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('birth-name')));
@@ -174,7 +345,7 @@ void main() {
   testWidgets('cloud judging is never called without consent', (tester) async {
     final backend = FakeBackend();
     await pumpApp(tester, backend: backend);
-    await drawFromGallery(tester);
+    await drawWithCamera(tester);
     await tester.pumpAndSettle();
     expect(backend.calls, isNot(contains('judgeDrawing')));
   });
@@ -186,7 +357,7 @@ void main() {
     );
     await tapVisible(tester, find.byKey(const Key('home-draw')));
     expect(find.byKey(const Key('draw-full')), findsOneWidget);
-    expect(find.byKey(const Key('draw-gallery')), findsNothing);
+    expect(find.byKey(const Key('draw-camera')), findsNothing);
     expect(app.container.read(collectionLimitProvider), 12);
   });
 
@@ -200,6 +371,6 @@ void main() {
     );
     expect(app.container.read(collectionLimitProvider), 36);
     await tapVisible(tester, find.byKey(const Key('home-draw')));
-    expect(find.byKey(const Key('draw-gallery')), findsOneWidget);
+    expect(find.byKey(const Key('draw-camera')), findsOneWidget);
   });
 }

@@ -14,6 +14,7 @@ import 'data/backend/firebase_bootstrap.dart';
 import 'data/drawing_loop_storage.dart';
 import 'data/file_character_repository.dart';
 import 'data/settings_repository.dart';
+import 'features/birth/ai_report.dart';
 import 'features/monetization/admob_gateway.dart';
 import 'features/monetization/app_monetization_service.dart';
 import 'features/monetization/monetization_service.dart';
@@ -52,6 +53,7 @@ Future<void> main() async {
         drawingLoopStorageProvider.overrideWithValue(
           FileDrawingLoopStorage(docs),
         ),
+        aiReportStoreProvider.overrideWithValue(FileAiReportStore(docs)),
         backendApiProvider.overrideWithValue(backend),
         crashReporterProvider.overrideWithValue(crash),
         monetizationServiceProvider.overrideWithValue(monetization),

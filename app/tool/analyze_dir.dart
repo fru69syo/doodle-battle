@@ -4,7 +4,8 @@
 //   cd app
 //   dart run tool/analyze_dir.dart <folder> [--csv out.csv] [--cutouts dir]
 //
-// --csv      also writes every feature of every image as CSV
+// --csv      also writes every feature and authenticity signal (`auth.*`,
+//            docs/TRUST.md) of every image as CSV
 // --cutouts  also writes the cut-out PNGs (to eyeball segmentation)
 // ignore_for_file: avoid_print
 
@@ -98,6 +99,9 @@ void main(List<String> args) {
 
   final csv = StringBuffer();
   List<String>? featureKeys;
+  List<String>? authKeys;
+  final rejects = <String, int>{};
+  var analysed = 0;
   for (final f in files) {
     final name = f.uri.pathSegments.last;
     final sw = Stopwatch()..start();
@@ -109,6 +113,9 @@ void main(List<String> args) {
       continue;
     }
     final ms = sw.elapsedMilliseconds;
+    analysed++;
+    final why = report.rejectReason?.name ?? 'accepted';
+    rejects[why] = (rejects[why] ?? 0) + 1;
     final r = report.result;
     final s = r.baseStats;
     final m = r.features;
@@ -128,6 +135,8 @@ void main(List<String> args) {
 
     if (csvPath != null) {
       featureKeys ??= m.keys.toList();
+      final auth = report.authenticity.toMap();
+      authKeys ??= auth.keys.toList();
       if (csv.isEmpty) {
         csv.writeln(
           [
@@ -142,6 +151,7 @@ void main(List<String> args) {
             'spd',
             'reject',
             ...featureKeys,
+            for (final k in authKeys) 'auth.$k',
           ].join(','),
         );
       }
@@ -158,6 +168,7 @@ void main(List<String> args) {
           s.spd,
           report.rejectReason?.name ?? '',
           for (final k in featureKeys) m[k] ?? '',
+          for (final k in authKeys) auth[k] ?? '',
         ].join(','),
       );
     }
@@ -167,6 +178,11 @@ void main(List<String> args) {
     }
   }
   print('(* = しょぼキャラ, skill > 75)');
+  print('summary ($analysed images):');
+  for (final e in rejects.entries) {
+    final pct = (100 * e.value / analysed).toStringAsFixed(1);
+    print('  ${e.key.padRight(12)} ${e.value} ($pct%)');
+  }
   if (csvPath != null) {
     File(csvPath).writeAsStringSync(csv.toString());
     print('wrote $csvPath');

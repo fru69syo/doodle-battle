@@ -25,6 +25,23 @@ export const NAME_CATEGORIES = [
 ] as const;
 export type NameCategory = (typeof NAME_CATEGORIES)[number];
 
+/**
+ * Where the picture comes from (SPEC §11.1). Only a confident
+ * `ai_generated` / `photo_print_or_screen` rejects; `unsure` never does, so
+ * real children's drawings are not refused on a hunch.
+ */
+export const IMAGE_ORIGINS = ["hand_drawn", "unsure", "ai_generated", "photo_print_or_screen"] as const;
+export type ImageOrigin = (typeof IMAGE_ORIGINS)[number];
+
+export type JudgeRejectCode = "IMAGE_AI_GENERATED" | "IMAGE_NOT_DRAWING";
+
+/** Only confident verdicts reject; `unsure` and `hand_drawn` never do. */
+export function originRejectCode(origin: ImageOrigin | undefined): JudgeRejectCode | null {
+  if (origin === "ai_generated") return "IMAGE_AI_GENERATED";
+  if (origin === "photo_print_or_screen") return "IMAGE_NOT_DRAWING";
+  return null;
+}
+
 /** Raw (unsanitised) judgement returned by the AI for judgeDrawing. */
 export interface DrawingJudgement {
   subject: string;
@@ -34,12 +51,16 @@ export interface DrawingJudgement {
   skillEstimate: number;
   appropriate: boolean;
   concerns: ImageConcern[];
+  /** AI-generated / digital vs. hand-drawn on paper. */
+  origin: ImageOrigin;
 }
 
 /** Moderation verdict for registerCharacter. */
 export interface ModerationVerdict {
   imageCategory: ImageCategory;
   isHandDrawn: boolean;
+  /** AI-generated / digital vs. hand-drawn on paper. */
+  origin: ImageOrigin;
   /** One verdict per candidate name, same order as the request. */
   names: { ok: boolean; category: NameCategory }[];
   skillEstimate: number;
