@@ -11,6 +11,7 @@ import '../battle_ui/battle_arena.dart';
 import '../battle_ui/battle_display.dart';
 import '../battle_ui/cpu_battle_screen.dart' show battleStepProvider;
 import '../battle_ui/move_labels.dart';
+import '../drawing_loop/drawing_loop.dart';
 import 'family_battle_session.dart';
 import 'family_setup.dart';
 import 'family_theme.dart';
@@ -225,7 +226,7 @@ class _Cover extends StatelessWidget {
 
 /// Both fighters (あお top, あか bottom) and, while picking, the picker's
 /// moves in their team colour.
-class _Arena extends StatelessWidget {
+class _Arena extends ConsumerWidget {
   const _Arena({
     required this.session,
     required this.display,
@@ -241,7 +242,7 @@ class _Arena extends StatelessWidget {
   final ValueChanged<BattleAction> onMove;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = session.config;
     final p = picker;
     return Padding(
@@ -263,6 +264,11 @@ class _Arena extends StatelessWidget {
                   BattleArena(
                     display: display,
                     gaugeMax: session.spec.gauge.max,
+                    // Both players' drawn move effects (docs/LOOP.md §5).
+                    effectImages: {
+                      Side.a: watchMoveEffects(ref, c.a.character),
+                      Side.b: watchMoveEffects(ref, c.b.character),
+                    },
                     pictures: {
                       Side.a: CharacterPicture(
                         character: c.a.character,

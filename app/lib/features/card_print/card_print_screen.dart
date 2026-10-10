@@ -7,6 +7,7 @@ import '../../data/app_state.dart';
 import '../../domain/battle/battle.dart';
 import '../../domain/character.dart';
 import '../battle_ui/move_labels.dart';
+import '../drawing_loop/drawing_loop.dart';
 import '../monetization/card_frames.dart';
 import '../monetization/monetization_service.dart';
 import 'card_content.dart';
@@ -44,7 +45,9 @@ class _CardPrintScreenState extends ConsumerState<CardPrintScreen> {
     for (final id in widget.characterIds) {
       final c = chars.where((x) => x.id == id).firstOrNull;
       if (c == null) continue;
-      final image = ref.watch(characterImageProvider(c.id));
+      // The picture as shown everywhere on this device: the drawing with
+      // its drawn parts (DisplayImageService, docs/LOOP.md §5).
+      final image = ref.watch(characterDisplayImageProvider(displayKeyOf(c)));
       if (image.isLoading) return null;
       out.add(
         cardContentFor(
