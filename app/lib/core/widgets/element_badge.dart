@@ -42,28 +42,3 @@ class ElementBadge extends StatelessWidget {
     ),
   );
 }
-
-/// 「げいじゅつか」 title of しょぼキャラ (SPEC §1).
-class ShoboBadge extends StatelessWidget {
-  const ShoboBadge({super.key});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: AppColors.purple,
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: const Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.palette, color: Colors.white, size: 18),
-        SizedBox(width: 4),
-        Text(
-          'げいじゅつか',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-        ),
-      ],
-    ),
-  );
-}

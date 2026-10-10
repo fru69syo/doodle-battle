@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { logger } from "firebase-functions/v2";
 import { onCall, type CallableRequest } from "firebase-functions/v2/https";
 import { z } from "zod";
-import { AiRefusalError, AiUnavailableError, getAiService, type ImageCategory } from "../ai";
+import { AiRefusalError, AiUnavailableError, getAiService, originRejectCode, type ImageCategory } from "../ai";
 import { LIMITS, RATE_LIMITS } from "../config";
 import { requireUserWithConsent, type UserProfile } from "../lib/auth";
 import { clock } from "../lib/clock";
@@ -68,6 +68,7 @@ export const REJECTION_REASONS = [
   "IMAGE_REAL_PERSON",
   "IMAGE_PERSONAL_INFO",
   "IMAGE_NOT_DRAWING",
+  "IMAGE_AI_GENERATED",
   "IMAGE_OTHER",
   "TOO_MANY_CHARACTERS",
 ] as const;
@@ -168,6 +169,10 @@ export async function registerCharacterHandler(req: CallableRequest<unknown>): P
     throw err;
   }
   if (verdict.imageCategory !== "ok") return reject(uid, IMAGE_REASON[verdict.imageCategory]);
+  // SPEC §11.1: AI-generated / digital pictures are refused (a confident
+  // verdict only; `unsure` falls through to the hand-drawn check).
+  const originCode = originRejectCode(verdict.origin);
+  if (originCode) return reject(uid, originCode);
   if (!verdict.isHandDrawn) return reject(uid, "IMAGE_NOT_DRAWING");
   const nameVerdict = verdict.names[0];
   if (!nameVerdict?.ok || nameVerdict.category !== "ok") {

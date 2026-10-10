@@ -130,7 +130,6 @@ class _Header extends StatelessWidget {
         style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
       ),
       ElementBadge(c.element, big: true),
-      if (c.isShobo) const ShoboBadge(),
       Chip(
         key: const Key('detail-stage'),
         avatar: Icon(

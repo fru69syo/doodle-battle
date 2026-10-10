@@ -37,6 +37,7 @@ export const COL = {
   moderationQueue: "moderationQueue",
   rateLimits: "rateLimits",
   moderationLog: "moderationLog",
+  aiSuggestionReports: "aiSuggestionReports",
 } as const;
 
 export function snapshotImagePath(snapshotId: string): string {

@@ -49,6 +49,13 @@ abstract interface class BackendApi {
   /// Returns true when this child had already reported the character.
   Future<bool> reportCharacter(String snapshotId, ReportReason reason);
 
+  /// Reports a name / move name the AI suggested (preset reason only).
+  Future<void> reportAiSuggestion(
+    AiSuggestionKind kind,
+    String text,
+    AiReportReason reason,
+  );
+
   /// Opponent snapshot image (Storage), or null.
   Future<Uint8List?> loadSnapshotImage(String imagePath);
 
@@ -99,6 +106,12 @@ class UnavailableBackendApi implements BackendApi {
   @override
   Future<bool> reportCharacter(String snapshotId, ReportReason reason) async =>
       _fail();
+  @override
+  Future<void> reportAiSuggestion(
+    AiSuggestionKind kind,
+    String text,
+    AiReportReason reason,
+  ) async => _fail();
   @override
   Future<Uint8List?> loadSnapshotImage(String imagePath) async => null;
   @override

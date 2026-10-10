@@ -292,6 +292,20 @@ class FakeBackend implements BackendApi {
     return false;
   }
 
+  final aiReports = <(AiSuggestionKind, String, AiReportReason)>[];
+  BackendException? aiReportError;
+
+  @override
+  Future<void> reportAiSuggestion(
+    AiSuggestionKind kind,
+    String text,
+    AiReportReason reason,
+  ) async {
+    calls.add('reportAiSuggestion');
+    if (aiReportError != null) throw aiReportError!;
+    aiReports.add((kind, text, reason));
+  }
+
   @override
   Future<Uint8List?> loadSnapshotImage(String imagePath) async => null;
 

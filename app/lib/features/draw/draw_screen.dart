@@ -6,13 +6,20 @@ import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/big_button.dart';
-import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
 import '../birth/pending_birth.dart';
+import 'album_import.dart';
+import 'capture_guide.dart';
 import 'draw_flow.dart';
 import 'drawing_services.dart';
 
-/// 「かく」: take a photo of the paper drawing (or pick one) and analyse it.
+/// 「かく」: take a photo of the paper drawing and analyse it (SPEC §11.1).
+///
+/// The camera is the only input for children. A parent can import one
+/// picture from the album via おうちのひと → 「アルバムから とりこむ」, which
+/// arms [albumImportArmProvider]; that picture goes through exactly the same
+/// checks. Before the first shot a capture guide is shown, and every
+/// rejection ends in a friendly retake flow.
 class DrawScreen extends ConsumerStatefulWidget {
   const DrawScreen({super.key});
 
@@ -23,6 +30,33 @@ class DrawScreen extends ConsumerStatefulWidget {
 class _DrawScreenState extends ConsumerState<DrawScreen> {
   bool _busy = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Providers can not be modified while the tree builds: consume the
+    // one-shot album import after the first frame.
+    if (ref.read(albumImportArmProvider)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (ref.read(albumImportArmProvider.notifier).consume()) {
+          _pick(PhotoSource.gallery);
+        }
+      });
+    }
+  }
+
+  /// Camera: show the capture guide first (once per app session, and again
+  /// after a "not a paper drawing" / unreadable retake).
+  Future<void> _shoot() async {
+    final seen = ref.read(captureGuideSeenProvider.notifier);
+    if (!ref.read(captureGuideSeenProvider)) {
+      final go = await showCaptureGuide(context);
+      if (!go || !mounted) return;
+      seen.set(true);
+    }
+    await _pick(PhotoSource.camera);
+  }
+
   Future<void> _pick(PhotoSource source) async {
     final bytes = await ref.read(drawingImageSourceProvider).pick(source);
     if (bytes == null || !mounted) return;
@@ -30,19 +64,26 @@ class _DrawScreenState extends ConsumerState<DrawScreen> {
     final outcome = await ref.read(drawFlowProvider).process(bytes);
     if (!mounted) return;
     setState(() => _busy = false);
+    final RetakeKind kind;
+    final String message;
     switch (outcome) {
       case DrawReady(:final birth):
         ref.read(pendingBirthProvider.notifier).set(birth);
         context.pushReplacement(Routes.birth);
-      case DrawTooEmpty(:final message):
-        await showKidMessage(context, message, icon: Icons.edit);
+        return;
+      case DrawRetake(message: final msg, :final notPaperDrawing):
+        kind = notPaperDrawing ? RetakeKind.notPaper : RetakeKind.drawMore;
+        message = msg;
       case DrawUnreadable():
-        await showKidMessage(
-          context,
-          'しゃしんが よめなかったよ。もういちど とってみてね',
-          icon: Icons.photo_camera,
-        );
+        kind = RetakeKind.unreadable;
+        message = 'しゃしんが よめなかったよ。もういちど とってみてね';
     }
+    final again = await showRetake(context, kind: kind, message: message);
+    if (!again || !mounted) return;
+    if (kind != RetakeKind.drawMore) {
+      ref.read(captureGuideSeenProvider.notifier).set(false);
+    }
+    await _shoot();
   }
 
   @override
@@ -56,15 +97,15 @@ class _DrawScreenState extends ConsumerState<DrawScreen> {
             ? const _Analyzing()
             : full
             ? const _CollectionFull()
-            : _Choices(onPick: _pick),
+            : _Choices(onShoot: _shoot),
       ),
     );
   }
 }
 
 class _Choices extends StatelessWidget {
-  const _Choices({required this.onPick});
-  final ValueChanged<PhotoSource> onPick;
+  const _Choices({required this.onShoot});
+  final VoidCallback onShoot;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -77,21 +118,15 @@ class _Choices extends StatelessWidget {
         textAlign: TextAlign.center,
         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
       ),
+      const SizedBox(height: 16),
+      const CaptureTips(),
       const SizedBox(height: 24),
       BigActionButton(
         key: const Key('draw-camera'),
         icon: Icons.photo_camera,
         label: 'しゃしんを とる',
         color: AppColors.primary,
-        onPressed: () => onPick(PhotoSource.camera),
-      ),
-      const SizedBox(height: 16),
-      BigActionButton(
-        key: const Key('draw-gallery'),
-        icon: Icons.photo_library,
-        label: 'アルバムから えらぶ',
-        color: AppColors.secondary,
-        onPressed: () => onPick(PhotoSource.gallery),
+        onPressed: onShoot,
       ),
     ],
   );

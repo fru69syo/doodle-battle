@@ -37,6 +37,7 @@ describe("judgeDrawing", () => {
       skillEstimate: 22,
       appropriate: true,
       reasons: [],
+      rejectCode: null,
     });
     expect(env.ai.judgeDrawing).toHaveBeenCalledTimes(1);
     expect(await storageFiles()).toEqual([]);
@@ -54,6 +55,7 @@ describe("judgeDrawing", () => {
       skillEstimate: 250,
       appropriate: true,
       concerns: [],
+      origin: "hand_drawn",
     });
     const res = await judgeDrawingHandler(req("kid", { imageBase64: pngBase64() }));
     expect(res.subject).toBe(DEFAULT_SUBJECT);
@@ -72,6 +74,19 @@ describe("judgeDrawing", () => {
     env.ai.judgeDrawing.mockResolvedValueOnce({ ...okJudgement, appropriate: false, concerns: [] });
     const r2 = await judgeDrawingHandler(req("kid", { imageBase64: pngBase64() }));
     expect([r2.appropriate, r2.reasons]).toEqual([false, ["other"]]);
+  });
+
+  it("rejects confidently AI-generated / non-drawing pictures, never on 'unsure'", async () => {
+    await seedUser("kid");
+    env.ai.judgeDrawing.mockResolvedValueOnce({ ...okJudgement, origin: "ai_generated" });
+    const ai = await judgeDrawingHandler(req("kid", { imageBase64: pngBase64() }));
+    expect([ai.appropriate, ai.reasons, ai.rejectCode]).toEqual([false, ["ai_generated"], "IMAGE_AI_GENERATED"]);
+    env.ai.judgeDrawing.mockResolvedValueOnce({ ...okJudgement, origin: "photo_print_or_screen" });
+    const photo = await judgeDrawingHandler(req("kid", { imageBase64: pngBase64() }));
+    expect([photo.reasons, photo.rejectCode]).toEqual([["not_drawing"], "IMAGE_NOT_DRAWING"]);
+    env.ai.judgeDrawing.mockResolvedValueOnce({ ...okJudgement, origin: "unsure" });
+    const unsure = await judgeDrawingHandler(req("kid", { imageBase64: pngBase64() }));
+    expect([unsure.appropriate, unsure.rejectCode]).toEqual([true, null]);
   });
 
   it("maps AI outages to AI_UNAVAILABLE and refusals to appropriate=false", async () => {

@@ -18,7 +18,9 @@ import 'dart:typed_data';
 
 import '../../domain/drawing_analysis_result.dart';
 import 'drawing_features.dart';
+import 'non_drawing_detector.dart';
 import 'scoring.dart';
+import 'src/authenticity.dart';
 import 'src/cutout.dart';
 import 'src/feature_extraction.dart';
 import 'src/normalize.dart';
@@ -29,6 +31,7 @@ import 'src/white_balance.dart';
 import 'stat_generator.dart';
 
 export 'drawing_features.dart';
+export 'non_drawing_detector.dart';
 export 'scoring.dart';
 export 'src/normalize.dart' show UndecodableImageException;
 export 'src/paper_detection.dart' show PaperQuad, kPaperInset;
@@ -77,6 +80,11 @@ DrawingAnalysisReport analyzeDrawingSync(Uint8List imageBytes) {
   lap('features');
   final cutout = encodeCutout(wb.image, seg.alpha);
   lap('cutout');
+  final authenticity = AuthenticitySignals.from(
+    features,
+    measureAuthenticity(norm, paper.quad, paperImage, wb.image, seg),
+  );
+  lap('authenticity');
 
   final energy = computeEnergy(features);
   final skill = computeSkill(features);
@@ -92,7 +100,9 @@ DrawingAnalysisReport analyzeDrawingSync(Uint8List imageBytes) {
   return DrawingAnalysisReport(
     result: result,
     features: features,
-    rejectReason: rejectReasonFor(features),
+    rejectReason:
+        classifyAuthenticity(authenticity) ?? rejectReasonFor(features),
+    authenticity: authenticity,
     paperQuad: paper.quad,
     silhouette: seg.silhouette,
     timingsMs: timings,
@@ -105,6 +115,7 @@ class DrawingAnalysisReport {
     required this.result,
     required this.features,
     required this.rejectReason,
+    required this.authenticity,
     required this.paperQuad,
     required this.silhouette,
     required this.timingsMs,
@@ -113,8 +124,13 @@ class DrawingAnalysisReport {
   final DrawingAnalysisResult result;
   final DrawingFeatures features;
 
-  /// Non-null when the child should draw more (e.g. a single dot).
+  /// Non-null when the picture can not become a character: it is not a
+  /// photo of a drawing on paper ([DrawingRejectReason.isNotPaperDrawing],
+  /// checked first) or the drawing is nearly empty.
   final DrawingRejectReason? rejectReason;
+
+  /// Signals of the "is this a hand drawing on paper?" check (TRUST.md).
+  final AuthenticitySignals authenticity;
 
   /// Detected paper corners in the 512px working image, if any.
   final PaperQuad? paperQuad;
@@ -128,7 +144,9 @@ class DrawingAnalysisReport {
   int get totalMs => timingsMs.values.fold(0, (a, b) => a + b);
 }
 
-/// Reject reason derived from a result's feature map.
+/// "Nearly empty" reject reason derived from a result's feature map. The
+/// authenticity check needs the image itself, so it is only available on
+/// [DrawingAnalysisReport.rejectReason].
 DrawingRejectReason? rejectReasonOf(DrawingAnalysisResult result) =>
     rejectReasonFor(DrawingFeatures.fromMap(result.features));
 

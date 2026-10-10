@@ -36,7 +36,7 @@ final _boundary = GlobalKey();
 late DrawingAnalysisResult _scribble; // normal kid drawing
 late DrawingAnalysisResult _blob;
 late DrawingAnalysisResult _marker;
-late DrawingAnalysisResult _artist; // しょぼキャラ
+late DrawingAnalysisResult _artist; // polished line art (internally weak)
 
 Future<void> _loadFonts() async {
   Future<ByteData> asset(String key) => rootBundle.load(key);
@@ -83,7 +83,7 @@ Character _char(
   subject: subject,
 );
 
-/// The child's collection: levels 12 / 7 / 3 (しょぼ) / 1.
+/// The child's collection: levels 12 / 7 / 3 (polished line art) / 1.
 List<Character> _collection() => [
   _char(
     'c_1',
@@ -98,7 +98,7 @@ List<Character> _collection() => [
     subject: 'ドラゴン',
   ),
   _char('c_2', 'ぷにまる', _blob, level: 7, xp: 40, seeds: const {StatKind.spd: 3}),
-  _char('c_3', 'げいじゅつくん', _artist, level: 3, xp: 30),
+  _char('c_3', 'ふくろうくん', _artist, level: 3, xp: 30),
   _char('c_4', 'にこにこ', _marker, level: 1),
 ];
 
@@ -235,7 +235,7 @@ void main() {
     _blob = _analyse(colourBlob(Crayon.sky, seed: 5));
     _marker = _analyse(kidMarker(seed: 4));
     _artist = _analyse(skilledLineArt());
-    expect(_artist.isShobo, isTrue, reason: 'line art should be a しょぼキャラ');
+    expect(_artist.isShobo, isTrue, reason: 'line art is internally weak');
     expect(_scribble.isShobo, isFalse);
   });
 
@@ -264,19 +264,16 @@ void main() {
     );
     await _tap(tester, find.byKey(const Key('home-draw')));
     await _tap(tester, find.byKey(const Key('draw-camera')));
+    await _tap(tester, find.byKey(const Key('guide-shoot')));
     await _shot(tester, '04_birth_normal');
   });
 
-  _shotTest('05 birth (しょぼキャラ)', (tester) async {
-    await _pump(
-      tester,
-      characters: _collection().take(2).toList(),
-      analyzer: FakeAnalyzer(result: _artist),
-    );
+  _shotTest('05 capture guide', (tester) async {
+    await _pump(tester, characters: _collection().take(2).toList());
     await _tap(tester, find.byKey(const Key('home-draw')));
     await _tap(tester, find.byKey(const Key('draw-camera')));
-    await _centre(tester, find.byKey(const Key('birth-shobo')), alignment: 0.9);
-    await _shot(tester, '05_birth_shobo');
+    expect(find.byKey(const Key('capture-guide')), findsOneWidget);
+    await _shot(tester, '05_capture_guide');
   });
 
   _shotTest('06 naming with an NG word', (tester) async {
@@ -287,6 +284,7 @@ void main() {
     );
     await _tap(tester, find.byKey(const Key('home-draw')));
     await _tap(tester, find.byKey(const Key('draw-camera')));
+    await _tap(tester, find.byKey(const Key('guide-shoot')));
     await _tap(tester, find.byKey(const Key('birth-name')));
     await tester.enterText(find.byKey(const Key('name-field')), 'ばか');
     await tester.pumpAndSettle();

@@ -57,6 +57,7 @@ export const RATE_LIMITS = {
     { key: "register_d", limit: 30, windowMs: 86_400_000 },
   ],
   reportCharacter: [{ key: "report_d", limit: 20, windowMs: 86_400_000 }],
+  reportAiSuggestion: [{ key: "aireport_d", limit: 20, windowMs: 86_400_000 }],
   setDisplayName: [{ key: "dname_d", limit: 20, windowMs: 86_400_000 }],
   deleteMyData: [{ key: "delete_d", limit: 5, windowMs: 86_400_000 }],
 } as const;
