@@ -140,7 +140,8 @@ void main() {
         ),
       );
       await tapVisible(tester, find.byKey(const Key('home-draw')));
-      await tapVisible(tester, find.byKey(const Key('draw-gallery')));
+      await tapVisible(tester, find.byKey(const Key('draw-camera')));
+      await tapVisible(tester, find.byKey(const Key('guide-shoot')));
       expect(backend.calls, ['judgeDrawing']);
     });
   });

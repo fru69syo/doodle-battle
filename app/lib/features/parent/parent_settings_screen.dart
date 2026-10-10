@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
+import '../../core/router/routes.dart';
 import '../../data/app_state.dart';
+import '../draw/album_import.dart';
 import '../monetization/shop_section.dart';
 import 'ar_install_tile.dart';
 import 'consent_toggles.dart';
@@ -67,6 +70,21 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             ),
             const _Section('プレイ時間の目安（1日）'),
             _PlayTimePicker(minutes: settings.playTimeMinutes),
+            const _Section('絵の取り込み'),
+            ListTile(
+              key: const Key('parent-album-import'),
+              leading: const Icon(Icons.photo_library),
+              title: const Text('アルバムから とりこむ'),
+              subtitle: const Text(
+                '紙に描いた絵の写真を 1 枚だけ取り込みます。撮影と同じ確認を行い、'
+                'AI で作った画像・デジタルのイラスト・印刷物・画面を撮った写真は取り込めません。',
+              ),
+              onTap: () {
+                ref.read(albumImportArmProvider.notifier).arm();
+                // go (not push): leaving this screen locks it again.
+                context.go(Routes.draw);
+              },
+            ),
             const _Section('AR'),
             const ArInstallTile(),
             const _Section('ショップ'),

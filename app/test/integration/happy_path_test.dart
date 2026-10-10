@@ -49,9 +49,11 @@ void main() {
     await tapVisible(tester, find.byKey(const Key('setup-finish')));
     expect(find.byKey(const Key('home-draw')), findsOneWidget);
 
-    // 2. Draw: photo from the (fake) gallery, (fake) on-device analysis.
+    // 2. Draw: photo from the (fake) camera, (fake) on-device analysis.
     await tapVisible(tester, find.byKey(const Key('home-draw')));
     await tapVisible(tester, find.byKey(const Key('draw-camera')));
+    // Capture guide (しろい かみ・ふとい せん・あかるい ばしょ) → shoot.
+    await tapVisible(tester, find.byKey(const Key('guide-shoot')));
     expect(app.analyzer.calls, 1);
 
     // 3. Birth reveal, then naming.

@@ -64,6 +64,7 @@ void main() {
 
       await tapVisible(tester, find.byKey(const Key('odai-draw')));
       await tapVisible(tester, find.byKey(const Key('draw-camera')));
+      await tapVisible(tester, find.byKey(const Key('guide-shoot')));
       await tester.pumpAndSettle();
       await tapVisible(tester, find.byKey(const Key('birth-name')));
       await nameAndSave(tester, 'おだいまる');

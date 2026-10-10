@@ -4,13 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/element_badge.dart';
-import '../../core/widgets/stat_bars.dart';
 import '../../domain/battle/battle.dart';
 import '../battle_ui/move_labels.dart';
+import '../drawing_analysis/feature_words.dart';
 import 'pending_birth.dart';
 
 /// Total length of the reveal animation.
@@ -46,11 +45,6 @@ class _BirthScreenState extends ConsumerState<BirthScreen>
         body: const Center(child: Text('キャラが いないよ')),
       );
     }
-    final spec = ref.watch(battleSpecProvider).value;
-    final hpMul = spec?.hpMultiplier ?? 3;
-    final growthTimes = spec == null
-        ? 3
-        : spec.growth.shoboLevelUpStatPct ~/ spec.growth.levelUpStatPct;
     return Scaffold(
       appBar: AppBar(title: const Text('たんじょう！')),
       body: SafeArea(
@@ -59,12 +53,7 @@ class _BirthScreenState extends ConsumerState<BirthScreen>
           onTap: () => _c.value = 1, // tap to skip the animation
           child: AnimatedBuilder(
             animation: _c,
-            builder: (context, _) => _Reveal(
-              birth: birth,
-              t: _c.value,
-              hpMultiplier: hpMul,
-              shoboGrowthTimes: growthTimes,
-            ),
+            builder: (context, _) => _Reveal(birth: birth, t: _c.value),
           ),
         ),
       ),
@@ -73,19 +62,12 @@ class _BirthScreenState extends ConsumerState<BirthScreen>
 }
 
 class _Reveal extends StatelessWidget {
-  const _Reveal({
-    required this.birth,
-    required this.t,
-    required this.hpMultiplier,
-    required this.shoboGrowthTimes,
-  });
+  const _Reveal({required this.birth, required this.t});
 
   final PendingBirth birth;
 
   /// Animation progress 0..1.
   final double t;
-  final int hpMultiplier;
-  final int shoboGrowthTimes;
 
   double _phase(double start, double end) =>
       ((t - start) / (end - start)).clamp(0.0, 1.0);
@@ -95,9 +77,9 @@ class _Reveal extends StatelessWidget {
     final r = birth.result;
     final appear = Curves.elasticOut.transform(_phase(0.25, 0.45));
     final shake = t < 0.25 ? sin(t * 120) * 8 * (t / 0.25) : 0.0;
-    final statsVisible = (_phase(0.45, 0.75) * 4).ceil();
-    final details = _phase(0.75, 0.85);
-    final shoboBanner = _phase(0.85, 1.0);
+    final traits = positiveTraits(r.features);
+    final traitsVisible = (_phase(0.45, 0.75) * traits.length).ceil();
+    final details = _phase(0.75, 0.9);
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -145,20 +127,11 @@ class _Reveal extends StatelessWidget {
           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
-        StatBars(
-          stats: r.baseStats,
-          hpMultiplier: hpMultiplier,
-          visible: statsVisible,
-        ),
+        _Traits(traits: traits, visible: traitsVisible),
         Opacity(
           opacity: details,
           child: _Details(birth: birth),
         ),
-        if (r.isShobo)
-          Opacity(
-            opacity: shoboBanner,
-            child: _ShoboBanner(growthTimes: shoboGrowthTimes),
-          ),
         const SizedBox(height: 16),
         if (t >= 1)
           FilledButton.icon(
@@ -190,7 +163,6 @@ class _Details extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               ElementBadge(r.element, big: true),
-              if (r.isShobo) const ShoboBadge(),
               if (cloud?.subject != null)
                 Chip(label: Text('${cloud!.subject} の キャラ')),
             ],
@@ -233,43 +205,45 @@ class _Details extends StatelessWidget {
   }
 }
 
-/// しょぼキャラ: humorous message + it grows fast (SPEC §4.2).
-class _ShoboBanner extends StatelessWidget {
-  const _ShoboBanner({required this.growthTimes});
-
-  /// しょぼ growth rate ÷ normal growth rate (from the battle spec).
-  final int growthTimes;
+/// 「とくちょう」: positive words about the drawing (SPEC §11.1). No scores,
+/// no ranking: every drawing gets its own special points.
+class _Traits extends StatelessWidget {
+  const _Traits({required this.traits, required this.visible});
+  final List<DrawingTrait> traits;
+  final int visible;
 
   @override
-  Widget build(BuildContext context) => Card(
-    key: const Key('birth-shobo'),
-    color: const Color(0xFFF1E6FF),
-    margin: const EdgeInsets.only(top: 16),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+  Widget build(BuildContext context) => Column(
+    key: const Key('birth-traits'),
+    children: [
+      const Text(
+        'この えの とくちょう',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
         children: [
-          const Icon(Icons.palette, size: 48, color: AppColors.purple),
-          const SizedBox(height: 8),
-          const Text(
-            'げいじゅつか すぎて しょぼキャラに なっちゃった！',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.purple,
+          for (var i = 0; i < traits.length; i++)
+            AnimatedOpacity(
+              opacity: i < visible ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Chip(
+                key: Key('birth-trait-${traits[i].name}'),
+                avatar: const Icon(Icons.star, color: AppColors.gold),
+                label: Text(
+                  traits[i].label,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'でも だいじょうぶ！ しょぼキャラは そだつのが $growthTimesばい はやい！'
-            'けいけんちも たくさん もらえるよ。バトルで そだてて みよう！',
-            key: const Key('birth-shobo-growth'),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18),
-          ),
         ],
       ),
-    ),
+    ],
   );
 }
