@@ -1,7 +1,7 @@
 {
   "name": "doodle-battle-functions",
   "private": true,
-  "description": "Cloud Functions for らくがきバトル (judge, moderation, matchmaking, server-authoritative battles)",
+  "description": "Cloud Functions for おえかきファイターズ (judge, moderation, matchmaking, server-authoritative battles)",
   "main": "lib/index.js",
   "engines": {
     "node": "22"

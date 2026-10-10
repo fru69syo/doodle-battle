@@ -1,5 +1,5 @@
 /**
- * らくがきバトル Cloud Functions (v2, asia-northeast1).
+ * おえかきファイターズ Cloud Functions (v2, asia-northeast1).
  * See docs/BACKEND.md for contracts, data model and deployment.
  */
 import "./config";

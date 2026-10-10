@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:doodle_battle/core/router/app_router.dart';
 import 'package:doodle_battle/core/router/routes.dart';
+import 'package:doodle_battle/core/widgets/character_picture.dart';
 import 'package:doodle_battle/data/before_photo.dart';
 import 'package:doodle_battle/features/battle_ui/battle_outcome.dart';
 import 'package:doodle_battle/features/draw/drawing_services.dart';
@@ -240,6 +241,10 @@ void main() {
     expect(kept?.jpeg, photo.jpeg);
     expect(kept?.inkRect, photo.inkRect);
     expect(find.byKey(const Key('video-open-card')), findsOneWidget);
+    // The prompt sits below the drawing and never covers it.
+    final picture = tester.getRect(find.byType(CharacterPicture).first);
+    final prompt = tester.getRect(find.byKey(const Key('video-open-card')));
+    expect(prompt.top, greaterThanOrEqualTo(picture.bottom));
     await tester.scrollUntilVisible(
       find.byKey(const Key('video-open')),
       300,
@@ -291,7 +296,7 @@ void main() {
   test('video file names carry no personal data', () {
     expect(
       videoFileName(DateTime(2026, 10, 10, 9, 5, 7)),
-      'rakugaki_battle_20261010_090507.mp4',
+      'oekaki_fighters_20261010_090507.mp4',
     );
     expect(VideoEncoderErrors.sizeUnsupported, 'size_unsupported');
   });

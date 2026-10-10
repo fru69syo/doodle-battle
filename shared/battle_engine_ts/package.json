@@ -2,7 +2,7 @@
   "name": "@doodle-battle/battle-engine",
   "version": "1.0.0",
   "private": true,
-  "description": "らくがきバトル battle engine (TypeScript port, bit-exact with the Dart engine)",
+  "description": "おえかきファイターズ battle engine (TypeScript port, bit-exact with the Dart engine)",
   "license": "UNLICENSED",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

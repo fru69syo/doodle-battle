@@ -67,8 +67,8 @@ class FakeStoreGateway implements StoreGateway {
         const StoreProduct(id: 'slots_24', price: '￥250'),
       if (ids.contains('frame_pack_1'))
         const StoreProduct(id: 'frame_pack_1', price: '￥160'),
-      if (ids.contains('ouen_pass'))
-        const StoreProduct(id: 'ouen_pass', price: '￥480'),
+      if (ids.contains('no_ads_pass'))
+        const StoreProduct(id: 'no_ads_pass', price: '￥320'),
       const StoreProduct(id: 'unknown_item', price: '￥1'),
     ];
   }
@@ -239,7 +239,7 @@ void main() {
       await service.refreshStore();
       expect(service.storeAvailable, isTrue);
       expect(service.priceOf(Product.slots24), '￥250');
-      expect(service.priceOf(Product.ouenPass), '￥480');
+      expect(service.priceOf(Product.noAdsPass), '￥320');
     });
 
     test('unavailable store / query failure', () async {
@@ -282,19 +282,23 @@ void main() {
       () async {
         await service.start(const {});
         await service.refreshStore();
-        final result = service.purchase(Product.ouenPass);
+        final result = service.purchase(Product.noAdsPass);
         await pumpEventQueue();
-        store.updates.add([sp('ouen_pass', StorePurchaseStatus.pending)]);
+        store.updates.add([sp('no_ads_pass', StorePurchaseStatus.pending)]);
         expect(await result, PurchaseResult.pending);
         expect(service.owned, isEmpty);
         expect(store.completed, isEmpty);
         // Paid later (コンビニ払い): granted and acknowledged then.
         store.updates.add([
-          sp('ouen_pass', StorePurchaseStatus.purchased, needsCompletion: true),
+          sp(
+            'no_ads_pass',
+            StorePurchaseStatus.purchased,
+            needsCompletion: true,
+          ),
         ]);
         await pumpEventQueue();
-        expect(service.owned, {Product.ouenPass});
-        expect(store.completed, ['ouen_pass']);
+        expect(service.owned, {Product.noAdsPass});
+        expect(store.completed, ['no_ads_pass']);
       },
     );
 
@@ -365,11 +369,11 @@ void main() {
     );
 
     test('restore is authoritative: refunded products disappear', () async {
-      store.ownedList = [sp('ouen_pass', StorePurchaseStatus.restored)];
-      await service.start({Product.framePack, Product.ouenPass});
-      expect(service.owned, {Product.ouenPass});
+      store.ownedList = [sp('no_ads_pass', StorePurchaseStatus.restored)];
+      await service.start({Product.framePack, Product.noAdsPass});
+      expect(service.owned, {Product.noAdsPass});
       await pumpEventQueue();
-      expect(emitted.last, {Product.ouenPass});
+      expect(emitted.last, {Product.noAdsPass});
     });
 
     test('restore ignores pending and unknown products', () async {

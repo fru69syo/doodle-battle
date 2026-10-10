@@ -1,6 +1,6 @@
 # doodle_battle
 
-らくがきバトル
+おえかきファイターズ（Flutter パッケージ名は `doodle_battle` のまま）
 
 ## Getting Started
 

@@ -44,9 +44,9 @@ final videoExportDirProvider = Provider<Future<Directory> Function()>(
   },
 );
 
-/// `rakugaki_battle_20261010_153012.mp4` — no character or child name.
+/// `oekaki_fighters_20261010_153012.mp4` — no character or child name.
 String videoFileName(DateTime t) {
   String two(int v) => v.toString().padLeft(2, '0');
-  return 'rakugaki_battle_${t.year}${two(t.month)}${two(t.day)}_'
+  return 'oekaki_fighters_${t.year}${two(t.month)}${two(t.day)}_'
       '${two(t.hour)}${two(t.minute)}${two(t.second)}.mp4';
 }

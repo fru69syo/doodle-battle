@@ -1,4 +1,4 @@
-# CI for らくがきバトル: Flutter app, shared TS battle engine, Firebase Functions,
+# CI for おえかきファイターズ: Flutter app, shared TS battle engine, Firebase Functions,
 # Android debug build + Play/Families manifest checks. See docs/RELEASE.md §CI.
 name: CI
 

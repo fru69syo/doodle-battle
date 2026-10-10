@@ -19,4 +19,6 @@ if [[ -z "$jar" ]]; then
     mv "$tmp" "$jar"
   fi
 fi
-exec java -jar "$jar" "$@"
+# UTF-8 output regardless of the locale (CI runners and containers default to
+# POSIX, which turns the Japanese app label into "?" in `dump manifest`).
+exec java -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -jar "$jar" "$@"

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/providers.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
@@ -88,9 +89,9 @@ class _CardPrintScreenState extends ConsumerState<CardPrintScreen> {
           '${now.day.toString().padLeft(2, '0')}';
       switch (action) {
         case CardAction.print:
-          await out.printPdf(pdf, name: 'らくがきバトル カード');
+          await out.printPdf(pdf, name: '$appDisplayName カード');
         case CardAction.share:
-          await out.sharePdf(pdf, filename: 'rakugaki_cards_$stamp.pdf');
+          await out.sharePdf(pdf, filename: 'oekaki_fighters_cards_$stamp.pdf');
       }
     } on Object {
       failed = true;

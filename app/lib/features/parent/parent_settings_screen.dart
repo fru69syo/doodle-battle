@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../data/app_state.dart';
 import '../draw/album_import.dart';
+import '../monetization/monetization_service.dart';
 import '../monetization/shop_section.dart';
 import 'ar_install_tile.dart';
 import 'consent_toggles.dart';
@@ -63,6 +65,7 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             ConsentToggles(
               value: settings.consents,
               serverAvailable: backend.isAvailable,
+              noAdsPass: settings.entitlements.contains(Product.noAdsPass.id),
               crashReportsAvailable: ref
                   .watch(crashReporterProvider)
                   .isAvailable,
@@ -114,8 +117,10 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
               key: const Key('licenses'),
               leading: const Icon(Icons.description),
               title: const Text('ライセンス'),
-              onTap: () =>
-                  showLicensePage(context: context, applicationName: 'らくがきバトル'),
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: appDisplayName,
+              ),
             ),
           ],
         ),

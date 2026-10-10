@@ -16,12 +16,16 @@ const adNoticeText = 'おうちのひとに きいてから みてね\nこうこ
 /// Shown when today's ad boosts are used up.
 const adCapText = 'きょうの どうがは おしまい。また あした みてね';
 
+/// Shown when today's こうこくなしパス bonuses are used up (same cap).
+const passCapText = 'きょうの 2ばいは おしまい。また あした ね';
+
 /// Shown while no ad could be loaded (offline / no fill).
 const adUnavailableText = 'いまは どうがが ないみたい。また こんど みてね';
 
 /// Post-battle 「どうがを みて けいけんち 2ばい」. Hidden unless the parent
-/// allowed ads. With おうえんパス the bonus is given without an ad (and
-/// without the daily cap). One bonus per battle.
+/// allowed ads. With こうこくなしパス no ad is shown or loaded: the bonus is
+/// given without an ad, within the same daily cap (SPEC §11.4). One bonus
+/// per battle.
 class RewardedAdButton extends ConsumerStatefulWidget {
   const RewardedAdButton({super.key, required this.onRewarded});
 
@@ -35,19 +39,40 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
   bool _used = false;
   bool _busy = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Retry a failed / missing preload when the result screen opens (the
-    // service ignores this unless ads are allowed, and backs off).
-    ref.read(monetizationServiceProvider).preloadRewardedAd();
+  bool _preloadAsked = false;
+
+  /// Retries a failed / missing preload once when the result screen opens
+  /// (the service ignores this unless ads are allowed, and backs off).
+  /// Only for the ad button: never with こうこくなしパス.
+  void _preloadOnce() {
+    if (_preloadAsked) return;
+    _preloadAsked = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(monetizationServiceProvider).preloadRewardedAd();
+    });
   }
+
+  static bool _hasPass(Set<String>? entitlements) =>
+      entitlements?.contains(Product.noAdsPass.id) ?? false;
 
   String get _today => dateKey(ref.read(clockProvider)());
 
   Future<void> _reward() async {
     await widget.onRewarded();
     if (mounted) setState(() => _used = true);
+  }
+
+  /// こうこくなしパス: counts against the same daily cap as an ad.
+  Future<void> _passReward() async {
+    setState(() => _busy = true);
+    await widget.onRewarded();
+    await ref.read(progressProvider.notifier).recordAdBoost(_today);
+    if (mounted) {
+      setState(() {
+        _used = true;
+        _busy = false;
+      });
+    }
   }
 
   Future<void> _watchAd() async {
@@ -78,7 +103,7 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider).value;
-    final pass = settings?.entitlements.contains(Product.ouenPass.id) ?? false;
+    final pass = _hasPass(settings?.entitlements);
     final adsAllowed = settings?.consents.ads ?? false;
     if (!pass && !adsAllowed) return const SizedBox.shrink();
     if (_used) {
@@ -93,22 +118,31 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
         ),
       );
     }
-    if (pass) {
-      return FilledButton.icon(
-        key: const Key('ad-double-xp'),
-        style: FilledButton.styleFrom(backgroundColor: AppColors.pink),
-        icon: const Icon(Icons.favorite),
-        label: const Text('おうえんパスで けいけんち 2ばい'),
-        onPressed: _busy ? null : _reward,
-      );
-    }
     final progress = ref.watch(progressProvider).value;
     if (progress == null) return const SizedBox.shrink();
     final left = adBoostsLeft(
       cap: dailyAdBoostCap,
       usedToday: progress.adBoostsOn(_today),
     );
+    if (pass) {
+      if (left == 0) return const _Note(key: Key('ad-cap'), text: passCapText);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton.icon(
+            key: const Key('ad-double-xp'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.pink),
+            icon: const Icon(Icons.favorite),
+            label: const Text('こうこくなしパスで けいけんち 2ばい'),
+            onPressed: _busy ? null : _passReward,
+          ),
+          const SizedBox(height: 4),
+          _LeftToday(left: left),
+        ],
+      );
+    }
     if (left == 0) return const _Note(key: Key('ad-cap'), text: adCapText);
+    _preloadOnce();
     final service = ref.watch(monetizationServiceProvider);
     return ListenableBuilder(
       listenable: service,
@@ -132,17 +166,25 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
               onPressed: _busy || !ready ? null : _watchAd,
             ),
             const SizedBox(height: 4),
-            Text(
-              'きょうは あと $left かい',
-              key: const Key('ad-left'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15),
-            ),
+            _LeftToday(left: left),
           ],
         );
       },
     );
   }
+}
+
+class _LeftToday extends StatelessWidget {
+  const _LeftToday({required this.left});
+  final int left;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    'きょうは あと $left かい',
+    key: const Key('ad-left'),
+    textAlign: TextAlign.center,
+    style: const TextStyle(fontSize: 15),
+  );
 }
 
 class _Note extends StatelessWidget {

@@ -94,7 +94,7 @@ class FakeMonetization extends ChangeNotifier implements MonetizationService {
            {
              Product.slots24: '￥250',
              Product.framePack: '￥160',
-             Product.ouenPass: '￥480',
+             Product.noAdsPass: '￥320',
            };
 
   RewardedAdResult adResult;

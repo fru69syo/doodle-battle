@@ -30,12 +30,18 @@ class CaptureTips extends StatelessWidget {
                 child: Icon(icon, size: 30, color: AppColors.primary),
               ),
               const SizedBox(height: 4),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+              // One line per tip (「あかるい ばしょ」 must not break
+              // mid-word in the narrow guide dialog).
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
