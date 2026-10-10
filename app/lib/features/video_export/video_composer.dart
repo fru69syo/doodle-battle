@@ -18,6 +18,22 @@ import 'video_timeline.dart';
 
 const _font = 'ZenMaruGothic';
 const _w = kVideoWidth * 1.0;
+
+/// Largest font size of the end-card logo (one glyph per colour).
+const double kVideoLogoMaxFontSize = 92;
+
+/// Width the end-card logo may take (the frame is 720 wide; the outline
+/// and the bounce rotation need a margin).
+const double kVideoLogoMaxWidth = 620;
+
+/// Font size for the end-card logo whose width at [kVideoLogoMaxFontSize]
+/// is [naturalWidth]: shrunk to fit [kVideoLogoMaxWidth], so a longer app
+/// name (appDisplayName) is never clipped.
+double videoLogoFontSize(double naturalWidth) =>
+    naturalWidth <= kVideoLogoMaxWidth
+    ? kVideoLogoMaxFontSize
+    : (kVideoLogoMaxFontSize * kVideoLogoMaxWidth / naturalWidth)
+          .floorToDouble();
 const _h = kVideoHeight * 1.0;
 
 /// Everything shown in the video, already decoded.
@@ -984,8 +1000,7 @@ class VideoComposer {
   void _logo(Canvas canvas, Offset center, double p, double t) {
     if (p <= 0) return;
     const text = VideoTexts.logo;
-    const size = 92.0;
-    final glyphs = [
+    List<(ui.Paragraph, ui.Paragraph)> glyphsAt(double size) => [
       for (var i = 0; i < text.length; i++)
         (
           _texts.get(
@@ -996,7 +1011,12 @@ class VideoComposer {
           _texts.get(text[i], size: size, stroke: 16, color: AppColors.ink),
         ),
     ];
-    final total = glyphs.fold(0.0, (a, g) => a + g.$1.maxIntrinsicWidth);
+    double widthOf(List<(ui.Paragraph, ui.Paragraph)> g) =>
+        g.fold(0.0, (a, g) => a + g.$1.maxIntrinsicWidth);
+    var glyphs = glyphsAt(kVideoLogoMaxFontSize);
+    final size = videoLogoFontSize(widthOf(glyphs));
+    if (size != kVideoLogoMaxFontSize) glyphs = glyphsAt(size);
+    final total = widthOf(glyphs);
     var x = center.dx - total / 2;
     for (var i = 0; i < glyphs.length; i++) {
       final (fill, stroke) = glyphs[i];

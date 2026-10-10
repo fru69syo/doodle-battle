@@ -56,12 +56,18 @@ class BigActionButton extends StatelessWidget {
                           ),
                         ),
                         if (subtitle != null)
-                          Text(
-                            subtitle!,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                          // One line: shrink rather than break a word.
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              subtitle!,
+                              maxLines: 1,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                       ],

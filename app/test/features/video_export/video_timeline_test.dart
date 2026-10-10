@@ -1,3 +1,5 @@
+import 'package:doodle_battle/core/config/app_config.dart';
+import 'package:doodle_battle/features/video_export/video_composer.dart';
 import 'package:doodle_battle/features/video_export/video_timeline.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -83,5 +85,15 @@ void main() {
       }
       expect(VideoTexts.before, 'かみに かいた え が…');
     });
+  });
+
+  test('the end-card logo is the app name and shrinks to fit the frame', () {
+    expect(VideoTexts.logo, appDisplayName);
+    expect(VideoTexts.store, contains(appDisplayName));
+    expect(videoLogoFontSize(400), kVideoLogoMaxFontSize);
+    expect(videoLogoFontSize(kVideoLogoMaxWidth), kVideoLogoMaxFontSize);
+    final size = videoLogoFontSize(920); // 10 glyphs at 92
+    expect(size, lessThan(kVideoLogoMaxFontSize));
+    expect(920 * size / kVideoLogoMaxFontSize, lessThanOrEqualTo(620));
   });
 }

@@ -198,7 +198,7 @@ void main() {
       expect(Product.noAdsPass.title, 'こうこくなしパス');
       expect(
         Product.noAdsPass.description,
-        'こうこくを みないで けいけんち 2ばい（1にち ${dailyAdBoostCap}かいまで）',
+        'こうこくを みないで けいけんち 2ばい（1にち $dailyAdBoostCapかいまで）',
       );
     });
 
