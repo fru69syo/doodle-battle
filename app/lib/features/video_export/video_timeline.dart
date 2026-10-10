@@ -2,6 +2,8 @@
 /// rendering, so the composition logic can be unit-tested.
 library;
 
+import '../../core/config/app_config.dart';
+
 /// Output size (9:16) and frame rate.
 const int kVideoWidth = 720;
 const int kVideoHeight = 1280;
@@ -22,9 +24,9 @@ abstract final class VideoTexts {
   static const birth = 'うごきだした！';
   static const battleStart = 'バトル！';
   static const win = 'かった！';
-  static const logo = 'らくがきバトル';
+  static const logo = appDisplayName;
   static const tagline = 'かみに かいた え が たたかう！';
-  static const store = 'Android アプリ「らくがきバトル」';
+  static const store = 'Android アプリ「$appDisplayName」';
 }
 
 enum VideoScene { before, birth, battle, endCard }

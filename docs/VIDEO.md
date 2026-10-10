@@ -15,7 +15,8 @@ SPEC §11.2-1 の実装。紙に描いた絵（Before）が動き出し、バト
 | 共有 | `share_plus 13.3.0`（システムの共有シート）、保存は既存の `gal`（MediaStore、Android 10+ は権限不要） | `share_plus` は権限を追加しない（FileProvider だけ） |
 | Before 画像 | 撮影時に紙の部分だけを透視補正して保存（長辺 ≤ 1280px、JPEG 品質 85、端末内のみ） | §2 |
 | 文言 | 子ども向けはひらがな。じょうずさ・のびのび度・しょぼ・点数は一切出さない（`VideoTexts` をテストで検査） | SPEC §11.1 |
-| ストアの一文 | 「かみに かいた え が たたかう！」「Android アプリ「らくがきバトル」」 | 商標（Google Play バッジ）を動画に入れない。変えるときは `VideoTexts` |
+| ストアの一文 | 「かみに かいた え が たたかう！」「Android アプリ「（アプリ名）」」 | 商標（Google Play バッジ）を動画に入れない。変えるときは `VideoTexts` |
+| アプリ名 | ロゴ・透かし・ストアの一文は `core/config/app_config.dart` の `appDisplayName` 1 か所から | 改名（「おえかきファイターズ」予定）は 1 行の変更で済む |
 
 ## 2. Before 画像（紙の絵）の保存
 
@@ -49,13 +50,14 @@ SPEC §11.2-1 の実装。紙に描いた絵（Before）が動き出し、バト
 
 ## 5. 保存・共有と保護者ゲート
 
-- 入口: 名前を付けた直後のキャラ詳細（大きなカード「かいた え が うごきだす どうがを つくろう！」）、キャラ詳細の「どうがに する」、バトル結果の「どうがに する」。
+- 入口: 名前を付けた直後のキャラ詳細（絵の下端に重ねたピンクのボタン「うごく どうがに しよう！」。ページのレイアウトは動かさない）、キャラ詳細の「どうがに する」、バトル結果の「どうがに する」。
 - 子どもが作れるのは端末内の動画まで。「おうちのひとに わたす」→ **保護者ゲート** → 保護者向けの注意（「えに なまえや がっこうめいが かいていないか かくにんしてね」＋漢字の説明: 顔・声・部屋は入らないこと、名前・学校名・住所が絵に書かれていないかの確認）→「確認しました」のあとで初めて「ギャラリーに保存」「共有する」が出る。ゲートは画面を開いている間 1 回だけ。
 - 子どもの顔・声は入らない（入力は紙の部分の写真と切り抜きだけ。音声トラックなし）。
 
 ## 6. 変更した共有ファイル
 
 - `pubspec.yaml`: `share_plus: 13.3.0` を追加（権限なし。マージ後のマニフェストに FileProvider と receiver が入る）。
+- `core/config/app_config.dart`: `appDisplayName` を追加。
 - `MainActivity.kt`: `VideoEncoderPlugin()` の登録 1 行。Gradle・`AndroidManifest.xml` の変更なし。
 - `lib/data/`: `before_photo.dart`（新規）、`CharacterRepository` に `saveBeforePhoto` / `readBeforePhoto`（File / InMemory 実装、`delete` で一緒に削除）。
 - `drawing_services.dart`（`AnalysisOutcome.beforePhoto`）、`draw_flow.dart`、`pending_birth.dart`、`naming_screen.dart`（保存と `justBornCharacterProvider`）、`character_detail_screen.dart`・`battle_result_screen.dart`（ボタン）。

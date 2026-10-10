@@ -53,8 +53,8 @@ Future<void> openVideoExport(BuildContext context, String characterId) =>
       ),
     );
 
-/// 「どうがに する」 button. [prominent] shows it as a big card (right
-/// after the character was born).
+/// 「どうがに する」 button. [prominent] is the eye-catching pill shown on
+/// the picture right after the character was born.
 class VideoExportButton extends ConsumerWidget {
   const VideoExportButton({
     super.key,
@@ -81,29 +81,19 @@ class VideoExportButton extends ConsumerWidget {
         onPressed: open,
       );
     }
-    return Card(
+    return FilledButton.icon(
       key: const Key('video-open-card'),
-      color: const Color(0xFFFFE6F2),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: open,
-        child: const Padding(
-          padding: EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Icon(Icons.movie_creation, size: 44, color: AppColors.pink),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'かいた え が うごきだす どうがを つくろう！',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-              ),
-              Icon(Icons.chevron_right, size: 32),
-            ],
-          ),
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.pink,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        elevation: 4,
+        shape: const StadiumBorder(
+          side: BorderSide(color: Colors.white, width: 3),
         ),
       ),
+      icon: const Icon(Icons.movie_creation, size: 26),
+      label: const Text('うごく どうがに しよう！'),
+      onPressed: open,
     );
   }
 }

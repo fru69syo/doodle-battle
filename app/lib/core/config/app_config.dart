@@ -7,6 +7,11 @@
 /// android/app/build.gradle.kts).
 library;
 
+/// The app's display name as drawn inside the app's own media (Before/After
+/// video logo, watermark and store line). Renaming the app is a one-line
+/// change here (the launcher label lives in AndroidManifest.xml).
+const String appDisplayName = 'らくがきバトル';
+
 /// Google's official test rewarded ad unit (Android). Test ads never earn
 /// money and are safe to tap during development.
 /// https://developers.google.com/admob/android/test-ads
