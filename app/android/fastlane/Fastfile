@@ -1,4 +1,4 @@
-# Google Play lanes for らくがきバトル (Release team). See docs/RELEASE.md.
+# Google Play lanes for おえかきファイターズ (Release team). See docs/RELEASE.md.
 #
 # Run from app/android:
 #   export BUNDLE_GEMFILE=fastlane/Gemfile PLAY_JSON_KEY_PATH=/path/to/play-service-account.json

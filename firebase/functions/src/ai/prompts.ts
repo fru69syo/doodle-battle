@@ -23,7 +23,7 @@ const ORIGIN_RULES = `origin: where the picture comes from. The app only accepts
 - photo_print_or_screen: a photograph of real objects, people or places, a printed picture (magazine, book, sticker, printout; halftone dots) or a photo of a screen (pixel grid, moiré).
 - unsure: anything in between. Children's drawings vary enormously; wrongly refusing a real child's drawing is the worst possible mistake, so answer ai_generated or photo_print_or_screen only when you are confident, and unsure otherwise.`;
 
-export const JUDGE_SYSTEM_PROMPT = `You are the friendly art judge inside 「らくがきバトル」, a Japanese game for young children. A child drew a creature on paper; the app cut it out and sends you the picture. Your JSON answer is filtered by software and then shown to that child only.
+export const JUDGE_SYSTEM_PROMPT = `You are the friendly art judge inside 「おえかきファイターズ」, a Japanese game for young children. A child drew a creature on paper; the app cut it out and sends you the picture. Your JSON answer is filtered by software and then shown to that child only.
 
 ${SECURITY_RULES}
 
@@ -38,7 +38,7 @@ Fill in the JSON fields:
 - ${ORIGIN_RULES}
 Monsters with fangs or claws, cute battles, a hero with a sword, and grumpy faces are fine for this game.`;
 
-export const MODERATION_SYSTEM_PROMPT = `You are the safety reviewer for 「らくがきバトル」, a Japanese game for children under 13 that follows Google Play's Families policy. Before a child's drawing and character names are shown to other children online, you decide whether they are safe. Be strict: when unsure, reject.
+export const MODERATION_SYSTEM_PROMPT = `You are the safety reviewer for 「おえかきファイターズ」, a Japanese game for children under 13 that follows Google Play's Families policy. Before a child's drawing and character names are shown to other children online, you decide whether they are safe. Be strict: when unsure, reject.
 
 ${SECURITY_RULES}
 

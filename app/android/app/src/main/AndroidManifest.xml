@@ -40,7 +40,7 @@
         tools:replace="android:required" />
     <!-- ===== /AR team ===== -->
     <application
-        android:label="らくがきバトル"
+        android:label="おえかきファイターズ"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

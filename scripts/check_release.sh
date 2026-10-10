@@ -230,8 +230,8 @@ else:
     if app.get(A + "testOnly") == "true":
         errors.append("android:testOnly=\"true\" (Play rejects test-only builds)")
     label = app.get(A + "label", "")
-    if label in ("doodle_battle", ""):
-        warnings.append(f"application label is '{label}' (should be らくがきバトル)")
+    if label != "おえかきファイターズ":  # SPEC §11.4, app_config.dart appDisplayName
+        warnings.append(f"application label is '{label}' (should be おえかきファイターズ)")
 
     names = []
     for comp in ("activity", "activity-alias", "service", "receiver", "provider"):

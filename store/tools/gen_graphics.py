@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate PLACEHOLDER store graphics and launcher-icon sources for らくがきバトル.
+"""Generate PLACEHOLDER store graphics and launcher-icon sources for おえかきファイターズ.
 
 Outputs (all deterministic for a given SEED):
   store/metadata/ja-JP/images/icon.png          Play Store hi-res icon, 512x512, 32-bit PNG
@@ -161,8 +161,43 @@ def star(cx, cy, r_out, r_in, points=5, rot=-90):
 
 
 # --------------------------------------------------------------------------- characters
-def doodle_monster(img, cx, cy, r, body, body_dark, rng, facing=1, mono=False):
-    """A round crayon monster with horns, stubby arms, big eyes and a grin."""
+def crayon_prop(img, x, y, length, angle_deg, color, rng, mono=False):
+    """A crayon held like a little sword: body from (x, y) towards angle_deg
+    (0 = right, 90 = up), pointed tip, paper wrapper band, ink outline."""
+    a = math.radians(angle_deg)
+    ux, uy = math.cos(a), -math.sin(a)
+    vx, vy = -uy, ux
+    hw = length * 0.16
+    body_len = length * 0.74
+
+    def at(t, w):
+        return (x + ux * t + vx * w, y + uy * t + vy * w)
+
+    body = [at(0, -hw), at(body_len, -hw), at(body_len, hw), at(0, hw)]
+    tip = [at(body_len, -hw), at(length, 0), at(body_len, hw)]
+    band = [at(body_len * 0.18, -hw), at(body_len * 0.45, -hw), at(body_len * 0.45, hw), at(body_len * 0.18, hw)]
+    shape = [body[0], body[1], tip[1], body[2], body[3]]
+    ink = (255, 255, 255) if mono else INK
+    lw = max(2, length * 0.07)
+    if mono:
+        m = Image.new("L", img.size, 0)
+        ImageDraw.Draw(m).polygon(shape, fill=255)
+        layer = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        layer.putalpha(m)
+        img.alpha_composite(layer)
+    else:
+        ImageDraw.Draw(img).polygon(shape, fill=color + (255,))
+        crayon_fill(img, shape, tuple(max(0, c - 50) for c in color), rng, hatch=max(3, length * 0.05),
+                    spill=0)
+        ImageDraw.Draw(img).polygon(band, fill=(255, 255, 255, 255))
+        crayon_line(img, band[1:3], ink, lw * 0.6, rng, passes=2)
+        crayon_line(img, [band[3], band[0]], ink, lw * 0.6, rng, passes=2)
+    crayon_line(img, body[:1] + tip[:1] + tip[1:2] + tip[2:] + body[3:], ink, lw, rng, closed=True)
+
+
+def doodle_monster(img, cx, cy, r, body, body_dark, rng, facing=1, mono=False, prop=None):
+    """A round crayon monster with horns, stubby arms, big eyes and a grin.
+    With `prop` (a colour) it holds up a crayon like a sword in its raised hand."""
     line_w = max(3, int(r * 0.075))
     ink = (255, 255, 255) if mono else INK
     # horns
@@ -193,6 +228,10 @@ def doodle_monster(img, cx, cy, r, body, body_dark, rng, facing=1, mono=False):
         arm = [(ax, cy + r * 0.05), (ax + side * r * 0.24, cy - r * lift * 0.5),
                (ax + side * r * 0.34, cy - r * lift)]
         crayon_line(img, arm, ink, line_w, rng)
+        if prop is not None and side == facing:
+            # held upright, leaning a little inwards (stays inside the adaptive-icon safe zone)
+            crayon_prop(img, arm[-1][0] - side * r * 0.1, arm[-1][1] + r * 0.14, r * 0.66,
+                        90 + side * 12, prop, rng, mono=mono)
     if mono:
         return
     # eyes
@@ -271,7 +310,7 @@ def make_icon(px: int) -> Image.Image:
     img = paper((s, s), rng)
     sparkles(img, rng, [(s * 0.06, s * 0.06, s * 0.3, s * 0.3), (s * 0.72, s * 0.08, s * 0.94, s * 0.28)],
              [YELLOW, BLUE, GREEN, PINK], 4, (s * 0.04, s * 0.07))
-    doodle_monster(img, s * 0.5, s * 0.56, s * 0.32, ORANGE, ORANGE_DARK, rng)
+    doodle_monster(img, s * 0.5, s * 0.56, s * 0.32, ORANGE, ORANGE_DARK, rng, prop=BLUE)
     return img.resize((px, px), Image.LANCZOS)
 
 
@@ -280,7 +319,7 @@ def make_foreground(px: int, mono=False) -> Image.Image:
     s = px * SS
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     # adaptive icons: 108dp canvas, ~66dp guaranteed visible circle -> keep within r ~ 0.30*s
-    doodle_monster(img, s * 0.5, s * 0.54, s * 0.215, ORANGE, ORANGE_DARK, rng, mono=mono)
+    doodle_monster(img, s * 0.5, s * 0.54, s * 0.215, ORANGE, ORANGE_DARK, rng, mono=mono, prop=BLUE)
     if not mono:
         sparkles(img, rng, [(s * 0.27, s * 0.27, s * 0.36, s * 0.36), (s * 0.64, s * 0.28, s * 0.72, s * 0.36)],
                  [YELLOW, BLUE], 2, (s * 0.025, s * 0.04))
@@ -302,26 +341,33 @@ def make_feature() -> Image.Image:
     W, H = 1024 * SS, 500 * SS
     img = paper((W, H), rng)
     scribble_bg(img, rng, [YELLOW, BLUE, GREEN, PINK, PURPLE], 26)
-    # two monsters facing each other
-    doodle_monster(img, W * 0.135, H * 0.64, H * 0.19, ORANGE, ORANGE_DARK, rng, facing=1)
-    doodle_monster(img, W * 0.865, H * 0.64, H * 0.19, BLUE, BLUE_DARK, rng, facing=-1)
-    sparkles(img, rng, [(W * 0.3, H * 0.08, W * 0.7, H * 0.2), (W * 0.32, H * 0.78, W * 0.68, H * 0.92)],
+    # two crayon fighters facing each other
+    doodle_monster(img, W * 0.135, H * 0.64, H * 0.19, ORANGE, ORANGE_DARK, rng, facing=1, prop=BLUE)
+    doodle_monster(img, W * 0.865, H * 0.64, H * 0.19, BLUE, BLUE_DARK, rng, facing=-1, prop=PINK)
+    sparkles(img, rng, [(W * 0.3, H * 0.03, W * 0.7, H * 0.12), (W * 0.32, H * 0.84, W * 0.68, H * 0.95)],
              [YELLOW, PINK, GREEN, PURPLE], 9, (H * 0.03, H * 0.05))
     fp = str(font_path())
-    title = "らくがきバトル"
+    d = ImageDraw.Draw(img)
+    # app name on two lines: small 「おえかき」 over a big 「ファイターズ」
+    top, main_title = "おえかき", "ファイターズ"
+    f_top = ImageFont.truetype(fp, int(H * 0.105))
     f = ImageFont.truetype(fp, int(H * 0.165))
-    bb = ImageDraw.Draw(img).textbbox((0, 0), title, font=f)
-    tw, th = bb[2] - bb[0], bb[3] - bb[1]
-    tx, ty = (W - tw) / 2 - bb[0], H * 0.3 - bb[1]
-    outlined_text(img, (tx, ty), title, f, (255, 255, 255), ORANGE_DARK, H * 0.022, rng)
+    bt = d.textbbox((0, 0), top, font=f_top)
+    bb = d.textbbox((0, 0), main_title, font=f)
+    ty_top = H * 0.14 - bt[1]
+    outlined_text(img, ((W - (bt[2] - bt[0])) / 2 - bt[0], ty_top), top, f_top, (255, 255, 255), BLUE_DARK,
+                  H * 0.018, rng)
+    tw = bb[2] - bb[0]
+    tx, ty = (W - tw) / 2 - bb[0], ty_top + bt[3] + H * 0.035 - bb[1]
+    outlined_text(img, (tx, ty), main_title, f, (255, 255, 255), ORANGE_DARK, H * 0.022, rng)
     # crayon underline
-    crayon_line(img, [(W * 0.34 + i * W * 0.32 / 20, ty + bb[3] + H * 0.05 + math.sin(i / 2.0) * H * 0.008)
+    crayon_line(img, [(W * 0.34 + i * W * 0.32 / 20, ty + bb[3] + H * 0.045 + math.sin(i / 2.0) * H * 0.008)
                       for i in range(21)], YELLOW, H * 0.02, rng)
-    sub = "かいた えが キャラになるよ！"
+    sub = "かみに かいた えが たたかう！"
     f2 = ImageFont.truetype(fp, int(H * 0.058))
-    bb2 = ImageDraw.Draw(img).textbbox((0, 0), sub, font=f2)
+    bb2 = d.textbbox((0, 0), sub, font=f2)
     sx = (W - (bb2[2] - bb2[0])) / 2 - bb2[0]
-    sy = ty + bb[3] + H * 0.12
+    sy = ty + bb[3] + H * 0.105
     outlined_text(img, (sx, sy), sub, f2, INK, (255, 255, 255), H * 0.012, rng)
     return img.resize((1024, 500), Image.LANCZOS).convert("RGB")
 
