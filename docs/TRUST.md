@@ -62,7 +62,7 @@ low-quality JPEG, phone noise reduction, 512 px gallery, 4000 px original) and 1
 |---|---|
 | kids' drawings, synthetic | 0 / 45 rejected (0 %) |
 | kids' drawings, Meta Amateur Drawings sample (300, tuning) | 0 / 300 rejected (0 %) |
-| kids' drawings, Meta Amateur Drawings hold-out (150, never tuned on) | see §3.1 |
+| kids' drawings, Meta Amateur Drawings hold-out (150, never tuned on) | 0 / 150 rejected (0 %) |
 | digital / AI (sticker, painting, shaded line art; PNG + JPEG) | 8 / 8 detected |
 | printed (halftone 5–7 px) | 4 / 4 detected |
 | photo of a screen | 3 / 3 detected |
@@ -78,7 +78,11 @@ catches them when the parent allowed it.
 
 ### 3.1 Hold-out
 
-Recorded in the final Trust report (run on `ad_meta/holdout`).
+Final run (2026-10-10, thresholds above): 0 / 150 hold-out images rejected, 0 / 150 of the local
+tuning subset, 0 / 45 synthetic kids' drawings; every synthetic non-drawing detected. The hold-out
+is small (150): the true false-reject rate on real photos is only bounded (≈ < 2 % at 95 %
+confidence); keep monitoring after release (retake rate per reason is not collected — check support
+mail and Play reviews).
 
 ## 4. Cloud origin judgement (`judgeDrawing`, `registerCharacter`)
 
