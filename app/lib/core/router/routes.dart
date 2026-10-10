@@ -27,4 +27,14 @@ abstract final class Routes {
   static String onlineMatch(String matchId, String characterId) =>
       '/online/match/$matchId?c=$characterId';
   static const parent = '/parent';
+
+  /// かぞくで たいせん (docs/FAMILY.md): setup, then the hot-seat battle
+  /// (`extra`: FamilyBattleConfig).
+  static const family = '/family';
+  static const familyBattle = '/family/battle';
+
+  /// キャラカード: choose up to 9 from the ずかん, then preview / print.
+  static const cardSelect = '/zukan/cards';
+  static String cardPrint(Iterable<String> ids) =>
+      '/zukan/cards/print?ids=${ids.map(Uri.encodeQueryComponent).join(',')}';
 }

@@ -60,6 +60,8 @@ dependencies:
   url_launcher: ^6.3.3
   in_app_purchase_android: ^0.5.3
   in_app_purchase_platform_interface: ^1.4.1
+  pdf: ^3.13.1
+  printing: ^5.15.1
 
 dev_dependencies:
   flutter_test:

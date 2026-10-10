@@ -33,6 +33,8 @@ lib/
 | `/battle`, `/battle/:id/stages`, `/battle/:id/stage/:n`, `/battle/result` | キャラ選択、ステージ 1–30、CPU 戦、結果 |
 | `/online`, `/online/queue/:id`, `/online/match/:matchId?c=:id` | ロビー（Lv5+）、審査とマッチング、対戦 |
 | `/parent` | おうちのひと（ゲートを通ったときだけ。離れると再ロック） |
+| `/family`, `/family/battle` | かぞくで たいせん（1 台で交互に操作。docs/FAMILY.md） |
+| `/zukan/cards`, `/zukan/cards/print?ids=` | キャラカードの選択（最大 9）、プレビューと印刷・共有（保護者ゲート。docs/FAMILY.md） |
 
 すべてのルートは `/` の子なので、どこからでも戻るとホームに着く。リダイレクトは `redirectFor()`（純関数・テスト済み）。
 
