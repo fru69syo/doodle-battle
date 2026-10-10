@@ -487,7 +487,7 @@ double periodicLattice(
   }
   cands.sort((a, b) => b.$1.compareTo(a.$1));
 
-  final peaks = <(double, double, double)>[]; // (ratio, radius, angle)
+  final peaks = <(double, double, double, double)>[]; // ratio, r, angle, mag
   for (final (ratio, kx, ky) in cands.take(16)) {
     final rr = math.sqrt(kx * kx + ky * ky);
     final m = at(kx, ky);
@@ -508,14 +508,16 @@ double periodicLattice(
       }
     }
     if (harmonic) continue;
-    peaks.add((ratio, rr, math.atan2(ky.toDouble(), kx.toDouble())));
+    peaks.add((ratio, rr, math.atan2(ky.toDouble(), kx.toDouble()), m));
   }
   var best = 0.0;
   for (var a = 0; a < peaks.length; a++) {
     for (var b = a + 1; b < peaks.length; b++) {
-      final (ra, rad, ta) = peaks[a];
-      final (rb, rbd, tb) = peaks[b];
+      final (ra, rad, ta, ma) = peaks[a];
+      final (rb, rbd, tb, mb) = peaks[b];
       if ((rad - rbd).abs() > 0.15 * math.max(rad, rbd)) continue;
+      // Both directions of a real lattice carry comparable energy.
+      if (math.min(ma, mb) < 0.15 * math.max(ma, mb)) continue;
       var d = (ta - tb).abs() % math.pi;
       if (d > math.pi / 2) d = math.pi - d;
       if (d < 55 * math.pi / 180) continue;
