@@ -1,3 +1,4 @@
+import 'package:doodle_battle/core/router/app_router.dart';
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/app_state.dart';
 import 'package:doodle_battle/data/backend/backend_api.dart';
@@ -139,7 +140,7 @@ void main() {
     await tapVisible(tester, find.byKey(const Key('home-draw')));
     expect(find.byKey(const Key('draw-gallery')), findsNothing);
     expect(find.textContaining('アルバム'), findsNothing);
-    await tester.pageBack();
+    app.container.read(routerProvider).go('/');
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byKey(const Key('home-parent')));
     await tapVisible(tester, find.byKey(const Key('parent-album-import')));
