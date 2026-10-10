@@ -59,6 +59,7 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
           padding: const EdgeInsets.all(12),
           children: [
             const _Section('許可の設定'),
+            const NoAiTrainingNotice(),
             ConsentToggles(
               value: settings.consents,
               serverAvailable: backend.isAvailable,

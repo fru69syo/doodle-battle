@@ -14,7 +14,8 @@ const registerRejectionMessages = <String, String>{
   'IMAGE_COPYRIGHT': 'ほかの キャラの まねっこは オンラインに だせないよ。じぶんで かんがえた キャラで あそぼう',
   'IMAGE_REAL_PERSON': 'ひとの しゃしんや かおは つかえないよ',
   'IMAGE_PERSONAL_INFO': 'えに なまえや じゅうしょが かいてあるみたい。けしてから もういちど とってね',
-  'IMAGE_NOT_DRAWING': 'しゃしんじゃなくて、かみに かいた えで あそぼう',
+  'IMAGE_NOT_DRAWING': 'かみに かいた えを とってね',
+  'IMAGE_AI_GENERATED': 'かみに かいた えを とってね',
   'IMAGE_OTHER': 'この えは オンラインに だせなかったよ。ほかの えで ためしてね',
   'TOO_MANY_CHARACTERS': 'オンラインに だせる キャラが いっぱいだよ。おうちのひとに そうだん してね',
 };

@@ -48,6 +48,8 @@ void main() {
     expect(find.byKey(const Key('setup-start')), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('setup-start')));
     expect((app.gate as FakeGate).calls, 1);
+    // SPEC §11.3: the consent screen states that drawings never train AI.
+    expect(find.text('えは AIの がくしゅうに つかいません'), findsOneWidget);
     // Server features (and Crashlytics) are disabled while Firebase is not
     // configured.
     expect(find.textContaining('現在準備中'), findsNWidgets(3));

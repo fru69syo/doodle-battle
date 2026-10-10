@@ -30,7 +30,8 @@ class ConsentToggles extends StatelessWidget {
         title: 'AI による絵の判定（クラウド判定）',
         body:
             '切り抜いた絵の画像をサーバーへ送り、AI（Anthropic 社の Claude）が'
-            '名前の候補やわざの名前を考えます。画像は判定後すぐに破棄され、保存されません。',
+            '名前の候補やわざの名前を考えます。画像は判定後すぐに破棄され、保存されません。'
+            '絵が AI の学習に使われることはありません。',
         on: value.cloudJudge,
         enabled: serverAvailable,
         set: (v) => onChanged(value.copyWith(cloudJudge: v)),
@@ -98,5 +99,36 @@ class ConsentToggles extends StatelessWidget {
     ),
     value: on && enabled,
     onChanged: enabled ? set : null,
+  );
+}
+
+/// 「えは AIの がくしゅうに つかいません」(SPEC §11.3) for the consent
+/// screens: one hiragana line for the child, details for the parent.
+class NoAiTrainingNotice extends StatelessWidget {
+  const NoAiTrainingNotice({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Card(
+    key: Key('no-ai-training'),
+    color: Color(0xFFE8F5E9),
+    child: Padding(
+      padding: EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Text(
+            'えは AIの がくしゅうに つかいません',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'お子さまの絵を AI の学習（トレーニング）に使うことはありません。'
+            '当アプリも、クラウド判定を行う Anthropic 社も、送られた絵を学習に使いません。'
+            '絵は AI の作品に作り替えず、お子さまが描いた線のままキャラクターになります。',
+            style: TextStyle(fontSize: 14),
+          ),
+        ],
+      ),
+    ),
   );
 }
