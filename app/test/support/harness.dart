@@ -14,6 +14,8 @@ import 'package:doodle_battle/domain/character.dart';
 import 'package:doodle_battle/domain/element_type.dart';
 import 'package:doodle_battle/domain/stats.dart';
 import 'package:doodle_battle/features/battle_ui/cpu_battle_screen.dart';
+import 'package:doodle_battle/features/drawing_loop/display_image.dart';
+import 'package:doodle_battle/features/drawing_loop/parts/composite.dart';
 import 'package:doodle_battle/features/ng_filter/ng_filter.dart';
 import 'package:doodle_battle/features/online/display_name_picker.dart';
 import 'package:doodle_battle/features/online/online_battle_screen.dart';
@@ -22,6 +24,7 @@ import 'package:doodle_battle/features/parent/policy_links.dart';
 import 'package:doodle_battle/features/parental_gate/parental_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes.dart';
@@ -113,6 +116,7 @@ Future<TestApp> pumpApp(
   double devicePixelRatio = 2.75,
   Duration battleStep = const Duration(milliseconds: 20),
   Widget Function(Widget app)? wrap,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = physicalSize;
   tester.view.devicePixelRatio = devicePixelRatio;
@@ -160,6 +164,11 @@ Future<TestApp> pumpApp(
         battleStepProvider.overrideWithValue(battleStep),
         queueHeartbeatProvider.overrideWithValue(const Duration(seconds: 10)),
         matchPollProvider.overrideWithValue(const Duration(seconds: 5)),
+        // Isolates don't run inside testWidgets' fake async zone.
+        compositeRunnerProvider.overrideWithValue(
+          (r) async => renderComposite(r),
+        ),
+        ...overrides,
       ],
       child: wrap == null
           ? const DoodleBattleApp()

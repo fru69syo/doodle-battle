@@ -97,6 +97,16 @@ class DisplayImageService {
     return composite.png;
   }
 
+  /// Deletes cached composites of [characterId] (e.g. after the last part
+  /// was removed).
+  Future<void> clearCache(String characterId) async {
+    for (final old in await _store.listAssets(characterId)) {
+      if (old.startsWith('display_')) {
+        await _store.deleteAsset(characterId, old);
+      }
+    }
+  }
+
   /// Drawn effect PNG of [move], or null (→ default effect).
   Future<Uint8List?> effectImageFor(Character c, DrawnMove move) async {
     final asset = c.cosmetics.effects[move];
@@ -118,8 +128,8 @@ final characterDisplayImageProvider = FutureProvider.autoDispose
       return ref.read(displayImageServiceProvider).displayImageFor(c);
     });
 
-/// Drawn effect PNG by (character id, asset name).
-final moveEffectArtProvider = FutureProvider.autoDispose
+/// A drawing-loop asset PNG (part or effect) by (character id, asset name).
+final loopAssetProvider = FutureProvider.autoDispose
     .family<Uint8List?, (String, String)>(
       (ref, key) =>
           ref.read(drawingLoopStorageProvider).readAsset(key.$1, key.$2),
@@ -134,7 +144,5 @@ BattleAction battleActionOf(DrawnMove m) => switch (m) {
 /// Drawn effects of [c] that have loaded, by battle move (watch in build).
 Map<BattleAction, Uint8List> watchMoveEffects(WidgetRef ref, Character c) => {
   for (final e in c.cosmetics.effects.entries)
-    battleActionOf(e.key): ?ref
-        .watch(moveEffectArtProvider((c.id, e.value)))
-        .value,
+    battleActionOf(e.key): ?ref.watch(loopAssetProvider((c.id, e.value))).value,
 };

@@ -14,6 +14,7 @@ import '../../domain/battle/battle.dart';
 import '../../domain/character.dart';
 import '../../domain/stats.dart';
 import '../battle_ui/move_labels.dart';
+import '../drawing_loop/drawing_loop.dart';
 import '../monetization/card_frames.dart';
 import '../monetization/monetization_service.dart';
 import 'xp_bar.dart';
@@ -55,6 +56,8 @@ class CharacterDetailScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _Moves(c: c),
             _FramePicker(c: c),
+            const SizedBox(height: 16),
+            DrawingLoopSection(character: c),
             const SizedBox(height: 20),
             FilledButton.icon(
               key: const Key('detail-battle'),
