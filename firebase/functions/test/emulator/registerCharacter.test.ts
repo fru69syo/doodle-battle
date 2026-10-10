@@ -90,6 +90,8 @@ describe("registerCharacter", () => {
       env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({
         imageCategory: category,
         isHandDrawn: true,
+      origin: "hand_drawn" as const,
+        origin: "hand_drawn" as const,
         names: names.map(() => ({ ok: true, category: "ok" as const })),
         skillEstimate: 20,
       }));
@@ -98,6 +100,24 @@ describe("registerCharacter", () => {
     env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({
       imageCategory: "ok",
       isHandDrawn: false,
+      origin: "unsure" as const,
+      names: names.map(() => ({ ok: true, category: "ok" as const })),
+      skillEstimate: 95,
+    }));
+    expect(await register()).toEqual({ ok: false, reason: "IMAGE_NOT_DRAWING" });
+    // SPEC §11.1: confidently AI-generated / digital pictures get their own code.
+    env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({
+      imageCategory: "ok",
+      isHandDrawn: false,
+      origin: "ai_generated" as const,
+      names: names.map(() => ({ ok: true, category: "ok" as const })),
+      skillEstimate: 95,
+    }));
+    expect(await register()).toEqual({ ok: false, reason: "IMAGE_AI_GENERATED" });
+    env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({
+      imageCategory: "ok",
+      isHandDrawn: true,
+      origin: "photo_print_or_screen" as const,
       names: names.map(() => ({ ok: true, category: "ok" as const })),
       skillEstimate: 95,
     }));
@@ -111,6 +131,7 @@ describe("registerCharacter", () => {
     env.ai.moderateCharacter.mockImplementationOnce(async () => ({
       imageCategory: "ok",
       isHandDrawn: true,
+      origin: "hand_drawn" as const,
       names: [{ ok: false, category: "personal_info" }, { ok: true, category: "ok" }, { ok: true, category: "ok" }],
       skillEstimate: 20,
     }));
@@ -119,6 +140,7 @@ describe("registerCharacter", () => {
     env.ai.moderateCharacter.mockImplementationOnce(async () => ({
       imageCategory: "ok",
       isHandDrawn: true,
+      origin: "hand_drawn" as const,
       names: [{ ok: true, category: "ok" }, { ok: false, category: "insult" }, { ok: true, category: "ok" }],
       skillEstimate: 20,
     }));
@@ -151,6 +173,7 @@ describe("registerCharacter", () => {
     env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({
       imageCategory: "ok",
       isHandDrawn: true,
+      origin: "hand_drawn" as const,
       names: names.map(() => ({ ok: true, category: "ok" as const })),
       skillEstimate: 90,
     }));

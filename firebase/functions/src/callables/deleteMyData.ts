@@ -63,6 +63,7 @@ export async function deleteMyDataHandler(req: CallableRequest<unknown>): Promis
   }
   reports += await deleteQuery(fs.collection(COL.reports).where("reporterUid", "==", uid));
   await deleteQuery(fs.collection(COL.moderationLog).where("uid", "==", uid));
+  await deleteQuery(fs.collection(COL.aiSuggestionReports).where("uid", "==", uid));
   await Promise.all([
     fs.collection(COL.queue).doc(uid).delete(),
     fs.collection(COL.rateLimits).doc(uid).delete(),

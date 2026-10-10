@@ -62,10 +62,15 @@ export const okJudgement: DrawingJudgement = {
   skillEstimate: 22,
   appropriate: true,
   concerns: [],
+  origin: "hand_drawn",
 };
 
 export function okVerdict(names: readonly string[]): ModerationVerdict {
-  return { imageCategory: "ok", isHandDrawn: true, names: names.map(() => ({ ok: true, category: "ok" })), skillEstimate: 25 };
+  return {
+    imageCategory: "ok",
+    isHandDrawn: true,
+    origin: "hand_drawn",
+    names: names.map(() => ({ ok: true, category: "ok" })), skillEstimate: 25 };
 }
 
 /** Mocked Claude-backed service. Never calls the network. */
