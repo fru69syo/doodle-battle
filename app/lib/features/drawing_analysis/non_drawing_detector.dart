@@ -3,9 +3,11 @@
 /// AI-generated pictures, digital illustrations, photographs, printed
 /// pictures and photos of screens are *not accepted* (rather than being
 /// turned into weak characters). Wrongly rejecting a real child's drawing is
-/// the worst possible outcome, so every rule needs strong evidence and the
-/// thresholds sit well outside the range measured on kids' drawings
-/// (docs/TRUST.md §3 has the calibration).
+/// the worst possible outcome, so every rule is a conjunction of several
+/// independent signals and each threshold sits outside the range measured on
+/// kids' drawings (docs/TRUST.md §3 has the calibration). When in doubt the
+/// picture is accepted; a polished picture that slips through still becomes
+/// an internally weak character (skill scoring is unchanged).
 library;
 
 import 'drawing_features.dart';
@@ -22,6 +24,10 @@ class AuthenticitySignals {
     required this.paperDetected,
     required this.photoLikelihood,
     required this.polish,
+    required this.symmetry,
+    required this.gradientShare,
+    required this.fineLineRatio,
+    required this.edgeCoherence,
     required this.backgroundShare,
     required this.backgroundFlatness,
     required this.noiseLevel,
@@ -40,6 +46,10 @@ class AuthenticitySignals {
     paperDetected: f.paperDetected,
     photoLikelihood: f.photoLikelihood,
     polish: digitalPolish(f),
+    symmetry: f.symmetry,
+    gradientShare: f.gradientShare,
+    fineLineRatio: f.fineLineRatio,
+    edgeCoherence: f.edgeCoherence,
     backgroundShare: m.backgroundShare,
     backgroundFlatness: m.backgroundFlatness,
     noiseLevel: m.noiseLevel,
@@ -50,7 +60,8 @@ class AuthenticitySignals {
     patchCount: m.patchCount,
   );
 
-  /// Bright, neutral, flat background dominates (0..1).
+  /// Bright, neutral, flat background dominates (0..1). Unreliable on its
+  /// own: tinted paper and dim rooms give ≈0 for real drawings.
   final double paperLikeness;
 
   /// A paper sheet was found and perspective-corrected.
@@ -59,13 +70,17 @@ class AuthenticitySignals {
   /// Photo evidence from the features (0..1).
   final double photoLikelihood;
 
-  /// Digital-illustration "finish" of the drawing itself (0..1): smooth
-  /// gradients, many distinct colours, perfectly clean edges, mirror
-  /// symmetry with shading. See [digitalPolish].
+  /// Digital-illustration "finish" (0..1), see [digitalPolish].
   final double polish;
 
+  /// Copied from [DrawingFeatures] (see docs/VISION.md §3).
+  final double symmetry;
+  final double gradientShare;
+  final double fineLineRatio;
+  final double edgeCoherence;
+
   /// Share of the image that is background (not the drawing), and how flat
-  /// that background is (paper is flat even when tinted or dim).
+  /// that background is.
   final double backgroundShare;
   final double backgroundFlatness;
 
@@ -77,16 +92,13 @@ class AuthenticitySignals {
   /// fills); -1 = could not be measured.
   final double exactFlatShare;
 
-  /// Isolated periodic peak strength in luminance / colour difference.
+  /// 2D lattice strength in luminance / colour difference.
   final double lumaPeriodicity;
   final double chromaPeriodicity;
 
-  /// Ink patches with a periodic peak, and how many were examined.
+  /// Drawing patches with a lattice, and how many were examined.
   final int periodicPatches;
   final int patchCount;
-
-  /// Noise was measured and is essentially zero (no camera involved).
-  bool get noiseless => noiseLevel >= 0 && noiseLevel < kNoiselessBelow;
 
   Map<String, num> toMap() => {
     'paperLikeness': paperLikeness,
@@ -106,29 +118,37 @@ class AuthenticitySignals {
 
 // ---- Thresholds (docs/TRUST.md §3) ----------------------------------------
 
-/// Below this paper evidence there is no sheet of paper in the picture.
-const double kMinPaperLikeness = 0.12;
-
-/// Photo rule: photo evidence at least this high *and* paper below
-/// [kPhotoMaxPaper].
-const double kPhotoLikelihoodAbove = 0.62;
-const double kPhotoMaxPaper = 0.5;
-
-/// Noise σ below this means the pixels never went through a camera.
-const double kNoiselessBelow = 0.35;
-
-/// Digital rule: noiseless *and* polish at least this high.
-const double kDigitalPolishAbove = 0.5;
-
-/// Print/screen rule: a periodic peak at least this strong, repeated in at
-/// least [kMinPeriodicPatches] ink patches (or in every patch when fewer
-/// were examined).
-const double kPeriodicAbove = 12;
+/// Print/screen: a 2D lattice at least this strong in at least
+/// [kMinPeriodicPatches] drawing patches.
+const double kPeriodicAbove = 10;
 const int kMinPeriodicPatches = 2;
 
-/// Chroma peaks this much stronger than luma peaks point to a screen's RGB
-/// sub-pixels rather than printed dots.
+/// Chroma lattices this much stronger than luma ones point to a screen's
+/// RGB sub-pixels rather than printed dots (diagnostic only).
 const double kScreenChromaRatio = 1.25;
+
+/// Digital "sticker" (AI mascot, shaded line art): polished, mirror
+/// symmetric, with exactly flat digital fills and little camera noise.
+const double kStickerPolish = 0.55;
+const double kStickerSymmetry = 0.9;
+const double kDigitalExactFlat = 0.05;
+const double kDigitalMaxNoise = 1.2;
+
+/// Full-frame digital painting: no paper, smooth gradients, exactly flat
+/// areas and almost no noise.
+const double kPaintingMaxPaper = 0.4;
+const double kPaintingMaxBackground = 0.5;
+const double kPaintingExactFlat = 0.15;
+const double kPaintingGradient = 0.4;
+const double kPaintingMaxNoise = 0.6;
+
+/// Photograph: photo-like, no paper, no line work at all, clean (non-crayon)
+/// edges and smooth gradients.
+const double kPhotoLikelihoodAbove = 0.62;
+const double kPhotoMaxPaper = 0.05;
+const double kPhotoMaxFineLines = 0.2;
+const double kPhotoMinCoherence = 0.8;
+const double kPhotoMinGradient = 0.3;
 
 /// "Finish" of a digital illustration (0..1).
 ///
@@ -146,29 +166,39 @@ double digitalPolish(DrawingFeatures f) {
 /// The reason to refuse the picture, or null when it looks like a photo of
 /// a drawing on paper (or when the evidence is not strong enough).
 DrawingRejectReason? classifyAuthenticity(AuthenticitySignals s) {
-  // 1. Printed picture / photographed screen: periodic dot or pixel grid.
-  final periodic =
+  // 1. Printed picture / photographed screen: a dot or pixel lattice that
+  //    repeats across the drawing.
+  final lattice =
       s.lumaPeriodicity >= kPeriodicAbove ||
       s.chromaPeriodicity >= kPeriodicAbove;
-  final repeated =
-      s.periodicPatches >=
-      (s.patchCount < kMinPeriodicPatches ? s.patchCount : kMinPeriodicPatches);
-  if (periodic && repeated && s.patchCount > 0) {
+  if (lattice && s.periodicPatches >= kMinPeriodicPatches) {
     return s.chromaPeriodicity >= kScreenChromaRatio * s.lumaPeriodicity
         ? DrawingRejectReason.screen
         : DrawingRejectReason.printed;
   }
-  // 2. Digital illustration / AI-generated: no camera noise and a polished,
-  //    gradient-shaded, many-coloured finish.
-  if (s.noiseless && s.polish >= kDigitalPolishAbove) {
+  final digitalPixels =
+      s.exactFlatShare >= kDigitalExactFlat && s.noiseLevel < kDigitalMaxNoise;
+  // 2a. Digital / AI "sticker" illustration.
+  if (digitalPixels &&
+      s.polish >= kStickerPolish &&
+      s.symmetry >= kStickerSymmetry) {
     return DrawingRejectReason.digital;
   }
-  // 3. A photograph of the world rather than of a sheet of paper.
+  // 2b. Full-frame digital / AI painting.
+  if (s.paperLikeness <= kPaintingMaxPaper &&
+      s.backgroundShare <= kPaintingMaxBackground &&
+      s.exactFlatShare >= kPaintingExactFlat &&
+      s.noiseLevel < kPaintingMaxNoise &&
+      s.gradientShare >= kPaintingGradient) {
+    return DrawingRejectReason.digital;
+  }
+  // 3. A photograph of the world rather than of a sheet with a drawing.
   if (s.photoLikelihood >= kPhotoLikelihoodAbove &&
-      s.paperLikeness < kPhotoMaxPaper) {
+      s.paperLikeness <= kPhotoMaxPaper &&
+      s.fineLineRatio < kPhotoMaxFineLines &&
+      s.edgeCoherence >= kPhotoMinCoherence &&
+      s.gradientShare >= kPhotoMinGradient) {
     return DrawingRejectReason.photo;
   }
-  // 4. No paper at all.
-  if (s.paperLikeness < kMinPaperLikeness) return DrawingRejectReason.noPaper;
   return null;
 }

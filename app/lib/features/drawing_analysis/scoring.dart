@@ -83,9 +83,6 @@ enum DrawingRejectReason {
   /// Almost no ink (blank paper, a single dot or a tiny line).
   nearlyEmpty('もうすこし かいてみよう'),
 
-  /// No sheet of paper could be found in the picture.
-  noPaper(kPaperDrawingMessage),
-
   /// A photograph (of things, people or places) rather than a drawing.
   photo(kPaperDrawingMessage),
 
