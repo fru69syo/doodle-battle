@@ -44,7 +44,11 @@ class FileCharacterRepository implements CharacterRepository {
         // Skip unreadable entries rather than losing the whole collection.
       }
     }
-    out.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    // Tie-break on id: directory listing order is filesystem-dependent.
+    out.sort((a, b) {
+      final byDate = a.createdAt.compareTo(b.createdAt);
+      return byDate != 0 ? byDate : a.id.compareTo(b.id);
+    });
     return out;
   }
 
