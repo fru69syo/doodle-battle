@@ -10,7 +10,8 @@ import 'monetization_service.dart';
 /// reporter (watched once by the app root):
 /// - starts the service with the cached entitlements (first settings load),
 /// - mirrors store entitlements into `settings.entitlements` (offline cache),
-/// - mirrors the ads consent (lazy SDK initialisation; off = nothing loads),
+/// - mirrors the ads consent (lazy SDK initialisation; off = nothing loads;
+///   always off with こうこくなしパス),
 /// - mirrors the crash-report consent.
 final monetizationSyncProvider = Provider<void>((ref) {
   final service = ref.watch(monetizationServiceProvider);
@@ -33,7 +34,9 @@ final monetizationSyncProvider = Provider<void>((ref) {
         service.start({for (final id in s.entitlements) ?Product.byId(id)}),
       );
     }
-    unawaited(service.setAdsAllowed(s.consents.ads));
+    // こうこくなしパス: no ad is ever needed, so the ads SDK stays off.
+    final noAds = s.entitlements.contains(Product.noAdsPass.id);
+    unawaited(service.setAdsAllowed(s.consents.ads && !noAds));
   }, fireImmediately: true);
 
   final crash = ref.watch(crashReporterProvider);
@@ -46,6 +49,7 @@ final monetizationSyncProvider = Provider<void>((ref) {
   }, fireImmediately: true);
 });
 
-/// Ad boosts left today (daily cap, `dailyAdBoostCap`).
+/// XP ×2 bonuses left today (daily cap `dailyAdBoostCap`, shared by ads and
+/// こうこくなしパス).
 int adBoostsLeft({required int cap, required int usedToday}) =>
     usedToday >= cap ? 0 : cap - usedToday;

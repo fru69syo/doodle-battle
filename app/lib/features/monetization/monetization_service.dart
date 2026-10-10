@@ -18,8 +18,10 @@ enum Product {
   /// カードの フレームパック (cosmetic card frames in ずかん).
   framePack('frame_pack_1', 'カードの フレームパック', 'ずかんの カードに かわいい わくが つく'),
 
-  /// おうえんパス: XP ×2 after every battle without ads.
-  ouenPass('ouen_pass', 'おうえんパス', 'こうこくなしで けいけんちが 2ばい');
+  /// こうこくなしパス (SPEC §11.4): hides every ad entry point and gives the
+  /// post-battle XP ×2 without an ad, within the same daily cap as ads
+  /// (`dailyAdBoostCap`).
+  noAdsPass('no_ads_pass', 'こうこくなしパス', 'こうこくを みないで けいけんち 2ばい（1にち 3かいまで）');
 
   const Product(this.id, this.title, this.description);
 

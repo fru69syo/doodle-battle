@@ -218,7 +218,7 @@ void main() {
     expect(Product.values.map((p) => p.id), [
       'slots_24',
       'frame_pack_1',
-      'ouen_pass',
+      'no_ads_pass',
     ]);
   });
 }

@@ -30,8 +30,8 @@ class GameProgress {
   /// Local date (yyyy-mm-dd) [adBoostsToday] refers to.
   final String? adBoostDate;
 
-  /// Rewarded-ad XP boosts used on [adBoostDate] (daily cap,
-  /// `dailyAdBoostCap`).
+  /// Post-battle XP ×2 bonuses used on [adBoostDate], by rewarded ad or
+  /// with こうこくなしパス (one shared daily cap, `dailyAdBoostCap`).
   final int adBoostsToday;
 
   /// Online display name last confirmed by the server (`setDisplayName` or

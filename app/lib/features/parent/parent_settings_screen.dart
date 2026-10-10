@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../data/app_state.dart';
 import '../draw/album_import.dart';
+import '../monetization/monetization_service.dart';
 import '../monetization/shop_section.dart';
 import 'ar_install_tile.dart';
 import 'consent_toggles.dart';
@@ -64,6 +65,7 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             ConsentToggles(
               value: settings.consents,
               serverAvailable: backend.isAvailable,
+              noAdsPass: settings.entitlements.contains(Product.noAdsPass.id),
               crashReportsAvailable: ref
                   .watch(crashReporterProvider)
                   .isAvailable,

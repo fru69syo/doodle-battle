@@ -55,7 +55,7 @@ Future<(InMemorySettingsRepository, int Function())> pumpAdButton(
 
 void main() {
   group('rewarded ad button', () {
-    testWidgets('hidden unless ads are allowed (and no おうえんパス)', (
+    testWidgets('hidden unless ads are allowed (and no こうこくなしパス)', (
       tester,
     ) async {
       final m = FakeMonetization();
@@ -142,27 +142,64 @@ void main() {
       expect(repo.progress.adBoostsToday, 0);
     });
 
-    testWidgets('おうえんパス: bonus without an ad and without the cap', (
+    testWidgets('こうこくなしパス: bonus without an ad, same daily cap', (
       tester,
     ) async {
+      final m = FakeMonetization();
+      final (repo, rewards) = await pumpAdButton(
+        tester,
+        monetization: m,
+        // Ads allowed too: the pass still hides every ad entry point.
+        settings: withConsents(
+          const ParentConsents(ads: true),
+          entitlements: {Product.noAdsPass.id},
+        ),
+        progress: const GameProgress(
+          adBoostDate: '2026-10-09',
+          adBoostsToday: dailyAdBoostCap - 1,
+        ),
+      );
+      expect(m.preloads, 0, reason: 'no ad is loaded with the pass');
+      expect(find.text('こうこくなしパスで けいけんち 2ばい'), findsOneWidget);
+      expect(find.text('きょうは あと 1 かい'), findsOneWidget);
+      expect(find.textContaining('どうが'), findsNothing);
+      await tester.tap(find.byKey(const Key('ad-double-xp')));
+      await tester.pumpAndSettle();
+      expect(find.text(adNoticeText), findsNothing);
+      expect(m.adsShown, 0);
+      expect(rewards(), 1);
+      expect(repo.progress.adBoostsOn('2026-10-09'), dailyAdBoostCap);
+      expect(find.byKey(const Key('ad-done')), findsOneWidget);
+    });
+
+    testWidgets('こうこくなしパス: cap reached, no button, no ad', (tester) async {
       final m = FakeMonetization();
       final (_, rewards) = await pumpAdButton(
         tester,
         monetization: m,
         settings: withConsents(
-          const ParentConsents(),
-          entitlements: {Product.ouenPass.id},
+          const ParentConsents(ads: true),
+          entitlements: {Product.noAdsPass.id},
         ),
         progress: const GameProgress(
           adBoostDate: '2026-10-09',
           adBoostsToday: dailyAdBoostCap,
         ),
       );
-      expect(find.text('おうえんパスで けいけんち 2ばい'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('ad-double-xp')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('ad-double-xp')), findsNothing);
+      expect(find.text(passCapText), findsOneWidget);
+      expect(find.text(adCapText), findsNothing);
       expect(m.adsShown, 0);
-      expect(rewards(), 1);
+      expect(rewards(), 0);
+    });
+
+    test('こうこくなしパス product text', () {
+      expect(Product.noAdsPass.id, 'no_ads_pass');
+      expect(Product.noAdsPass.title, 'こうこくなしパス');
+      expect(
+        Product.noAdsPass.description,
+        'こうこくを みないで けいけんち 2ばい（1にち ${dailyAdBoostCap}かいまで）',
+      );
     });
 
     test('adBoostsLeft', () {
@@ -197,6 +234,32 @@ void main() {
       expect(m.adsAllowedCalls.last, isFalse);
     });
 
+    testWidgets('こうこくなしパス keeps the ads SDK off and explains the switch', (
+      tester,
+    ) async {
+      final m = FakeMonetization();
+      await pumpApp(
+        tester,
+        monetization: m,
+        settings: withConsents(
+          const ParentConsents(ads: true),
+          entitlements: {Product.noAdsPass.id},
+        ),
+      );
+      expect(m.adsAllowedCalls, everyElement(isFalse));
+      await tapVisible(tester, find.byKey(const Key('home-parent')));
+      final tile = tester.widget<SwitchListTile>(
+        find.byKey(const Key('consent-ads')),
+      );
+      expect(tile.onChanged, isNull);
+      expect(tile.value, isFalse);
+      expect(find.textContaining('こうこくなしパスを購入済み'), findsOneWidget);
+      // A refund (restore without the pass) turns the consented ads back on.
+      m.emitOwned({});
+      await tester.pumpAndSettle();
+      expect(m.adsAllowedCalls.last, isTrue);
+    });
+
     testWidgets('starts with the cached entitlements', (tester) async {
       final m = FakeMonetization();
       await pumpApp(
@@ -216,14 +279,17 @@ void main() {
       final m = FakeMonetization();
       final app = await pumpApp(tester, monetization: m);
       expect(app.container.read(collectionLimitProvider), 12);
-      m.emitOwned({Product.slots24, Product.ouenPass});
+      m.emitOwned({Product.slots24, Product.noAdsPass});
       await tester.pumpAndSettle();
-      expect(app.settingsRepo.settings.entitlements, {'slots_24', 'ouen_pass'});
+      expect(app.settingsRepo.settings.entitlements, {
+        'slots_24',
+        'no_ads_pass',
+      });
       expect(app.container.read(collectionLimitProvider), 36);
       // A refund (restore without the product) removes it again.
-      m.emitOwned({Product.ouenPass});
+      m.emitOwned({Product.noAdsPass});
       await tester.pumpAndSettle();
-      expect(app.settingsRepo.settings.entitlements, {'ouen_pass'});
+      expect(app.settingsRepo.settings.entitlements, {'no_ads_pass'});
       expect(app.container.read(collectionLimitProvider), 12);
     });
 
@@ -294,7 +360,7 @@ void main() {
       await openShop(tester, m);
       expect(m.refreshes, 1);
       expect(find.textContaining('価格: ￥250'), findsOneWidget);
-      expect(find.textContaining('価格: ￥480'), findsOneWidget);
+      expect(find.textContaining('価格: ￥320'), findsOneWidget);
       expect(find.textContaining('定期購入ではありません'), findsWidgets);
     });
 
@@ -303,7 +369,7 @@ void main() {
       await openShop(tester, m);
       expect(find.byKey(const Key('shop-unavailable')), findsOneWidget);
       final buy = tester.widget<ButtonStyleButton>(
-        find.byKey(const Key('buy-ouen_pass')),
+        find.byKey(const Key('buy-no_ads_pass')),
       );
       expect(buy.enabled, isFalse);
     });
@@ -324,11 +390,11 @@ void main() {
     ) async {
       final m = FakeMonetization();
       await openShop(tester, m);
-      await tapVisible(tester, find.byKey(const Key('buy-ouen_pass')));
+      await tapVisible(tester, find.byKey(const Key('buy-no_ads_pass')));
       await tester.tap(find.byKey(const Key('purchase-confirm')));
       await tester.pumpAndSettle();
       expect(find.text('購入しました。ありがとうございます。'), findsOneWidget);
-      expect(find.byKey(const Key('buy-ouen_pass')), findsNothing);
+      expect(find.byKey(const Key('buy-no_ads_pass')), findsNothing);
       m.purchaseResult = PurchaseResult.pending;
       await tapVisible(tester, find.byKey(const Key('buy-slots_24')));
       await tester.tap(find.byKey(const Key('purchase-confirm')));

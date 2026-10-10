@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config/app_config.dart';
 import '../../data/app_settings.dart';
 
 /// The consent switches (SPEC §7 + opt-in crash reports). Parent-facing text (kanji is fine).
@@ -11,6 +12,7 @@ class ConsentToggles extends StatelessWidget {
     required this.onChanged,
     required this.serverAvailable,
     this.crashReportsAvailable = false,
+    this.noAdsPass = false,
   });
 
   final ParentConsents value;
@@ -19,6 +21,10 @@ class ConsentToggles extends StatelessWidget {
 
   /// Crashlytics needs Firebase; otherwise the switch shows 「準備中」.
   final bool crashReportsAvailable;
+
+  /// こうこくなしパス is owned: no ads are shown, so the ads switch is
+  /// replaced by an explanation (SPEC §11.4).
+  final bool noAdsPass;
 
   static const _pending = '（現在準備中のため利用できません）\n';
 
@@ -50,11 +56,13 @@ class ConsentToggles extends StatelessWidget {
       _tile(
         key: 'ads',
         title: '広告の視聴',
-        body:
-            'バトルのあとに「どうがを みて けいけんち 2ばい」が表示されます。'
-            '子ども向けに設定したリワード広告のみで、見る前に必ず注意書きが出ます。',
+        body: noAdsPass
+            ? 'こうこくなしパスを購入済みのため、広告は表示されません。'
+                  'バトルのあとの経験値 2 倍は、広告なしで 1 日 $dailyAdBoostCap 回まで受け取れます。'
+            : 'バトルのあとに「どうがを みて けいけんち 2ばい」が表示されます（1 日 $dailyAdBoostCap 回まで）。'
+                  '子ども向けに設定したリワード広告のみで、見る前に必ず注意書きが出ます。',
         on: value.ads,
-        enabled: true,
+        enabled: !noAdsPass,
         set: (v) => onChanged(value.copyWith(ads: v)),
       ),
       _tile(
@@ -94,7 +102,7 @@ class ConsentToggles extends StatelessWidget {
     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
     subtitle: Text(
-      enabled ? body : '$_pending$body',
+      enabled || key == 'ads' ? body : '$_pending$body',
       style: const TextStyle(fontSize: 14),
     ),
     value: on && enabled,
