@@ -46,7 +46,7 @@ Google Play Console で入力する内容の**推奨回答**をまとめたも�
 |---|---|---|
 | アプリアイコン | 512×512、32 ビット PNG（アルファあり）、1 MB 以下 | **仮** `store/metadata/ja-JP/images/icon.png` |
 | フィーチャーグラフィック | 1024×500、JPEG か 24 ビット PNG（アルファなし）、15 MB 以下 | **仮** `store/metadata/ja-JP/images/featureGraphic.png` |
-| スマートフォンのスクリーンショット | 2〜8 枚（必須）。JPEG か 24 ビット PNG、各辺 320〜3840 px、長辺は短辺の 2 倍以下。ゲームのおすすめ枠に載るには**縦 1080×1920 以上を 4 枚以上**推奨 | 未作成。`store/metadata/ja-JP/images/phoneScreenshots/1.png` … に置く |
+| スマートフォンのスクリーンショット | 2〜8 枚（必須）。JPEG か 24 ビット PNG、各辺 320〜3840 px、長辺は短辺の 2 倍以下。ゲームのおすすめ枠に載るには**縦 1080×1920 以上を 4 枚以上**推奨 | **作成済み 8 枚**（1080×1920）`store/metadata/ja-JP/images/phoneScreenshots/`。予備 2 枚は `store/screenshots/alternates/`、一覧は `store/screenshots/contact_sheet.png` |
 | 7 インチ・10 インチタブレット | 各 8 枚まで。各辺 1080〜7680 px | 任意。タブレット向けとして表示するなら必要（PM 判断） |
 | Chromebook | 任意 | 不要 |
 | プロモーション動画 | YouTube の URL。広告なし・年齢制限なし・埋め込み可。子ども向けの内容 | 任意 |
@@ -54,6 +54,7 @@ Google Play Console で入力する内容の**推奨回答**をまとめたも�
 
 - 仮のグラフィックは `store/tools/gen_graphics.py` でプログラム生成しています（クレヨンで描いたような丸いモンスター）。文字は **Zen Maru Gothic Black**（SIL Open Font License 1.1、`store/fonts/OFL-ZenMaruGothic.txt`）。フォントのファイルはリポジトリに入れず、google/fonts の固定コミットからダウンロードし、SHA-256 を確かめて使います。
 - **本番のグラフィックに差し替える場合**は、同じファイル名で上書きし、`python3 scripts/check_listing.py` と `cd app && dart run flutter_launcher_icons` を実行してください。アダプティブアイコンの前景は 1024×1024 で、**キャラクターを中央 61%（直径）の円の中に収めてください**（端末によって丸や角丸に切り抜かれます）。
+- スクリーンショットの作り方: `app/tool/screenshots.sh` が実際のアプリの画面（テスト用のフェイクのサービス、同梱のフォント、合成した子どもの絵を本物の解析に通したもの）を `store/screenshots/raw/` に書き出し、`store/tools/compose_screenshots.py` が短い見出しを付けて掲載用の 8 枚を作ります。順番: ① 紙の絵 → キャラ（Before/After。紙の写真は raw の `00_paper_photo.jpg` で、同じ絵から生まれたキャラの誕生画面と並べる）② バトル ③ 保護者向けの安心の仕組み（チャット・ガチャなし、設定と購入は保護者の確認の先、広告・課金・オンラインは初期設定でオフ、絵は AI の学習に使わない、紙に手で描いた絵だけ）④ かぞくで たいせん ⑤ うごく どうが ⑥ キャラカード ⑦ おだい ⑧ そだてる。予備: 撮影のコツ、ずかん。③の項目は実装と QA で確かめたことだけを書いています。仕様が変わったら `SAFETY` の文も直してください。
 - スクリーンショットの注意:
   - 実際のゲーム画面を使います。子どもの**顔や名前、写真**が写らないようにします。
   - 子どもが描いた本物の絵を使うときは、描いた子の保護者から**書面で許可**をもらいます。社内やサンプルの絵を使うのが安全です。
