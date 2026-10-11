@@ -149,3 +149,8 @@ class InMemoryPuppetStore implements PuppetStore {
 final puppetStoreProvider = Provider<PuppetStore>(
   (ref) => InMemoryPuppetStore(),
 );
+
+/// Whether 「うごく ところを なおそう」 opens right after a birth (SPEC
+/// §12.7). Widget tests of other flows turn it off so they land on the
+/// character page as before.
+final jointEditorAfterBirthProvider = Provider<bool>((ref) => true);

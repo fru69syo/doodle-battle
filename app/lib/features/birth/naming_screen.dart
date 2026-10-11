@@ -127,7 +127,11 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
     // Video export: the detail page offers 「どうがに する」 prominently.
     ref.read(justBornCharacterProvider.notifier).set(id);
     // 「うごく ところを なおそう」 (skippable), then the character page.
-    context.go(Routes.characterJoints(id, first: true));
+    context.go(
+      ref.read(jointEditorAfterBirthProvider)
+          ? Routes.characterJoints(id, first: true)
+          : Routes.character(id),
+    );
   }
 
   @override

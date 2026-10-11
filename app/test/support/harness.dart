@@ -22,6 +22,9 @@ import 'package:doodle_battle/features/online/online_battle_screen.dart';
 import 'package:doodle_battle/features/online/online_lobby_screen.dart';
 import 'package:doodle_battle/features/parent/policy_links.dart';
 import 'package:doodle_battle/features/parental_gate/parental_gate.dart';
+import 'package:doodle_battle/features/puppet/puppet_builder.dart';
+import 'package:doodle_battle/features/puppet/puppet_store.dart';
+import 'package:doodle_battle/features/puppet/render/puppet_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -117,6 +120,7 @@ Future<TestApp> pumpApp(
   Duration battleStep = const Duration(milliseconds: 20),
   Widget Function(Widget app)? wrap,
   List<Override> overrides = const [],
+  bool jointEditorAfterBirth = false,
 }) async {
   tester.view.physicalSize = physicalSize;
   tester.view.devicePixelRatio = devicePixelRatio;
@@ -168,6 +172,12 @@ Future<TestApp> pumpApp(
         compositeRunnerProvider.overrideWithValue(
           (r) async => renderComposite(r),
         ),
+        puppetBuilderProvider.overrideWithValue(
+          PuppetBuilder(runner: syncRunner),
+        ),
+        // The joint editor animates forever (preview), which would keep
+        // pumpAndSettle from settling; flows that do not test it skip it.
+        jointEditorAfterBirthProvider.overrideWithValue(jointEditorAfterBirth),
         ...overrides,
       ],
       child: wrap == null
