@@ -1,48 +1,51 @@
 import 'dart:ui' as ui;
 
-import 'package:doodle_battle/features/spike25d/anim/clips.dart';
-import 'package:doodle_battle/features/spike25d/battle/battle_session25.dart';
-import 'package:doodle_battle/features/spike25d/battle/stage_painter.dart';
-import 'package:doodle_battle/features/spike25d/render/character_sprite.dart';
-import 'package:doodle_battle/features/spike25d/rig/rigged_character.dart';
-import 'package:doodle_battle/features/spike25d/samples25d.dart';
+import 'package:doodle_battle/features/battle_stage/adapters/battle_v2_feed.dart';
+import 'package:doodle_battle/features/battle_stage/battle_stage.dart';
+import 'package:doodle_battle/features/battle_stage/debug/demo_battle.dart';
+import 'package:doodle_battle/features/battle_stage/stage_background.dart';
+import 'package:doodle_battle/features/battle_stage/stage_painter.dart';
+import 'package:doodle_battle/features/battle_stage/stage_vfx.dart';
+import 'package:doodle_battle/features/puppet/anim/clips.dart';
+import 'package:doodle_battle/features/puppet/puppet_builder.dart';
+import 'package:doodle_battle/features/puppet/render/puppet_sprite.dart';
+import 'package:doodle_battle/features/puppet/samples.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// CPU cost per frame (JIT, desktop x86) of the parts that run on the UI
-/// thread every frame: engine + director, skinning 2 characters, building
-/// the Vertices, and recording the whole stage picture. Numbers go to
-/// docs/V2_25D_TECH.md §6. Raster cost is GPU work on a phone and is not
-/// measured here (software Skia in tests is not representative).
+/// CPU cost per frame (JIT, desktop x86) of what runs on the UI thread
+/// every frame for 2 characters + stage: engine + director, skinning, the
+/// Vertices, and recording the whole stage picture. Numbers go to
+/// docs/PUPPET.md §5. Raster (GPU) cost is not measured here (software
+/// Skia in tests is not representative of a phone GPU).
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<void> measure(String label, BuildOptions o) async {
+  Future<Map<String, double>> measure(String label, StageQuality q) async {
     final sides = [
-      Side25(png: sample25dPng(Sample25d.hero), name: 'a', genomeSeed: 11),
-      Side25(png: sample25dPng(Sample25d.dog), name: 'b', genomeSeed: 5),
+      DemoSide(png: samplePng(Sample.hero), name: 'a', genomeSeed: 11),
+      DemoSide(png: samplePng(Sample.dog), name: 'b', genomeSeed: 5),
     ];
     final sw0 = Stopwatch()..start();
-    final chars = [
-      for (final s in sides) buildRiggedCharacterFromPng(s.png, options: o),
+    final meshes = [
+      for (final s in sides) buildPuppetSync(s.puppet(quality: q.puppet)),
     ];
     final buildMs = sw0.elapsedMilliseconds / 2;
-    final sprites = [for (final c in chars) await CharacterSprite.create(c)];
-    final s = BattleSession25(
-      sides: sides,
-      characters: chars,
-      alwaysAuto: true,
-    );
+    final sprites = [for (final m in meshes) await PuppetSprite.create(m)];
+    final feed = BattleV2Feed(demoEngine(sides), alwaysAuto: true);
+    final c = BattleStageController(feed: feed)
+      ..attach(meshes, [for (final s in sides) s.look]);
     final painter = StagePainter(
-      director: s.director,
+      director: c.director!,
       sprites: sprites,
-      repaintSignal: ValueNotifier(0),
+      background: StageBackground(StageTheme.meadow),
+      vfx: StageVfx(),
+      quality: q,
     );
     const size = Size(393, 851);
     const dt = 1 / 60;
-    // Warm-up (JIT).
     for (var i = 0; i < 300; i++) {
-      s.advance(dt);
+      c.advance(dt);
       final r = ui.PictureRecorder();
       painter.paint(Canvas(r), size);
       r.endRecording().dispose();
@@ -51,7 +54,7 @@ void main() {
     const n = 1200;
     for (var i = 0; i < n; i++) {
       sim.start();
-      s.advance(dt);
+      c.advance(dt);
       sim.stop();
       skin.start();
       for (final sp in sprites) {
@@ -65,24 +68,53 @@ void main() {
       r.endRecording().dispose();
       paint.stop();
     }
-    final tris = chars.fold<int>(0, (a, c) => a + c.triangleCount);
-    final kb = chars.fold<int>(0, (a, c) => a + c.bytes) ~/ 1024;
+    final tris = meshes.fold<int>(0, (a, m) => a + m.triangleCount);
+    final kb = meshes.fold<int>(0, (a, m) => a + m.bytes) / 1024;
+    final out = {
+      'tris': tris.toDouble(),
+      'buildMs': buildMs,
+      'simUs': sim.elapsedMicroseconds / n,
+      'skinUs': skin.elapsedMicroseconds / n,
+      'frameUs': paint.elapsedMicroseconds / n,
+      'cpuKiB': kb,
+    };
     // ignore: avoid_print
     print(
-      '$label: tris(2 chars)=$tris build/char=${buildMs.toStringAsFixed(0)}ms '
-      'sim+director=${(sim.elapsedMicroseconds / n).toStringAsFixed(0)}µs '
-      'skin(2)=${(skin.elapsedMicroseconds / n).toStringAsFixed(0)}µs '
-      'record stage (incl. skin+Vertices)=${(paint.elapsedMicroseconds / n).toStringAsFixed(0)}µs '
-      'cpu-mem=${kb}KiB',
+      '$label: tris(2)=$tris build/char=${buildMs.toStringAsFixed(0)}ms '
+      'engine+director=${out['simUs']!.toStringAsFixed(0)}µs '
+      'skin(2)=${out['skinUs']!.toStringAsFixed(0)}µs '
+      'record stage=${out['frameUs']!.toStringAsFixed(0)}µs '
+      'cpu-mem=${kb.toStringAsFixed(0)}KiB',
     );
     for (final sp in sprites) {
       sp.dispose();
     }
+    painter.background.dispose();
+    return out;
   }
 
-  test('frame cost', () async {
-    await measure('grid 64 (default)', const BuildOptions());
-    await measure('grid 96 (dense)', const BuildOptions(gridCells: 96));
-    await measure('grid 40 (low tier)', const BuildOptions(gridCells: 40));
+  test('frame cost and memory budget: 2 characters + stage', () async {
+    final high = await measure('high', StageQuality.high);
+    final low = await measure('low', StageQuality.low);
+    // Budgets with wide margins (CI machines vary): a frame's CPU work
+    // stays far below 16 ms, and the low tier is cheaper.
+    expect(high['frameUs']!, lessThan(8000));
+    expect(low['tris']!, lessThan(high['tris']!));
+    expect(low['frameUs']!, lessThan(high['frameUs']! * 1.2));
+    // Memory budget: 2 puppets' CPU side (textures + meshes + weights).
+    expect(high['cpuKiB']!, lessThan(4 * 1024));
+  });
+
+  test('builder cache stays inside its memory budget', () async {
+    final b = PuppetBuilder(runner: syncRunner, maxBytes: 2 << 20);
+    for (final s in Sample.values) {
+      await b.mesh(PuppetSpec(png: samplePng(s)));
+    }
+    expect(b.cachedBytes, lessThanOrEqualTo(2 << 20));
+    expect(b.cachedCount, greaterThanOrEqualTo(1));
+    // A hit returns the same mesh without rebuilding.
+    final m1 = await b.mesh(PuppetSpec(png: samplePng(Sample.car)));
+    final m2 = await b.mesh(PuppetSpec(png: samplePng(Sample.car)));
+    expect(identical(m1, m2), isTrue);
   });
 }
