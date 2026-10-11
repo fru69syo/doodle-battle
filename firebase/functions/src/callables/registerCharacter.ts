@@ -26,6 +26,7 @@ import {
   type Stats,
 } from "../stats/statLimits";
 import { AI_CALLABLE } from "./options";
+import { registerCharacterV2Handler, type RegisterCharacterV2Response } from "./registerCharacterV2";
 
 const StatValue = z.number().int().min(0).max(100_000);
 const StatsSchema = z.object({ hp: StatValue, atk: StatValue, def: StatValue, spd: StatValue }).strict();
@@ -74,7 +75,7 @@ export const REJECTION_REASONS = [
 ] as const;
 export type RejectionReason = (typeof REJECTION_REASONS)[number];
 
-const IMAGE_REASON: Record<Exclude<ImageCategory, "ok">, RejectionReason> = {
+export const IMAGE_REASON: Record<Exclude<ImageCategory, "ok">, RejectionReason> = {
   violence: "IMAGE_VIOLENCE",
   sexual: "IMAGE_SEXUAL",
   hate: "IMAGE_HATE",
@@ -99,7 +100,7 @@ export type RegisterCharacterResponse =
     }
   | { ok: false; reason: RejectionReason; presetNames?: string[] };
 
-async function reject(
+export async function reject(
   uid: string,
   reason: RejectionReason,
   extra: Record<string, unknown> = {},
@@ -116,7 +117,12 @@ async function reject(
  * online snapshot (SPEC §5). Fail-closed: nothing is stored unless the
  * image and the name passed every check.
  */
-export async function registerCharacterHandler(req: CallableRequest<unknown>): Promise<RegisterCharacterResponse> {
+export async function registerCharacterHandler(
+  req: CallableRequest<unknown>,
+): Promise<RegisterCharacterResponse | RegisterCharacterV2Response> {
+  // v2 apps (engine v3 characters) send `schema: 2`.
+  const data = req.data as { schema?: unknown } | null | undefined;
+  if (data && typeof data === "object" && data.schema === 2) return registerCharacterV2Handler(req);
   const { uid, profile } = await requireUserWithConsent(req, "online");
   const input = parseInput(Input, req.data);
   const png = decodePng(input.imageBase64);

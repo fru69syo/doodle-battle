@@ -10,6 +10,7 @@ import {
   NAME_CATEGORIES,
   type AiService,
   type DrawingJudgement,
+  type JudgeOptions,
   type ModerationVerdict,
 } from "./types";
 import {
@@ -17,6 +18,7 @@ import {
   JUDGE_USER_TEXT,
   MODERATION_SYSTEM_PROMPT,
   moderationUserText,
+  movesUserText,
 } from "./prompts";
 
 /**
@@ -34,6 +36,43 @@ const JudgeSchema = z.object({
   concerns: z.array(z.enum(IMAGE_CONCERNS as [string, ...string[]])),
   origin: z.enum(IMAGE_ORIGINS),
 });
+
+const Num = z.number().nullable();
+const StatEnum = z.enum(["STR", "DEF", "INT", "RES", "AGI", "DEX", "LUK"]).nullable();
+/** One AI move proposal (GAME_DESIGN_V2 §5.5; shared/battle_spec_v3/ai_moves.schema.json). */
+const AiMoveSchema = z.object({
+  template: z.enum(["strike", "combo", "blast", "barrage", "heal", "power_up", "weaken", "poison", "paralyze", "barrier"]),
+  attribute: z.enum(["gu", "choki", "pa", "none"]),
+  name: z.string(),
+  flavor: z.string(),
+  vfx: z.enum(["slash", "punch", "beam", "orb", "burst", "wave", "rain", "spiral", "stars", "hearts", "bubbles", "leaves", "sparks", "shield", "glow"]),
+  colour: z.enum(["red", "orange", "yellow", "green", "cyan", "blue", "purple", "pink", "black", "white", "rainbow"]),
+  atkFormula: z
+    .enum(["STR80_AGI20", "STR70_VIT30", "STR60_DEX40", "INT80_DEX20", "INT70_RES30", "INT60_LUK40"])
+    .nullable(),
+  power: Num,
+  hits: Num,
+  accuracy: Num,
+  critBonus: Num,
+  spCost: Num,
+  castTicks: Num,
+  cooldownTicks: Num,
+  healPct: Num,
+  stat: StatEnum,
+  stages: Num,
+  durationTicks: Num,
+  chance: Num,
+  shieldPct: Num,
+  secondary: z
+    .object({
+      type: z.enum(["none", "poison", "paralyze", "debuff", "drain"]),
+      chance: Num,
+      stat: StatEnum,
+      drainPct: Num,
+    })
+    .nullable(),
+});
+const JudgeWithMovesSchema = JudgeSchema.extend({ moves: z.array(AiMoveSchema) });
 
 const ModerationSchema = z.object({
   imageCategory: z.enum(IMAGE_CATEGORIES),
@@ -67,7 +106,17 @@ export class ClaudeAiService implements AiService {
     if (!opts.model) throw new AiUnavailableError("CLAUDE_MODEL is not configured");
   }
 
-  async judgeDrawing(png: Buffer): Promise<DrawingJudgement> {
+  async judgeDrawing(png: Buffer, opts: JudgeOptions = {}): Promise<DrawingJudgement> {
+    if (opts.moves) {
+      const text = `${JUDGE_USER_TEXT}\n\n${movesUserText(opts.moves.attribute, opts.moves.slotBudgets)}`;
+      const out = await this.call(
+        JUDGE_SYSTEM_PROMPT,
+        [imageBlock(png), { type: "text", text }],
+        JudgeWithMovesSchema,
+        "low",
+      );
+      return { ...out, concerns: out.concerns as DrawingJudgement["concerns"] };
+    }
     const out = await this.call(
       JUDGE_SYSTEM_PROMPT,
       [imageBlock(png), { type: "text", text: JUDGE_USER_TEXT }],
