@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../../domain/battle_v2/battle_v2.dart';
+import '../../../domain/battle_v3/battle_v3.dart';
 import '../render/character_sprite.dart';
 import 'battle_session25.dart';
 import 'stage_painter.dart';
@@ -387,7 +387,7 @@ class Battle25dScreenState extends State<Battle25dScreen>
     ),
   );
 
-  Widget _moveButton(BattleSession25 s, int i, MoveV2 m) {
+  Widget _moveButton(BattleSession25 s, int i, Move m) {
     final usable = s.usable(i);
     final selected = s.pending == i;
     final ready = s.choiceLeft != null;

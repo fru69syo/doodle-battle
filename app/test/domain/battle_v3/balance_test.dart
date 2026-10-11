@@ -1,5 +1,5 @@
 // Engine v3 — guards the balance targets of docs/GAME_DESIGN_V2.md §10
-// with a small Monte Carlo (the full table: dart run tool/v2_sim.dart).
+// with a small Monte Carlo (the full table: dart run tool/v3_sim.dart).
 import 'package:doodle_battle/domain/battle_v3/battle_v3.dart';
 import 'package:doodle_battle/domain/battle_v3/sim.dart';
 import 'package:flutter_test/flutter_test.dart';

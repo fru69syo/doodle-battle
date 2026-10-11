@@ -100,7 +100,7 @@ Map<String, Object?> fullSpecJson(V3Spec s) => {
       'worlds': kWorldNames,
       'powerPctByPosition': kStagePowerPct,
       'aiTier': 'stage 1-20 weak, 21-60 normal, 61-100 strong',
-      'strongTierPowerAdjustPct': kStrongTierPowerAdjustPct,
+      'powerPctTable': kStagePowerTable,
       'worldRosters': kWorldRosters,
       'table': [for (final st in stageTable()) st.toJson()],
     },

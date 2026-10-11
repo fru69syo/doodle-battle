@@ -480,7 +480,7 @@ const Map<String, String> kFeatureUnits = {
 
 /// Affinity per stat = Σ weight·term / 100 (weights per stat sum to 100).
 /// Terms are ramps from [kRampTable]; `inv:x` = 1000 − ramp x; `luck` =
-/// rng(statJitter) % 1001 (drawn in stat order, see stats_v2.dart).
+/// rng(statJitter) % 1001 (drawn in stat order, see genome.dart).
 const Map<String, Map<String, int>> kAffinityTable = {
   'HP': {'round': 40, 'size': 35, 'ink': 25},
   'SP': {'hues': 40, 'ink': 30, 'parts': 30},

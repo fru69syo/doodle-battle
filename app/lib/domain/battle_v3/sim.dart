@@ -267,6 +267,8 @@ SimStats simulateStage(
   Stage st, {
   int n = 1000,
   Map<String, Genome> cpuGenomes = const {},
+  int? powerPct,
+  int seed = 1,
 }) => runScenario(
   s,
   'stage ${st.stage} (Lv${st.recommendedLevel}, ${st.cpuId}, '
@@ -283,9 +285,44 @@ SimStats simulateStage(
         );
     return (
       setupAt(s, randomKid(s, r), st.recommendedLevel),
-      setupAt(s, g, st.cpuLevel, powerPct: st.cpuPowerPct),
+      setupAt(s, g, st.cpuLevel, powerPct: powerPct ?? st.cpuPowerPct),
     );
   },
   thinkTicksA: 10,
   tierB: st.tier,
+  seed: seed,
 );
+
+/// Target win rate (%) of a child at the recommended level, by position in
+/// a world (docs/GAME_DESIGN_V2.md §7: 85 → 63, boss ≈56).
+const List<int> kStageTargetWinPct = [85, 82, 80, 77, 75, 71, 68, 65, 63, 56];
+
+/// CPU stat % for [st] that brings the child's win rate to the target
+/// (bisection over 50..140 %), with the stage's real CPU doodle and tier.
+int tuneStagePower(
+  V3Spec s,
+  Stage st,
+  Map<String, Genome> cpuGenomes, {
+  int n = 400,
+}) {
+  final target = kStageTargetWinPct[st.position - 1] * 10;
+  var lo = 50; // child wins more than the target here
+  var hi = 140;
+  while (hi - lo > 1) {
+    final mid = (lo + hi) ~/ 2;
+    final r = simulateStage(
+      s,
+      st,
+      n: n,
+      cpuGenomes: cpuGenomes,
+      powerPct: mid,
+      seed: 7,
+    );
+    if (r.winsA * 1000 ~/ r.n > target) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}

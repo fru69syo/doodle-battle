@@ -783,7 +783,108 @@
         98
       ],
       "aiTier": "stage 1-20 weak, 21-60 normal, 61-100 strong",
-      "strongTierPowerAdjustPct": 0,
+      "powerPctTable": [
+        81,
+        78,
+        86,
+        84,
+        84,
+        90,
+        86,
+        88,
+        93,
+        98,
+        87,
+        94,
+        101,
+        91,
+        95,
+        104,
+        94,
+        99,
+        106,
+        92,
+        83,
+        90,
+        91,
+        86,
+        91,
+        93,
+        88,
+        94,
+        96,
+        95,
+        76,
+        87,
+        81,
+        78,
+        89,
+        84,
+        81,
+        91,
+        85,
+        89,
+        78,
+        91,
+        79,
+        82,
+        94,
+        82,
+        84,
+        99,
+        85,
+        96,
+        82,
+        89,
+        87,
+        85,
+        91,
+        88,
+        87,
+        93,
+        91,
+        91,
+        75,
+        86,
+        82,
+        77,
+        87,
+        86,
+        80,
+        90,
+        87,
+        88,
+        80,
+        82,
+        94,
+        83,
+        85,
+        96,
+        85,
+        89,
+        98,
+        92,
+        84,
+        86,
+        88,
+        87,
+        89,
+        91,
+        89,
+        92,
+        94,
+        96,
+        84,
+        82,
+        89,
+        85,
+        83,
+        91,
+        88,
+        86,
+        94,
+        88
+      ],
       "worldRosters": [
         [
           "cpu_fire_blob",
@@ -856,7 +957,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_fire_blob",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 81
         },
         {
           "stage": 2,
@@ -867,7 +968,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 78
         },
         {
           "stage": 3,
@@ -878,7 +979,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 86
         },
         {
           "stage": 4,
@@ -889,7 +990,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_fire_blob",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 84
         },
         {
           "stage": 5,
@@ -900,7 +1001,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 84
         },
         {
           "stage": 6,
@@ -911,7 +1012,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 90
         },
         {
           "stage": 7,
@@ -922,7 +1023,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_fire_blob",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 86
         },
         {
           "stage": 8,
@@ -933,7 +1034,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 88
         },
         {
           "stage": 9,
@@ -944,7 +1045,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 93
         },
         {
           "stage": 10,
@@ -966,7 +1067,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_bear",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 87
         },
         {
           "stage": 12,
@@ -977,7 +1078,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_butterfly",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 94
         },
         {
           "stage": 13,
@@ -988,7 +1089,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_hedgehog",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 101
         },
         {
           "stage": 14,
@@ -1010,7 +1111,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_butterfly",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 95
         },
         {
           "stage": 16,
@@ -1021,7 +1122,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_hedgehog",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 104
         },
         {
           "stage": 17,
@@ -1043,7 +1144,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_butterfly",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 99
         },
         {
           "stage": 19,
@@ -1054,7 +1155,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_hedgehog",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 106
         },
         {
           "stage": 20,
@@ -1065,7 +1166,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_thunder_bird",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 92
         },
         {
           "stage": 21,
@@ -1076,7 +1177,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_fish",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 83
         },
         {
           "stage": 22,
@@ -1087,7 +1188,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_octopus",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 90
         },
         {
           "stage": 23,
@@ -1098,7 +1199,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_jellyfish",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 91
         },
         {
           "stage": 24,
@@ -1109,7 +1210,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_fish",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 86
         },
         {
           "stage": 25,
@@ -1120,7 +1221,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_octopus",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 91
         },
         {
           "stage": 26,
@@ -1142,7 +1243,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_fish",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 88
         },
         {
           "stage": 28,
@@ -1153,7 +1254,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_octopus",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 94
         },
         {
           "stage": 29,
@@ -1175,7 +1276,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_swordfish",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 95
         },
         {
           "stage": 31,
@@ -1186,7 +1287,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rock_golem",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 76
         },
         {
           "stage": 32,
@@ -1197,7 +1298,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_flower",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 87
         },
         {
           "stage": 33,
@@ -1208,7 +1309,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_fire_spiky",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 81
         },
         {
           "stage": 34,
@@ -1219,7 +1320,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rock_golem",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 78
         },
         {
           "stage": 35,
@@ -1230,7 +1331,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_flower",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 89
         },
         {
           "stage": 36,
@@ -1241,7 +1342,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_fire_spiky",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 84
         },
         {
           "stage": 37,
@@ -1252,7 +1353,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rock_golem",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 81
         },
         {
           "stage": 38,
@@ -1263,7 +1364,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_flower",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 91
         },
         {
           "stage": 39,
@@ -1274,7 +1375,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_fire_spiky",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 85
         },
         {
           "stage": 40,
@@ -1285,7 +1386,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_dino",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 89
         },
         {
           "stage": 41,
@@ -1296,7 +1397,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_penguin",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 78
         },
         {
           "stage": 42,
@@ -1307,7 +1408,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_snowman",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 91
         },
         {
           "stage": 43,
@@ -1318,7 +1419,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_snake",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 79
         },
         {
           "stage": 44,
@@ -1329,7 +1430,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_penguin",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 82
         },
         {
           "stage": 45,
@@ -1340,7 +1441,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_snowman",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 94
         },
         {
           "stage": 46,
@@ -1351,7 +1452,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_snake",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 82
         },
         {
           "stage": 47,
@@ -1362,7 +1463,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_penguin",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 84
         },
         {
           "stage": 48,
@@ -1373,7 +1474,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_snowman",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 99
         },
         {
           "stage": 49,
@@ -1384,7 +1485,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_snake",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 85
         },
         {
           "stage": 50,
@@ -1395,7 +1496,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_shadow_ghost",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 96
         },
         {
           "stage": 51,
@@ -1406,7 +1507,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_car",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 82
         },
         {
           "stage": 52,
@@ -1428,7 +1529,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rainbow_robot",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 87
         },
         {
           "stage": 54,
@@ -1439,7 +1540,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_car",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 85
         },
         {
           "stage": 55,
@@ -1450,7 +1551,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_train",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 91
         },
         {
           "stage": 56,
@@ -1461,7 +1562,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rainbow_robot",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 88
         },
         {
           "stage": 57,
@@ -1472,7 +1573,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_car",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 87
         },
         {
           "stage": 58,
@@ -1483,7 +1584,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_train",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 93
         },
         {
           "stage": 59,
@@ -1494,7 +1595,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rainbow_robot",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 91
         },
         {
           "stage": 60,
@@ -1505,7 +1606,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_ufo",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 91
         },
         {
           "stage": 61,
@@ -1516,7 +1617,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_crab",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 75
         },
         {
           "stage": 62,
@@ -1527,7 +1628,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cactus",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 86
         },
         {
           "stage": 63,
@@ -1538,7 +1639,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_thunder_star",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 82
         },
         {
           "stage": 64,
@@ -1549,7 +1650,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_crab",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 77
         },
         {
           "stage": 65,
@@ -1560,7 +1661,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cactus",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 87
         },
         {
           "stage": 66,
@@ -1571,7 +1672,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_thunder_star",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 86
         },
         {
           "stage": 67,
@@ -1582,7 +1683,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_crab",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 80
         },
         {
           "stage": 68,
@@ -1593,7 +1694,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cactus",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 90
         },
         {
           "stage": 69,
@@ -1604,7 +1705,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_thunder_star",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 87
         },
         {
           "stage": 70,
@@ -1615,7 +1716,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_shadow_bat",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 88
         },
         {
           "stage": 71,
@@ -1626,7 +1727,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 80
         },
         {
           "stage": 72,
@@ -1637,7 +1738,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_cat",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 82
         },
         {
           "stage": 73,
@@ -1648,7 +1749,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rocket",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 94
         },
         {
           "stage": 74,
@@ -1659,7 +1760,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 83
         },
         {
           "stage": 75,
@@ -1670,7 +1771,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_cat",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 85
         },
         {
           "stage": 76,
@@ -1681,7 +1782,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rocket",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 96
         },
         {
           "stage": 77,
@@ -1692,7 +1793,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 85
         },
         {
           "stage": 78,
@@ -1703,7 +1804,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_cat",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 89
         },
         {
           "stage": 79,
@@ -1714,7 +1815,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rocket",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 98
         },
         {
           "stage": 80,
@@ -1725,7 +1826,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_castle",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 92
         },
         {
           "stage": 81,
@@ -1736,7 +1837,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cloud",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 84
         },
         {
           "stage": 82,
@@ -1747,7 +1848,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_bird",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 86
         },
         {
           "stage": 83,
@@ -1758,7 +1859,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_kite",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 88
         },
         {
           "stage": 84,
@@ -1769,7 +1870,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cloud",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 87
         },
         {
           "stage": 85,
@@ -1780,7 +1881,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_bird",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 89
         },
         {
           "stage": 86,
@@ -1791,7 +1892,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_kite",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 91
         },
         {
           "stage": 87,
@@ -1802,7 +1903,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cloud",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 89
         },
         {
           "stage": 88,
@@ -1813,7 +1914,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_bird",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 92
         },
         {
           "stage": 89,
@@ -1824,7 +1925,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_kite",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 94
         },
         {
           "stage": 90,
@@ -1835,7 +1936,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 96
         },
         {
           "stage": 91,
@@ -1846,7 +1947,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 84
         },
         {
           "stage": 92,
@@ -1857,7 +1958,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 82
         },
         {
           "stage": 93,
@@ -1868,7 +1969,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 89
         },
         {
           "stage": 94,
@@ -1879,7 +1980,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 85
         },
         {
           "stage": 95,
@@ -1890,7 +1991,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 83
         },
         {
           "stage": 96,
@@ -1901,7 +2002,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 91
         },
         {
           "stage": 97,
@@ -1912,7 +2013,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 88
         },
         {
           "stage": 98,
@@ -1923,7 +2024,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 86
         },
         {
           "stage": 99,
@@ -1934,7 +2035,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 94
         },
         {
           "stage": 100,
@@ -1945,7 +2046,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_scribble_king",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 88
         }
       ]
     },

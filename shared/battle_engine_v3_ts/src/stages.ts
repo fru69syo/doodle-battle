@@ -3,9 +3,11 @@
  * app/lib/domain/battle_v3/stages.dart.
  */
 import type { AiTier } from './ai';
+import { STAGE_POWER_TABLE } from './stagePowerTable';
+
+export { STAGE_POWER_TABLE };
 
 export const STAGE_POWER_PCT = [88, 89, 90, 91, 92, 93, 94, 95, 96, 98] as const;
-export const STRONG_TIER_POWER_ADJUST_PCT = 0;
 
 export const WORLD_NAMES = [
   'らくがき のはら',
@@ -55,7 +57,6 @@ export function stageAt(n: number): Stage {
   const roster = WORLD_ROSTERS[world - 1]!;
   const boss = pos === 10;
   const tier = stageTier(n);
-  const adjust = tier === 'strong' ? STRONG_TIER_POWER_ADJUST_PCT : 0;
   return {
     stage: n,
     world,
@@ -65,7 +66,7 @@ export function stageAt(n: number): Stage {
     aiTier: tier,
     cpuId: boss ? roster[roster.length - 1]! : roster[(pos - 1) % (roster.length - 1)]!,
     boss,
-    cpuPowerPct: STAGE_POWER_PCT[pos - 1]! - adjust,
+    cpuPowerPct: STAGE_POWER_TABLE[n - 1]!,
   };
 }
 
