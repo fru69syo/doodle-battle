@@ -74,7 +74,7 @@ void main() {
     expect(pre.stats, b.statsAt(50, preForm: true));
     final post = ratedSetup(s, b, actualLevel: 60);
     expect(post.stats, b.statsAt(50));
-    final sum = (List<int> x) => x.fold<int>(0, (a, v) => a + v);
+    int sum(List<int> x) => x.fold<int>(0, (a, v) => a + v);
     expect(sum(pre.stats), lessThan(sum(post.stats)));
   });
 

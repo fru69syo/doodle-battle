@@ -187,7 +187,7 @@ void main() {
     expect(d.moveSet, 1);
     expect(d.moves, isEmpty);
     expect(d.allMoves().first.name, isNot('ぴょんパンチ'));
-    final sum = (List<int> x) => x.fold<int>(0, (a, v) => a + v);
+    int sum(List<int> x) => x.fold<int>(0, (a, v) => a + v);
     expect(sum(d.stats()), greaterThan(sum(c.copyWith(level: 49).stats()) * 2));
   });
 
