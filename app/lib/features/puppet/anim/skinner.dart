@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import '../rig/rig.dart';
-import '../rig/rigged_character.dart';
+import '../mesh/puppet_mesh.dart';
+import '../rig/character_rig.dart';
 
 /// 2D affine map: x' = a·x + c·y + e, y' = b·x + d·y + f.
 class Affine {
@@ -84,7 +84,7 @@ class Skinner {
     : _m = Float64List(c.bones.length * 6),
       out = Float32List(c.rest.length);
 
-  final RiggedCharacter c;
+  final PuppetMesh c;
   final Float64List _m;
 
   /// Posed vertex positions (screen space) after [skin].
@@ -166,7 +166,10 @@ class Skinner {
   (double, double) limbTip(int limb, RigLimb l) {
     for (var i = 0; i < c.bones.length; i++) {
       final bn = c.bones[i];
-      if (bn.limb == limb && (bn.segment == 1 || l.kind == LimbKind.head)) {
+      if (bn.limb == limb &&
+          (bn.segment == 1 ||
+              l.kind == LimbKind.head ||
+              l.kind == LimbKind.item)) {
         return bone(i).apply(l.tip.x, l.tip.y);
       }
     }

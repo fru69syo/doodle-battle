@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import '../rig/rig.dart';
+import '../rig/character_rig.dart';
 import 'skinner.dart';
 
 /// Procedural clips. Every clip works on any rig: limbs move by kind, and
@@ -9,6 +9,9 @@ import 'skinner.dart';
 enum Anim {
   idle,
   walk,
+
+  /// Bouncy hop in place (happy, waiting to act).
+  hop,
 
   /// Arm swing (punch / slap); kick when there are legs but no arms;
   /// tackle for blobs.
@@ -28,6 +31,12 @@ enum Anim {
   hit,
   faint,
   victory,
+
+  /// Limbless / simple look: squash down and spring back (a "boing").
+  squash,
+
+  /// Limbless / simple look: jelly wobble in place.
+  wobble,
 }
 
 /// Lengths (s) and the moment the blow lands.
@@ -39,6 +48,7 @@ const kAnimLength = {
   Anim.shoot: 0.7,
   Anim.hit: 0.5,
   Anim.faint: 1.1,
+  Anim.squash: 0.6,
 };
 const kAnimImpact = {
   Anim.swing: 0.3,
@@ -132,6 +142,14 @@ void evaluateAnim(Anim clip, double t, AnimContext c, int fwd, Pose p) {
     } else if (l.kind == LimbKind.extra) {
       p.a[i] = 0.1 * math.sin(2 * math.pi * t / 0.9 + i);
       p.b[i] = 0.14 * math.sin(2 * math.pi * t / 0.9 + i - 0.7);
+    } else if (l.kind == LimbKind.wing) {
+      // Flap away from the body: the rotation sign follows the side.
+      final side = l.tip.x < rig.root.x ? 1.0 : -1.0;
+      final fast = clip == Anim.jump || clip == Anim.victory ? 0.28 : 0.5;
+      p.a[i] = side * 0.35 * (0.5 + 0.5 * math.sin(2 * math.pi * t / fast));
+      p.b[i] = side * 0.2 * math.sin(2 * math.pi * t / fast - 0.8);
+    } else if (l.kind == LimbKind.item) {
+      p.a[i] = 0.06 * math.sin(2 * math.pi * t / 1.1 + i);
     }
   }
   final up = -math.pi / 2;
@@ -334,6 +352,44 @@ void evaluateAnim(Anim clip, double t, AnimContext c, int fwd, Pose p) {
         if (l.kind == LimbKind.arm) p.a[i] = 0.5 * fall * (i.isEven ? 1 : -1);
         if (l.kind == LimbKind.head) p.a[i] = 0.3 * fall * -fwd;
       }
+
+    case Anim.hop:
+      const period = 0.42;
+      final s = (math.sin(math.pi * t / period)).abs();
+      p.dy = -0.1 * k * s;
+      final contact = 1 - s;
+      p.sy = 1 - 0.1 * contact * contact + 0.05 * s;
+      p.sx = 1 / math.sqrt(p.sy);
+      for (final (i, l) in limbs.indexed) {
+        if (l.kind == LimbKind.arm) {
+          p.a[i] = 0.25 * k * s * (l.tip.x < rig.root.x ? 1 : -1);
+        } else if (l.kind == LimbKind.leg) {
+          p.b[i] = 0.25 * contact * fwd;
+        }
+      }
+      if (blob) {
+        p.wobble = 0.03;
+        p.wobblePhase = t * 14;
+      }
+
+    case Anim.squash:
+      final dn = _bump(t, 0, 0.22);
+      final up = _bump(t, 0.18, 0.48);
+      final settle = math.exp(-8 * math.max(0, t - 0.4)) *
+          math.sin(30 * math.max(0, t - 0.4));
+      p.sy = 1 - 0.28 * k * dn + 0.16 * k * up + 0.05 * settle;
+      p.sx = 1 / math.sqrt(p.sy);
+      p.dy = -0.12 * k * up;
+      p.wobble = 0.05 * (dn + up);
+      p.wobblePhase = t * 20;
+
+    case Anim.wobble:
+      final w = 2 * math.pi * t / 0.9;
+      p.wobble = 0.07 * k;
+      p.wobblePhase = w;
+      p.sy = 1 + 0.06 * k * math.sin(2 * w);
+      p.sx = 1 / math.sqrt(p.sy);
+      p.lean = 0.06 * math.sin(w);
 
     case Anim.victory:
       const period = 0.55;

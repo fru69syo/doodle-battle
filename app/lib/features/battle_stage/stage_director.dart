@@ -1,8 +1,7 @@
 import 'dart:math' as math;
 
-import '../../../domain/battle_v2/atb_engine.dart';
-import '../../../domain/battle_v2/moves_v2.dart';
-import '../anim/clips.dart';
+import '../puppet/anim/clips.dart';
+import 'stage_events.dart';
 
 /// Ground-plane camera of the 2.5D stage: a pinhole camera above the
 /// ground looking at it at a shallow angle. Only points on the ground are
@@ -59,8 +58,8 @@ enum _Intent { approach, circle, retreat, wait }
 enum FighterMode { roam, dash, act, back, hurt, down, win }
 
 /// What the renderer needs for one fighter this frame.
-class FighterView25 {
-  FighterView25(this.side, this.x, this.z);
+class StageFighter {
+  StageFighter(this.side, this.x, this.z);
   final int side;
   double x, z;
 
@@ -100,6 +99,7 @@ class Fx {
     this.duration = 0.6,
     this.side = 0,
     this.big = false,
+    this.scale = 1,
   });
   final String
   kind; // vfx name, or 'number', 'heal', 'miss', 'crit', 'status', 'ko'
@@ -111,14 +111,16 @@ class Fx {
   final double duration;
   final int side;
   final bool big;
+
+  /// Effect intensity (simple look 0.5, normal 1, でんせつ 1.4, ×1.25
+  /// for ひっさつ).
+  final double scale;
   double age = 0;
 }
 
 class _Action {
-  _Action(this.side, this.move, this.events, {required this.fast});
-  final int side;
-  final MoveV2 move;
-  final List<BattleEventV2> events;
+  _Action(this.e, {required this.fast});
+  final StageAction e;
   final bool fast;
   double t = 0;
   int hitsShown = 0;
@@ -126,22 +128,24 @@ class _Action {
   late double length;
   late Anim anim;
   bool resultsShown = false;
+  int get side => e.side;
+  StageMove get move => e.move;
 }
 
-/// Turns v3 ATB engine events into 2.5D choreography: auto-movement with
+/// Turns stage events (from an engine adapter, [StageFeed]) into 2.5D choreography: auto-movement with
 /// depth, dashes, clip choice per move template, impacts timed to the clip,
 /// per-move effects, a camera that pans/zooms/shakes. Pure Dart and
 /// deterministic per seed; the renderer only draws what it says. Online,
 /// the same director consumes the server's event stream (delayed 150–250
 /// ms), so nothing here is authoritative.
-class Director25 {
-  Director25({
+class StageDirector {
+  StageDirector({
     required this.contexts,
     int seed = 1,
     this.fxScale = const [1, 1],
     this.halfWidth = const [0.4, 0.4],
   }) : _rng = math.Random(seed),
-       fighters = [FighterView25(0, -1.2, 0.5), FighterView25(1, 1.2, 1.9)] {
+       fighters = [StageFighter(0, -1.2, 0.5), StageFighter(1, 1.2, 1.9)] {
     fighters[0].dir = 1;
     fighters[1].dir = -1;
     _frame(snap: true);
@@ -156,7 +160,7 @@ class Director25 {
   /// Per side half width of the drawing (world units): wide animals and
   /// cars need more room to be hit without overlapping.
   final List<double> halfWidth;
-  final List<FighterView25> fighters;
+  final List<StageFighter> fighters;
   final math.Random _rng;
   final camera = StageCamera();
   final List<Fx> fx = [];
@@ -172,70 +176,58 @@ class Director25 {
   double _focus = 0; // 0..1 camera punch-in
   int _variant = 0;
 
+  /// Camera shake strength (0 turns it off, e.g. for reduced motion).
+  double shakeScale = 1;
+
   static const xMin = -2.2, xMax = 2.2;
 
   /// Screen size the camera frames for (set by the painter).
   double viewW = 393, viewH = 851;
   static const zNear = [0.15, 1.2], zFar = [1.4, 2.8];
 
-  /// Feeds one engine event (in tick order).
-  void handle(BattleEventV2 e, AtbBattle battle) {
-    final d = e.data;
-    switch (e.type) {
-      case 'choose':
-        final side = d['side']! as int;
-        if ((d['cast']! as int) > 0) fighters[side].charging = true;
-      case 'move':
-        final side = d['side']! as int;
-        final slot = d['slot']! as int;
-        fighters[side].charging = false;
-        final idx = battle.events.indexOf(e);
-        final results = <BattleEventV2>[];
-        for (var i = idx + 1; i < battle.events.length; i++) {
-          final r = battle.events[i];
-          if (r.tick != e.tick || r.type == 'move') break;
-          if (r.type == 'damage' && r.data['cause'] == 'poison') continue;
-          results.add(r);
-        }
-        _queue.add(
-          _Action(
-            side,
-            battle.fighters[side].moves[slot],
-            results,
-            fast: _queue.isNotEmpty || _current != null,
-          ),
-        );
-      case 'damage' when d['cause'] == 'poison':
-        final t = d['target']! as int;
-        final f = fighters[t];
-        f.shownHp = (d['hp']! as int).toDouble();
+  /// Feeds one event (in order).
+  void handle(StageEvent e) {
+    switch (e) {
+      case StageChoose(:final side, :final castSeconds):
+        if (castSeconds > 0) fighters[side].charging = true;
+      case StageAction():
+        fighters[e.side].charging = false;
+        _queue.add(_Action(e, fast: _queue.isNotEmpty || _current != null));
+      case StagePoisonTick(:final target, :final amount, :final hpAfter):
+        final f = fighters[target];
+        f.shownHp = hpAfter.toDouble();
         fx.add(
           Fx(
             'number',
             f.x,
             f.z,
             y: 1.1,
-            value: d['amount']! as int,
+            value: amount,
             colour: 'purple',
             duration: 0.8,
-            side: t,
+            side: target,
           ),
         );
-      case 'end':
+      case StageEnd(:final winner):
         // Shown once the last action has played out.
-        _pendingWinner = d['winner']! as int;
+        _pendingWinner = winner;
+      case StageReady():
+        break;
     }
   }
 
-  /// Per-frame status mirror from the engine (icons, shield bubble).
-  void syncStatus(AtbBattle b) {
+  /// Per-frame status mirror (status visuals, shield bubble).
+  void syncStatus(List<StageFighterState> states) {
     for (var i = 0; i < 2; i++) {
-      final f = b.fighters[i];
-      fighters[i].poisoned = f.poisonTicks > 0;
-      fighters[i].paralyzed = f.paralyzeTicks > 0;
-      fighters[i].shield = f.shieldTicks > 0 ? f.shieldPct / 100 : 0;
+      final f = states[i];
+      fighters[i].poisoned = f.poisoned;
+      fighters[i].paralyzed = f.paralyzed;
+      fighters[i].shield = f.shield;
     }
   }
+
+  /// True while an action is playing or queued.
+  bool get busy => _current != null || _queue.isNotEmpty;
 
   void update(double dt) {
     time += dt;
@@ -275,7 +267,7 @@ class Director25 {
 
   // --- movement ------------------------------------------------------------
 
-  void _updateFighter(FighterView25 f, double dt) {
+  void _updateFighter(StageFighter f, double dt) {
     final o = fighters[1 - f.side];
     if (f.lift > 0 && f.mode != FighterMode.act) {
       f.lift = math.max(0, f.lift - dt * 2.5);
@@ -348,7 +340,7 @@ class Director25 {
     }
   }
 
-  void _setAnim(FighterView25 f, Anim a, {bool restart = false}) {
+  void _setAnim(StageFighter f, Anim a, {bool restart = false}) {
     if (f.anim == a && !restart) return;
     f.anim = a;
     f.animT = 0;
@@ -362,31 +354,36 @@ class Director25 {
     _home[a.side] = (f.x, f.z);
     final m = a.move;
     final ctx = contexts[a.side];
-    if (m.kind == MoveKind.physical) {
-      a.anim = ctx.physicalClip(_variant++);
-      final dash = a.fast ? 0.0 : 0.28;
-      a.impactAt = dash + (kAnimImpact[a.anim] ?? 0.3);
-      a.length =
-          dash +
-          (kAnimLength[a.anim] ?? 0.7) +
-          (a.fast ? 0.1 : 0.3) +
-          0.12 * (m.hits - 1);
-      f.mode = a.fast ? FighterMode.act : FighterMode.dash;
-    } else if (m.kind == MoveKind.special ||
-        m.kind == MoveKind.debuff ||
-        m.kind == MoveKind.status) {
-      a.anim = Anim.shoot;
-      a.impactAt = 0.3 + 0.32; // shoot + travel
-      a.length = 0.95 + 0.12 * (m.hits - 1);
-      f.mode = FighterMode.act;
-    } else {
-      a.anim = Anim.cast;
-      a.impactAt = 0.45;
-      a.length = 0.85;
-      f.mode = FighterMode.act;
+    switch (m.kind) {
+      case StageMoveKind.physical:
+        a.anim = ctx.physicalClip(_variant++);
+        final dash = a.fast ? 0.0 : 0.28;
+        a.impactAt = dash + (kAnimImpact[a.anim] ?? 0.3);
+        a.length =
+            dash +
+            (kAnimLength[a.anim] ?? 0.7) +
+            (a.fast ? 0.1 : 0.3) +
+            0.12 * (m.hits - 1);
+        f.mode = a.fast ? FighterMode.act : FighterMode.dash;
+      case StageMoveKind.ranged:
+        a.anim = Anim.shoot;
+        a.impactAt = 0.3 + 0.32; // shoot + travel
+        a.length = 0.95 + 0.12 * (m.hits - 1);
+        f.mode = FighterMode.act;
+      case StageMoveKind.self:
+        a.anim = Anim.cast;
+        a.impactAt = 0.45;
+        a.length = 0.85;
+        f.mode = FighterMode.act;
     }
     if (f.mode == FighterMode.act) _setAnim(f, a.anim, restart: true);
   }
+
+  static String _effText(StageEffectiveness e) => switch (e) {
+    StageEffectiveness.strong => 'ばつぐん！',
+    StageEffectiveness.weak => 'いまひとつ…',
+    StageEffectiveness.normal => '',
+  };
 
   void _runAction(_Action a, double dt) {
     a.t += dt;
@@ -396,8 +393,8 @@ class Director25 {
     _focus = math.min(1, _focus + dt * 4);
     f.dir = o.x >= f.x ? 1 : -1;
     if (f.mode == FighterMode.dash) {
-      // Run to the target, stopping at contact distance.
-      // Close enough that a swung arm reaches the other drawing.
+      // Run to the target, stopping where a swung arm reaches the other
+      // drawing.
       final tx = o.x - f.dir * (0.55 * (halfWidth[0] + halfWidth[1]) + 0.15);
       final tz = o.z + (a.side == 0 ? -0.12 : 0.12);
       final k = math.min(1.0, dt * 9);
@@ -409,100 +406,94 @@ class Director25 {
         _setAnim(f, a.anim, restart: true);
       }
     }
-    final scale = fxScale[a.side];
-    // Effects at the start of a projectile / cast.
-    if (m.kind != MoveKind.physical && a.t - dt < 0.3 && a.t >= 0.3) {
-      if (m.kind == MoveKind.special ||
-          m.kind == MoveKind.debuff ||
-          m.kind == MoveKind.status) {
-        fx.add(
-          Fx(
-            m.vfx,
-            f.x + f.dir * 0.35,
-            f.z,
-            y: 0.65,
-            tx: o.x,
-            tz: o.z,
-            colour: m.colour,
-            duration: 0.34,
-            side: a.side,
-            big: scale > 1.2,
-          ),
-        );
-      }
+    final scale = fxScale[a.side] * (m.special ? 1.25 : 1);
+    final big = scale > 1.2;
+    // Projectile leaves the hand.
+    if (m.kind == StageMoveKind.ranged && a.t - dt < 0.3 && a.t >= 0.3) {
+      fx.add(
+        Fx(
+          m.vfx,
+          f.x + f.dir * 0.35,
+          f.z,
+          y: 0.65,
+          tx: o.x,
+          tz: o.z,
+          colour: m.colour,
+          duration: 0.34,
+          side: a.side,
+          big: big,
+          scale: scale,
+        ),
+      );
     }
-    if (m.kind == MoveKind.heal ||
-        m.kind == MoveKind.buff ||
-        m.kind == MoveKind.shield) {
-      if (a.t - dt < 0.05 && a.t >= 0.05 || a.t < dt) {
-        fx.add(
-          Fx(
-            m.vfx,
-            f.x,
-            f.z,
-            y: 0.6,
-            colour: m.colour,
-            duration: 0.9,
-            side: a.side,
-            big: scale > 1.2,
-          ),
-        );
-      }
+    if (m.kind == StageMoveKind.self && (a.t - dt < 0.05 && a.t >= 0.05)) {
+      fx.add(
+        Fx(
+          m.vfx,
+          f.x,
+          f.z,
+          y: 0.6,
+          colour: m.colour,
+          duration: 0.9,
+          side: a.side,
+          big: big,
+          scale: scale,
+        ),
+      );
     }
     // Impacts: one per hit, 0.12 s apart.
-    final hits = a.events
-        .where((e) => e.type == 'damage' || e.type == 'miss')
-        .toList();
+    final hits = a.e.hits;
     while (a.hitsShown < math.max(1, hits.length) &&
         a.t >= a.impactAt + 0.12 * a.hitsShown) {
-      final e = hits.isEmpty ? null : hits[a.hitsShown];
+      final h = hits.isEmpty ? null : hits[a.hitsShown];
       a.hitsShown++;
-      if (e == null) break;
-      if (e.type == 'damage') {
-        final t = e.data['target']! as int;
-        final tf = fighters[t];
-        tf.shownHp = (e.data['hp']! as int).toDouble();
-        final crit = a.events.any((x) => x.type == 'crit');
+      if (h == null) break;
+      final tf = fighters[h.target];
+      if (h.missed) {
         fx.add(
           Fx(
-            'number',
+            'miss',
             tf.x,
             tf.z,
-            y: 1.15,
-            value: e.data['amount']! as int,
-            colour: crit ? 'orange' : 'white',
-            duration: 0.9,
-            side: t,
-            big: crit,
+            y: 1.3,
+            text: 'はずれ',
+            duration: 0.8,
+            side: h.target,
           ),
         );
-        if (m.kind == MoveKind.physical) {
-          fx.add(
-            Fx(
-              m.vfx,
-              tf.x - f.dir * 0.15,
-              tf.z,
-              y: 0.55,
-              colour: m.colour,
-              duration: 0.45,
-              side: a.side,
-              big: scale > 1.2,
-            ),
-          );
-        } else {
-          fx.add(
-            Fx(
-              'burst',
-              tf.x,
-              tf.z,
-              y: 0.55,
-              colour: m.colour,
-              duration: 0.4,
-              side: a.side,
-            ),
-          );
-        }
-        if (crit && a.hitsShown == 1) {
+        continue;
+      }
+      if (h.hpAfter != null) tf.shownHp = h.hpAfter!.toDouble();
+      fx.add(
+        Fx(
+          'number',
+          tf.x,
+          tf.z,
+          y: 1.15,
+          value: h.amount!,
+          colour: h.crit
+              ? 'orange'
+              : (h.effectiveness == StageEffectiveness.weak ? 'grey' : 'white'),
+          duration: 0.9,
+          side: h.target,
+          big: h.crit || h.effectiveness == StageEffectiveness.strong,
+        ),
+      );
+      fx.add(
+        Fx(
+          m.kind == StageMoveKind.physical ? m.vfx : 'burst',
+          tf.x - f.dir * 0.15,
+          tf.z,
+          y: 0.55,
+          colour: m.colour,
+          duration: m.kind == StageMoveKind.physical ? 0.45 : 0.4,
+          side: a.side,
+          big: big,
+          scale: scale,
+        ),
+      );
+      if (a.hitsShown == 1) {
+        if (h.crit) {
           fx.add(
             Fx(
               'crit',
@@ -511,88 +502,89 @@ class Director25 {
               y: 1.5,
               text: 'かいしん！',
               duration: 0.9,
-              side: t,
+              side: h.target,
             ),
           );
         }
-        if (tf.mode != FighterMode.down) {
-          tf.mode = FighterMode.hurt;
-          _setAnim(tf, Anim.hit, restart: true);
-          tf.x = (tf.x + f.dir * 0.18).clamp(xMin, xMax);
-          tf.lift = 0.12;
+        final eff = _effText(h.effectiveness);
+        if (eff.isNotEmpty) {
+          fx.add(
+            Fx(
+              h.effectiveness == StageEffectiveness.strong ? 'strong' : 'weak',
+              tf.x,
+              tf.z,
+              y: h.crit ? 1.85 : 1.55,
+              text: eff,
+              duration: 1.0,
+              side: h.target,
+            ),
+          );
         }
-        _shake = math.max(_shake, (crit ? 14.0 : 8.0) * scale.clamp(0.6, 1.4));
-      } else {
-        fx.add(
-          Fx(
-            'miss',
-            o.x,
-            o.z,
-            y: 1.3,
-            text: 'はずれ',
-            duration: 0.8,
-            side: 1 - a.side,
-          ),
-        );
       }
+      if (tf.mode != FighterMode.down) {
+        tf.mode = FighterMode.hurt;
+        _setAnim(tf, Anim.hit, restart: true);
+        tf.x = (tf.x + f.dir * 0.18).clamp(xMin, xMax);
+        tf.lift = 0.12;
+      }
+      final strong = h.crit || h.effectiveness == StageEffectiveness.strong;
+      _shake = math.max(
+        _shake,
+        (strong ? 14.0 : 8.0) * scale.clamp(0.6, 1.4) * shakeScale,
+      );
     }
     if (!a.resultsShown && a.t >= a.impactAt) {
       a.resultsShown = true;
-      for (final e in a.events) {
-        switch (e.type) {
-          case 'heal':
-            final s = e.data['side']! as int;
-            fighters[s].shownHp = (e.data['hp']! as int).toDouble();
+      for (final e in a.e.outcomes) {
+        switch (e) {
+          case StageHealed(:final side, :final amount, :final hpAfter):
+            fighters[side].shownHp = hpAfter.toDouble();
             fx.add(
               Fx(
                 'heal',
-                fighters[s].x,
-                fighters[s].z,
+                fighters[side].x,
+                fighters[side].z,
                 y: 1.15,
-                value: e.data['amount']! as int,
+                value: amount,
                 colour: 'green',
                 duration: 0.9,
-                side: s,
+                side: side,
               ),
             );
-          case 'status':
-            final t = e.data['target']! as int;
+          case StageStatus(:final target, :final status):
             fx.add(
               Fx(
                 'status',
-                fighters[t].x,
-                fighters[t].z,
+                fighters[target].x,
+                fighters[target].z,
                 y: 1.45,
-                text: e.data['status'] == 'poison' ? 'ねばねば！' : 'ビリビリ！',
+                text: status == StageStatusKind.poison ? 'ねばねば！' : 'ビリビリ！',
                 duration: 1.0,
-                side: t,
+                side: target,
               ),
             );
-          case 'stage':
-            final s = e.data['side']! as int;
-            final up = (e.data['stage']! as int) > 0;
+          case StageStatChange(:final side, :final up):
             fx.add(
               Fx(
                 up ? 'up' : 'down',
-                fighters[s].x,
-                fighters[s].z,
+                fighters[side].x,
+                fighters[side].z,
                 y: 1.4,
                 text: up ? 'パワーアップ！' : 'よわくなった',
                 duration: 1.0,
-                side: s,
+                side: side,
               ),
             );
-          case 'shield':
-            final s = e.data['side']! as int;
+          case StageShieldUp(:final side):
             fx.add(
               Fx(
                 'status',
-                fighters[s].x,
-                fighters[s].z,
+                fighters[side].x,
+                fighters[side].z,
                 y: 1.45,
                 text: 'まもり！',
                 duration: 1.0,
-                side: s,
+                side: side,
               ),
             );
         }
@@ -601,7 +593,7 @@ class Director25 {
     // Return home after the clip.
     final animEnd = a.length - (a.fast ? 0.1 : 0.3);
     if (a.t >= animEnd &&
-        m.kind == MoveKind.physical &&
+        m.kind == StageMoveKind.physical &&
         f.mode == FighterMode.act) {
       f.mode = FighterMode.back;
       _setAnim(f, Anim.walk);

@@ -6,14 +6,14 @@ import 'package:flutter/painting.dart';
 
 import '../anim/clips.dart';
 import '../anim/skinner.dart';
-import '../rig/rigged_character.dart';
+import '../mesh/puppet_mesh.dart';
 
-/// Draws a [RiggedCharacter] with `Canvas.drawVertices` + an `ImageShader`
+/// Draws a [PuppetMesh] with `Canvas.drawVertices` + an `ImageShader`
 /// of the drawing. This is plain 2D canvas work: it runs on Skia with
 /// GLES 2 (Android 7–9) and on Impeller (Android 10+, iOS Metal) alike —
 /// no Flutter GPU, no shaders of our own.
-class CharacterSprite {
-  CharacterSprite._(this.data, this.image)
+class PuppetSprite {
+  PuppetSprite._(this.data, this.image)
     : skinner = Skinner(data),
       clip = AnimContext(data.rig, limited: data.simplified),
       pose = Pose(data.rig.limbs.length),
@@ -45,7 +45,7 @@ class CharacterSprite {
           filterQuality: FilterQuality.medium,
         );
 
-  static Future<CharacterSprite> create(RiggedCharacter data) async {
+  static Future<PuppetSprite> create(PuppetMesh data) async {
     final c = Completer<ui.Image>();
     ui.decodeImageFromPixels(
       data.textureRgba,
@@ -54,10 +54,10 @@ class CharacterSprite {
       ui.PixelFormat.rgba8888,
       c.complete,
     );
-    return CharacterSprite._(data, await c.future);
+    return PuppetSprite._(data, await c.future);
   }
 
-  final RiggedCharacter data;
+  final PuppetMesh data;
   final ui.Image image;
   final Skinner skinner;
   final AnimContext clip;

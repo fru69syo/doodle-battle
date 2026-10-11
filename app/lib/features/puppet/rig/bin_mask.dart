@@ -211,6 +211,78 @@ class BinMask {
     return out;
   }
 
+  /// Keeps the largest component plus every component of at least
+  /// [minFraction] of its area that lies within [maxGap] px of it, joined
+  /// to it by a thin bridge (kids draw hands, hats and feet that do not
+  /// quite touch the body). Farther or smaller bits are dropped.
+  BinMask largestBridged({double minFraction = 0.03, double maxGap = 12}) {
+    final (lab, sizes) = labels();
+    if (sizes.length <= 1) return copy();
+    var best = 1;
+    for (var i = 2; i < sizes.length; i++) {
+      if (sizes[i] > sizes[best]) best = i;
+    }
+    final out = BinMask(w, h);
+    final main = Uint8List(w * h);
+    for (var i = 0; i < w * h; i++) {
+      if (lab[i] == best) {
+        out.data[i] = 1;
+        main[i] = 1;
+      }
+    }
+    if (sizes.length == 2) return out;
+    final d2 = squaredDistanceTransform(main, w, h);
+    final nearest = <int, int>{}; // component → its pixel nearest to main
+    for (var i = 0; i < w * h; i++) {
+      final l = lab[i];
+      if (l == 0 || l == best || sizes[l] < minFraction * sizes[best]) {
+        continue;
+      }
+      final cur = nearest[l];
+      if (cur == null || d2[i] < d2[cur]) nearest[l] = i;
+    }
+    for (final MapEntry(key: l, value: p) in nearest.entries) {
+      final gap = math.sqrt(d2[p]);
+      if (gap > maxGap) continue;
+      for (var i = 0; i < w * h; i++) {
+        if (lab[i] == l) out.data[i] = 1;
+      }
+      // Nearest main pixel to p (search the gap-sized window).
+      final px = p % w, py = p ~/ w;
+      final r = gap.ceil() + 1;
+      var q = -1;
+      var bd = double.infinity;
+      for (var y = math.max(0, py - r); y <= math.min(h - 1, py + r); y++) {
+        for (var x = math.max(0, px - r); x <= math.min(w - 1, px + r); x++) {
+          if (main[y * w + x] == 0) continue;
+          final dd = ((x - px) * (x - px) + (y - py) * (y - py)).toDouble();
+          if (dd < bd) {
+            bd = dd;
+            q = y * w + x;
+          }
+        }
+      }
+      if (q >= 0) out.line(px, py, q % w, q ~/ w, 1);
+    }
+    return out;
+  }
+
+  /// Draws a line of radius [r] px (foreground).
+  void line(int x0, int y0, int x1, int y1, int r) {
+    final n = math.max((x1 - x0).abs(), (y1 - y0).abs());
+    for (var i = 0; i <= n; i++) {
+      final t = n == 0 ? 0.0 : i / n;
+      final cx = (x0 + (x1 - x0) * t).round(), cy = (y0 + (y1 - y0) * t).round();
+      for (var y = cy - r; y <= cy + r; y++) {
+        for (var x = cx - r; x <= cx + r; x++) {
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > r * r) continue;
+          data[y * w + x] = 1;
+        }
+      }
+    }
+  }
+
   /// Euclidean distance (px) from every foreground pixel to the nearest
   /// background pixel (0 on the background).
   Float64List insideDistance() {

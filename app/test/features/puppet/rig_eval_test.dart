@@ -4,10 +4,10 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
-import 'package:doodle_battle/features/spike25d/rig/auto_rig.dart';
-import 'package:doodle_battle/features/spike25d/rig/bin_mask.dart';
-import 'package:doodle_battle/features/spike25d/rig/rig.dart';
-import 'package:doodle_battle/features/spike25d/rig/rigged_character.dart';
+import 'package:doodle_battle/features/puppet/mesh/puppet_mesh.dart';
+import 'package:doodle_battle/features/puppet/rig/auto_rig.dart';
+import 'package:doodle_battle/features/puppet/rig/bin_mask.dart';
+import 'package:doodle_battle/features/puppet/rig/character_rig.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
@@ -16,17 +16,19 @@ import 'package:image/image.dart' as img;
 ///
 ///   AD_DIR=/home/user/datasets/ad_meta \
 ///   AD_ANN=/home/user/datasets/ad_meta_ann/sample_annotations.json \
-///   AD_OUT=/tmp/rig_eval flutter test test/features/spike25d/rig_eval_test.dart
+///   AD_OUT=/tmp/rig_eval flutter test test/features/puppet/rig_eval_test.dart
 ///
 /// Mode `gt`: the dataset's own segmentation mask (isolates the rigger).
 /// Mode `app`: the app's own cut-out silhouette (Vision pipeline), for
 /// pictures where no paper warp happened (same coordinates as the GT).
+/// A `-spike` suffix (`gt-spike`, `app-spike`) runs the spike's rules
+/// (AutoRigOptions.spike) for before/after numbers.
 /// Skipped when AD_DIR is not set.
 void main() {
   final dir = Platform.environment['AD_DIR'];
   final annPath = Platform.environment['AD_ANN'];
   final out = Platform.environment['AD_OUT'];
-  final modes = (Platform.environment['AD_MODES'] ?? 'gt,app').split(',');
+  final modes = (Platform.environment['AD_MODES'] ?? 'gt-spike,gt,app-spike,app').split(',');
   final limit = int.tryParse(Platform.environment['AD_LIMIT'] ?? '') ?? 1000;
 
   test('auto-rig accuracy on Amateur Drawings', () {
@@ -58,12 +60,18 @@ void main() {
           .map((e) => (e as num).toDouble())
           .toList();
       final norm = math.max(bbox[2], bbox[3]);
+      final rgbaImg = image.convert(numChannels: 4, format: img.Format.uint8);
+      final rgba = Uint8List.fromList(
+        rgbaImg.getBytes(order: img.ChannelOrder.rgba),
+      );
+      DrawingAnalysisReport? rep;
       for (final mode in modes) {
         BinMask? mask;
-        if (mode == 'gt') {
+        final spike = mode.endsWith('-spike');
+        if (mode.startsWith('gt')) {
           mask = _rasterPolygon(poly, w, h);
         } else {
-          final rep = analyzeDrawingSync(bytes);
+          rep ??= analyzeDrawingSync(bytes);
           if (rep.paperQuad != null) continue;
           final s = rep.silhouette;
           if (s.width != w || s.height != h) continue;
@@ -82,19 +90,23 @@ void main() {
         final env = Platform.environment;
         final r = autoRig(
           mask,
-          o: AutoRigOptions(
-            workSize: int.tryParse(env['AD_WORK'] ?? '') ?? 160,
-            protrusionRatio: double.tryParse(env['AD_RATIO'] ?? '') ?? 0.25,
-            minProtrusionFrac: double.tryParse(env['AD_MINP'] ?? '') ?? 0.03,
-          ),
+          rgba: rgba,
+          o: spike
+              ? AutoRigOptions.spike
+              : AutoRigOptions(
+                  workSize: int.tryParse(env['AD_WORK'] ?? '') ?? 160,
+                  inkHints: env['AD_INK'] != '0',
+                  bridgeGapFrac:
+                      double.tryParse(env['AD_BRIDGE'] ?? '') ?? 0.06,
+                ),
         );
         // Full character build (mesh + weights) timing on a cut-out.
         final sw = Stopwatch()..start();
-        final rgba = Uint8List(w * h * 4);
+        final cut = Uint8List(w * h * 4);
         for (var i = 0; i < w * h; i++) {
-          if (mask.data[i] != 0) rgba[i * 4 + 3] = 255;
+          if (mask.data[i] != 0) cut[i * 4 + 3] = 255;
         }
-        buildRiggedCharacter(rgba, w, h, rig: r.rig);
+        buildPuppetMesh(cut, w, h, rig: r.rig);
         final buildMs = sw.elapsedMicroseconds / 1000;
         final e = _Eval.of(r.rig, kp, norm, r.micros / 1000, buildMs);
         results[mode]!.add(e);
@@ -106,9 +118,14 @@ void main() {
           '${e.rigMs.toStringAsFixed(1)},${buildMs.toStringAsFixed(1)}',
         );
         if (out != null &&
-            mode == 'gt' &&
+            mode == (Platform.environment['AD_OV_MODE'] ?? 'gt') &&
             k <= int.parse(Platform.environment['AD_OV'] ?? '48')) {
-          _overlay(image, r, kp, '$out/ov_${k.toString().padLeft(3, '0')}.png');
+          _overlay(
+            image,
+            r,
+            kp,
+            '$out/ov_${k.toString().padLeft(3, '0')}.png',
+          );
         }
       }
     }
@@ -156,13 +173,13 @@ class _Eval {
     double rigMs,
     double buildMs,
   ) {
-    V2 p(int i) => V2(kp[i * 3], kp[i * 3 + 1]);
+    P2 p(int i) => P2(kp[i * 3], kp[i * 3 + 1]);
     final headGt = [0, 1, 2].map(p).reduce((a, b) => a + b) * (1 / 3);
     final head = rig.head;
     final arms = rig.of(LimbKind.arm).toList();
     final legs = rig.of(LimbKind.leg).toList()
       ..sort((a, b) => b.tip.y.compareTo(a.tip.y));
-    double pair(List<V2> pred, V2 l, V2 r) {
+    double pair(List<P2> pred, P2 l, P2 r) {
       if (pred.length < 2) {
         if (pred.isEmpty) return double.infinity;
         // One found: count it against the nearer GT, the other is a miss.
@@ -283,7 +300,19 @@ void _overlay(img.Image src, AutoRigResult r, List<double> kp, String path) {
     LimbKind.leg: img.ColorRgb8(0, 170, 0),
     LimbKind.tail: img.ColorRgb8(0, 170, 170),
     LimbKind.extra: img.ColorRgb8(120, 120, 0),
+    LimbKind.wing: img.ColorRgb8(120, 120, 255),
+    LimbKind.item: img.ColorRgb8(60, 60, 60),
   };
+  for (final h in r.hints) {
+    img.drawLine(
+      im,
+      x1: h.a.x.round(),
+      y1: h.a.y.round(),
+      x2: h.b.x.round(),
+      y2: h.b.y.round(),
+      color: img.ColorRgb8(0, 200, 255),
+    );
+  }
   final rig = r.rig;
   for (final l in rig.limbs) {
     final c = colors[l.kind]!;

@@ -3,17 +3,18 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
-import 'auto_rig.dart';
-import 'bin_mask.dart';
-import 'rig.dart';
+import '../rig/auto_rig.dart';
+import '../rig/bin_mask.dart';
+import '../rig/character_rig.dart';
+import '../rig/limb_hints.dart';
 
 /// Everything needed to draw and animate one character with
 /// `Canvas.drawVertices` (no 3D API): the texture, a triangle mesh over the
 /// drawing, the bones and per-vertex linear-blend-skinning weights.
 ///
 /// Pure Dart (no `dart:ui`) so it is built in an isolate and unit-tested.
-class RiggedCharacter {
-  RiggedCharacter({
+class PuppetMesh {
+  PuppetMesh({
     required this.rig,
     required this.bones,
     required this.textureRgba,
@@ -59,7 +60,7 @@ class RiggedCharacter {
       boneW.lengthInBytes;
 }
 
-/// Options for [buildRiggedCharacter].
+/// Options for [buildPuppetMesh].
 class BuildOptions {
   const BuildOptions({
     this.gridCells = 64,
@@ -87,29 +88,32 @@ class BuildOptions {
 
 /// Decodes a cut-out PNG and builds the rigged character (auto-rig unless
 /// [rig] is given, e.g. the stored / edited one).
-RiggedCharacter buildRiggedCharacterFromPng(
+PuppetMesh buildPuppetMeshFromPng(
   Uint8List png, {
   CharacterRig? rig,
+  List<HintStroke>? strokes,
   BuildOptions options = const BuildOptions(),
 }) {
   final im = img.decodePng(png) ?? img.decodeImage(png);
   if (im == null) throw const FormatException('not an image');
   final rgba = im.convert(numChannels: 4, format: img.Format.uint8);
-  return buildRiggedCharacter(
+  return buildPuppetMesh(
     Uint8List.fromList(rgba.getBytes(order: img.ChannelOrder.rgba)),
     im.width,
     im.height,
     rig: rig,
+    strokes: strokes,
     options: options,
   );
 }
 
 /// Builds from raw RGBA (straight alpha).
-RiggedCharacter buildRiggedCharacter(
+PuppetMesh buildPuppetMesh(
   Uint8List rgba,
   int w,
   int h, {
   CharacterRig? rig,
+  List<HintStroke>? strokes,
   BuildOptions options = const BuildOptions(),
 }) {
   final micros = <String, int>{};
@@ -120,15 +124,15 @@ RiggedCharacter buildRiggedCharacter(
   }
 
   final mask = BinMask.fromRgba(rgba, w, h);
-  var r = rig ?? autoRig(mask).rig;
+  var r = rig ?? autoRig(mask, rgba: rgba, strokes: strokes).rig;
   lap('rig');
   if (options.simplified) {
     // Body only: limbs are dropped so it moves like a simple blob.
     r = CharacterRig(
       width: r.width,
       height: r.height,
-      root: V2(r.width / 2, r.groundY - 0.1 * r.height),
-      chest: V2(r.width / 2, r.height * 0.4),
+      root: P2(r.width / 2, r.groundY - 0.1 * r.height),
+      chest: P2(r.width / 2, r.height * 0.4),
       limbs: [],
       ground: r.groundY,
       source: r.source,
@@ -140,7 +144,7 @@ RiggedCharacter buildRiggedCharacter(
   final tex = options.simplified
       ? _posterise(rgba, w, h, b)
       : _withBorder(rgba, w, h, b);
-  final shifted = _shift(r, b.toDouble());
+  final shifted = r.shifted(b.toDouble(), b.toDouble(), padW: 2.0 * b, padH: 2.0 * b);
   lap('texture');
   final texMask = BinMask.fromRgba(tex, tw, th, threshold: 1);
   final cells = options.simplified ? 14 : options.gridCells;
@@ -156,7 +160,7 @@ RiggedCharacter buildRiggedCharacter(
     options.weightPower,
   );
   lap('weights');
-  return RiggedCharacter(
+  return PuppetMesh(
     rig: shifted,
     bones: bones,
     textureRgba: tex,
@@ -168,22 +172,6 @@ RiggedCharacter buildRiggedCharacter(
     boneW: bw,
     micros: micros,
     simplified: options.simplified,
-  );
-}
-
-CharacterRig _shift(CharacterRig r, double d) {
-  V2 s(V2 p) => V2(p.x + d, p.y + d);
-  return CharacterRig(
-    width: r.width + 2 * d,
-    height: r.height + 2 * d,
-    root: s(r.root),
-    chest: s(r.chest),
-    limbs: [
-      for (final l in r.limbs)
-        RigLimb(l.kind, s(l.base), s(l.mid), s(l.tip))..edited = l.edited,
-    ],
-    ground: r.ground == null ? null : r.ground! + d,
-    source: r.source,
   );
 }
 
