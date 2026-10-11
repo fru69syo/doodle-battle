@@ -17,6 +17,11 @@ import { RealtimeServer } from "./server";
 async function main(): Promise<void> {
   const config = loadConfig();
   const log = createLogger({ level: parseSeverity(config.logLevel), pretty: config.logPretty });
+  // Log instead of crashing on a stray rejected promise (e.g. a library's background retry);
+  // a crash would drop every running match.
+  process.on("unhandledRejection", (reason) => {
+    log.error("unhandled rejection", { err: reason instanceof Error ? reason : String(reason) });
+  });
   const app = initializeApp(config.projectId ? { projectId: config.projectId } : undefined);
   const db = getFirestore(app);
   db.settings({ ignoreUndefinedProperties: true });

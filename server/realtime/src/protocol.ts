@@ -19,8 +19,8 @@ export const Hello = z
   .object({
     t: z.literal("hello"),
     proto: z.literal(PROTOCOL_VERSION),
-    idToken: z.string().min(10).max(4096),
-    appCheckToken: z.string().min(10).max(4096).optional(),
+    idToken: z.string().min(1).max(4096),
+    appCheckToken: z.string().min(1).max(4096).optional(),
     /** Last event `seq` the client applied, to resend what it missed after a reconnect. */
     lastSeq: z.number().int().min(0).max(1_000_000).optional(),
   })

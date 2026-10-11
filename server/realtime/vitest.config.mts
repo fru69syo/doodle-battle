@@ -19,6 +19,17 @@ export default defineConfig({
           hookTimeout: 15_000,
         },
       },
+      {
+        // Needs the Firestore emulator: `npm run test:firestore` (uses the firebase CLI from
+        // firebase/functions/node_modules or a global install).
+        test: {
+          name: "firestore",
+          include: ["test/firestore/**/*.test.ts"],
+          environment: "node",
+          fileParallelism: false,
+          testTimeout: 30_000,
+        },
+      },
     ],
   },
 });
