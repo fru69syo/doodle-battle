@@ -295,7 +295,8 @@ List<int> _kmeans(List<int> cols, int k) {
       var best = 0;
       var bd = double.infinity;
       for (var j = 0; j < k; j++) {
-        final d = math.pow(r - cs[j][0], 2) +
+        final d =
+            math.pow(r - cs[j][0], 2) +
             math.pow(g - cs[j][1], 2) +
             math.pow(bl - cs[j][2], 2);
         if (d < bd) {
@@ -389,9 +390,11 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
           ..add((vy * c).toDouble());
         final cid = cellIds.first;
         final px = math.min(w - 1, vx * c), py = math.min(h - 1, vy * c);
-        rep.add(m.data[py * w + px] != 0
-            ? py * w + px
-            : ((cid ~/ gx) * c) * w + (cid % gx) * c);
+        rep.add(
+          m.data[py * w + px] != 0
+              ? py * w + px
+              : ((cid ~/ gx) * c) * w + (cid % gx) * c,
+        );
         for (var s = 0; s < cellIds.length; s++) {
           corner[cellIds[s] * 4 + cornerK[s]] = v;
         }
@@ -547,7 +550,8 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
     final p = rep[v];
     final px = p >= 0 ? (p % m.w).toDouble() : rest[v * 2];
     final py = p >= 0 ? (p ~/ m.w).toDouble() : rest[v * 2 + 1];
-    final ci = (py / s).floor().clamp(0, ch - 1) * cw +
+    final ci =
+        (py / s).floor().clamp(0, ch - 1) * cw +
         (px / s).floor().clamp(0, cw - 1);
     for (var k = 0; k < skinned.length; k++) {
       var dist = fields[k][ci];
@@ -590,7 +594,10 @@ Float64List _geodesic(Uint8List mask, int w, int h, Bone b, double s) {
   final heap = _Heap();
   final ax = b.from.x / s, ay = b.from.y / s;
   final bx = b.to.x / s, by = b.to.y / s;
-  final steps = math.max(1, (math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) * 2).ceil());
+  final steps = math.max(
+    1,
+    (math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) * 2).ceil(),
+  );
   var seeded = false;
   for (var i = 0; i <= steps; i++) {
     final t = i / steps;

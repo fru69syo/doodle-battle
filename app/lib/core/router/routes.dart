@@ -40,4 +40,7 @@ abstract final class Routes {
 
   /// v2.0 3D tech spike (debug builds only): `features/spike3d/`.
   static const debug3d = '/debug/3d';
+
+  /// v2.0 2.5D spike (debug builds only): `features/spike25d/`.
+  static const debug25d = '/debug/25d';
 }

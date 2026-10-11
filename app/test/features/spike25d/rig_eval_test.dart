@@ -54,7 +54,9 @@ void main() {
       final kp = (a['keypoints']! as List)
           .map((e) => (e as num).toDouble())
           .toList();
-      final bbox = (a['bbox']! as List).map((e) => (e as num).toDouble()).toList();
+      final bbox = (a['bbox']! as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
       final norm = math.max(bbox[2], bbox[3]);
       for (final mode in modes) {
         BinMask? mask;
@@ -83,8 +85,7 @@ void main() {
           o: AutoRigOptions(
             workSize: int.tryParse(env['AD_WORK'] ?? '') ?? 160,
             protrusionRatio: double.tryParse(env['AD_RATIO'] ?? '') ?? 0.25,
-            minProtrusionFrac:
-                double.tryParse(env['AD_MINP'] ?? '') ?? 0.03,
+            minProtrusionFrac: double.tryParse(env['AD_MINP'] ?? '') ?? 0.03,
           ),
         );
         // Full character build (mesh + weights) timing on a cut-out.
@@ -104,7 +105,9 @@ void main() {
           '${e.err.map((x) => x.isFinite ? x.toStringAsFixed(4) : 'inf').join(',')},'
           '${e.rigMs.toStringAsFixed(1)},${buildMs.toStringAsFixed(1)}',
         );
-        if (out != null && mode == 'gt' && k <= int.parse(Platform.environment['AD_OV'] ?? '48')) {
+        if (out != null &&
+            mode == 'gt' &&
+            k <= int.parse(Platform.environment['AD_OV'] ?? '48')) {
           _overlay(image, r, kp, '$out/ov_${k.toString().padLeft(3, '0')}.png');
         }
       }
@@ -118,9 +121,9 @@ void main() {
     if (out != null) {
       Directory(out).createSync(recursive: true);
       File('$out/rig_eval.csv').writeAsStringSync(csv.toString());
-      File('$out/rig_eval_summary.json').writeAsStringSync(
-        const JsonEncoder.withIndent('  ').convert(summary),
-      );
+      File(
+        '$out/rig_eval_summary.json',
+      ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(summary));
     }
   }, skip: dir == null || annPath == null ? 'AD_DIR / AD_ANN not set' : false);
 }
@@ -128,8 +131,15 @@ void main() {
 const _names = ['head', 'hand', 'foot', 'shoulder', 'elbow', 'hip', 'knee'];
 
 class _Eval {
-  _Eval(this.err, this.hasHead, this.arms, this.legs, this.extras, this.rigMs,
-      this.buildMs);
+  _Eval(
+    this.err,
+    this.hasHead,
+    this.arms,
+    this.legs,
+    this.extras,
+    this.rigMs,
+    this.buildMs,
+  );
   final List<double> err; // normalised, per joint type (mean of the pair)
   final bool hasHead;
   final int arms, legs, extras;
@@ -249,13 +259,23 @@ void _overlay(img.Image src, AutoRigResult r, List<double> kp, String path) {
   for (var i = 0; i < skel.pixels.length; i++) {
     if (skel.pixels[i] == 0) continue;
     final p = r.toDrawing((i % skel.w).toDouble(), (i ~/ skel.w).toDouble());
-    img.fillRect(im, x1: p.x.round() - 1, y1: p.y.round() - 1,
-        x2: p.x.round() + 1, y2: p.y.round() + 1,
-        color: img.ColorRgb8(150, 150, 150));
+    img.fillRect(
+      im,
+      x1: p.x.round() - 1,
+      y1: p.y.round() - 1,
+      x2: p.x.round() + 1,
+      y2: p.y.round() + 1,
+      color: img.ColorRgb8(150, 150, 150),
+    );
   }
   for (var j = 0; j < 17; j++) {
-    img.fillCircle(im, x: kp[j * 3].round(), y: kp[j * 3 + 1].round(),
-        radius: 3, color: img.ColorRgb8(0, 0, 255));
+    img.fillCircle(
+      im,
+      x: kp[j * 3].round(),
+      y: kp[j * 3 + 1].round(),
+      radius: 3,
+      color: img.ColorRgb8(0, 0, 255),
+    );
   }
   final colors = {
     LimbKind.head: img.ColorRgb8(255, 0, 255),
@@ -268,17 +288,40 @@ void _overlay(img.Image src, AutoRigResult r, List<double> kp, String path) {
   for (final l in rig.limbs) {
     final c = colors[l.kind]!;
     for (final (a, b) in [(l.base, l.mid), (l.mid, l.tip)]) {
-      img.drawLine(im, x1: a.x.round(), y1: a.y.round(), x2: b.x.round(),
-          y2: b.y.round(), color: c, thickness: 2);
+      img.drawLine(
+        im,
+        x1: a.x.round(),
+        y1: a.y.round(),
+        x2: b.x.round(),
+        y2: b.y.round(),
+        color: c,
+        thickness: 2,
+      );
     }
-    img.fillCircle(im, x: l.tip.x.round(), y: l.tip.y.round(), radius: 5,
-        color: c);
+    img.fillCircle(
+      im,
+      x: l.tip.x.round(),
+      y: l.tip.y.round(),
+      radius: 5,
+      color: c,
+    );
   }
-  img.drawLine(im, x1: rig.root.x.round(), y1: rig.root.y.round(),
-      x2: rig.chest.x.round(), y2: rig.chest.y.round(),
-      color: img.ColorRgb8(255, 0, 0), thickness: 3);
-  img.fillCircle(im, x: rig.root.x.round(), y: rig.root.y.round(), radius: 5,
-      color: img.ColorRgb8(255, 0, 0));
+  img.drawLine(
+    im,
+    x1: rig.root.x.round(),
+    y1: rig.root.y.round(),
+    x2: rig.chest.x.round(),
+    y2: rig.chest.y.round(),
+    color: img.ColorRgb8(255, 0, 0),
+    thickness: 3,
+  );
+  img.fillCircle(
+    im,
+    x: rig.root.x.round(),
+    y: rig.root.y.round(),
+    radius: 5,
+    color: img.ColorRgb8(255, 0, 0),
+  );
   File(path)
     ..createSync(recursive: true)
     ..writeAsBytesSync(img.encodePng(im));

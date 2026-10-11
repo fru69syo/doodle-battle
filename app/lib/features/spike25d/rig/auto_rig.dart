@@ -64,7 +64,10 @@ class AutoRigResult {
 
 /// Auto-rigs a drawing from its silhouette ([mask] at drawing resolution,
 /// e.g. alpha ≥ 128 of the cut-out). Pure Dart, deterministic.
-AutoRigResult autoRig(BinMask mask, {AutoRigOptions o = const AutoRigOptions()}) {
+AutoRigResult autoRig(
+  BinMask mask, {
+  AutoRigOptions o = const AutoRigOptions(),
+}) {
   final sw = Stopwatch()..start();
   // Work on the figure's own box so small figures get the full
   // resolution (the app's cut-out is already cropped).
@@ -111,21 +114,21 @@ AutoRigResult autoRig(BinMask mask, {AutoRigOptions o = const AutoRigOptions()})
   final rig = _assign(work, dist, skel, b, size, o, d)
     ..ground = (b[3] - pad + 1) * scale + offY;
   return AutoRigResult(
-    rig: CharacterRig(
-      width: mask.w.toDouble(),
-      height: mask.h.toDouble(),
-      root: rig.root,
-      chest: rig.chest,
-      limbs: rig.limbs,
-      ground: rig.ground,
-    ),
-    work: work,
-    scale: scale,
-    pad: pad,
-    skeleton: skel,
-    dist: dist,
-    micros: sw.elapsedMicroseconds,
-  )
+      rig: CharacterRig(
+        width: mask.w.toDouble(),
+        height: mask.h.toDouble(),
+        root: rig.root,
+        chest: rig.chest,
+        limbs: rig.limbs,
+        ground: rig.ground,
+      ),
+      work: work,
+      scale: scale,
+      pad: pad,
+      skeleton: skel,
+      dist: dist,
+      micros: sw.elapsedMicroseconds,
+    )
     ..offX = offX
     ..offY = offY;
 }
@@ -201,10 +204,12 @@ CharacterRig _assign(
       // The junction is a hand: replace it by one leaf following the
       // remaining edge back to the next junction.
       final j = g.nodes[entry.key];
-      final e = g.edgesOf(entry.key).firstWhere(
-        (e) => !g.nodes[e.other(entry.key)].isEnd,
-        orElse: () => g.edgesOf(entry.key).first,
-      );
+      final e = g
+          .edgesOf(entry.key)
+          .firstWhere(
+            (e) => !g.nodes[e.other(entry.key)].isEnd,
+            orElse: () => g.edgesOf(entry.key).first,
+          );
       final other = g.nodes[e.other(entry.key)];
       final pix = e.a == other.id ? e.path : e.path.reversed.toList();
       final path = <(double, double)>[
@@ -231,10 +236,7 @@ CharacterRig _assign(
   final legCands =
       leaves
           .where(
-            (l) =>
-                l.ty > cy &&
-                ang(l).abs() > 95 &&
-                l.ty > b[1] + 0.6 * bh,
+            (l) => l.ty > cy && ang(l).abs() > 95 && l.ty > b[1] + 0.6 * bh,
           )
           .toList()
         ..sort((a, c) => c.ty.compareTo(a.ty));
@@ -252,7 +254,8 @@ CharacterRig _assign(
       for (var x = b[0]; x <= b[2]; x++) {
         final r = dist[y * w + x];
         if (r <= 0) continue;
-        final s = r * (1.15 - 0.5 * (y - b[1]) / bh) -
+        final s =
+            r * (1.15 - 0.5 * (y - b[1]) / bh) -
             0.35 * maxR * (x - cx).abs() / bw;
         if (s > bestS) {
           bestS = s;
@@ -269,14 +272,15 @@ CharacterRig _assign(
   }
   bool inHead(_Leaf l) {
     if (headDisc == null) return false;
-    final (hx, hy, hr) = headDisc!;
+    final (hx, hy, hr) = headDisc;
     double dd(double x, double y) =>
         math.sqrt((x - hx) * (x - hx) + (y - hy) * (y - hy));
     // Ends inside the head (the neck branch), or sticks out of the top of
     // the head (hair, ears, hats). Arms of "tadpole" figures leave the
     // head sideways and stay candidates.
     if (dd(l.tx, l.ty) < 1.05 * hr) return true;
-    final near = dd(l.tx, l.ty) < 1.6 * hr || dd(l.junction.x, l.junction.y) < hr;
+    final near =
+        dd(l.tx, l.ty) < 1.6 * hr || dd(l.junction.x, l.junction.y) < hr;
     return near && l.ty < hy - 0.3 * hr;
   }
 
@@ -376,7 +380,7 @@ CharacterRig _assign(
   } else if (head != null && !landscape) {
     chestW = avgJ([head]);
   } else if (headDisc != null) {
-    final (hx, hy, hr) = headDisc!;
+    final (hx, hy, hr) = headDisc;
     chestW = V2(hx, hy + 1.3 * hr);
   } else {
     chestW = V2(cx, cy - 0.15 * bh);
@@ -407,7 +411,7 @@ CharacterRig _assign(
 
   RigLimb? headLimb;
   if (headDisc != null) {
-    final (hx, hy, hr) = headDisc!;
+    final (hx, hy, hr) = headDisc;
     final tip = V2(hx, hy);
     final dir = chestW - tip;
     final len = dir.length;
@@ -446,8 +450,7 @@ CharacterRig _assign(
 /// Tip distance from the head centre in head radii.
 double _reach(_Leaf l, (double, double, double) disc) {
   final (hx, hy, hr) = disc;
-  return math.sqrt((l.tx - hx) * (l.tx - hx) + (l.ty - hy) * (l.ty - hy)) /
-      hr;
+  return math.sqrt((l.tx - hx) * (l.tx - hx) + (l.ty - hy) * (l.ty - hy)) / hr;
 }
 
 double _dist((double, double) a, (double, double) b) {

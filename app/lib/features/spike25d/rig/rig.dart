@@ -59,14 +59,12 @@ class RigLimb {
     if (edited) 'edited': true,
   };
 
-  static RigLimb fromJson(Map<String, Object?> j) =>
-      RigLimb(
-          LimbKind.values.byName(j['kind']! as String),
-          V2.fromJson(j['base']),
-          V2.fromJson(j['mid']),
-          V2.fromJson(j['tip']),
-        )
-        ..edited = j['edited'] == true;
+  static RigLimb fromJson(Map<String, Object?> j) => RigLimb(
+    LimbKind.values.byName(j['kind']! as String),
+    V2.fromJson(j['base']),
+    V2.fromJson(j['mid']),
+    V2.fromJson(j['tip']),
+  )..edited = j['edited'] == true;
 
   RigLimb copy() => RigLimb(kind, base, mid, tip)..edited = edited;
 }
@@ -217,10 +215,12 @@ List<Bone> bonesOf(CharacterRig rig) {
       continue;
     }
     final upper = bones.length;
-    bones.add(Bone('${l.kind.name}${i}a', parent, l.base, l.mid,
-        limb: i, segment: 0));
-    bones.add(Bone('${l.kind.name}${i}b', upper, l.mid, l.tip,
-        limb: i, segment: 1));
+    bones.add(
+      Bone('${l.kind.name}${i}a', parent, l.base, l.mid, limb: i, segment: 0),
+    );
+    bones.add(
+      Bone('${l.kind.name}${i}b', upper, l.mid, l.tip, limb: i, segment: 1),
+    );
   }
   return bones;
 }
