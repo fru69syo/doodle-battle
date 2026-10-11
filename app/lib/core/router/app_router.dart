@@ -30,7 +30,6 @@ import '../../features/online/online_lobby_screen.dart';
 import '../../features/parent/parent_session.dart';
 import '../../features/parent/parent_settings_screen.dart';
 import '../../features/spike25d/spike25d_debug_page.dart';
-import '../../features/spike3d/spike3d_debug_page.dart';
 import 'routes.dart';
 
 /// Where the router should send [location] given the app state; null to
@@ -56,7 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(parentSessionProvider, (_, _) => refresh.value++);
   final router = GoRouter(
     // Debug builds can start on a debug page:
-    // flutter run --dart-define=INITIAL_ROUTE=/debug/3d
+    // flutter run --dart-define=INITIAL_ROUTE=/debug/25d
     initialLocation: kDebugMode
         ? const String.fromEnvironment(
             'INITIAL_ROUTE',
@@ -65,10 +64,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         : Routes.home,
     refreshListenable: refresh,
     redirect: (context, state) {
-      // 3D spike debug route: reachable before setup in debug builds only.
-      if (kDebugMode &&
-          (state.matchedLocation.startsWith(Routes.debug3d) ||
-              state.matchedLocation.startsWith(Routes.debug25d))) {
+      // 2.5D spike debug route: reachable before setup in debug builds only.
+      if (kDebugMode && state.matchedLocation.startsWith(Routes.debug25d)) {
         return null;
       }
       final settings = ref.read(settingsProvider);
@@ -216,12 +213,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'parent',
             builder: (_, _) => const ParentSettingsScreen(),
           ),
-          // v2.0 3D tech spike (docs/V2_3D_TECH.md); debug builds only.
-          if (kDebugMode)
-            GoRoute(
-              path: 'debug/3d',
-              builder: (_, _) => const Spike3dDebugPage(),
-            ),
           // v2.0 2.5D spike (docs/V2_25D_TECH.md); debug builds only.
           if (kDebugMode)
             GoRoute(

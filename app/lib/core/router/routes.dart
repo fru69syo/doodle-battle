@@ -38,9 +38,6 @@ abstract final class Routes {
   static String cardPrint(Iterable<String> ids) =>
       '/zukan/cards/print?ids=${ids.map(Uri.encodeQueryComponent).join(',')}';
 
-  /// v2.0 3D tech spike (debug builds only): `features/spike3d/`.
-  static const debug3d = '/debug/3d';
-
   /// v2.0 2.5D spike (debug builds only): `features/spike25d/`.
   static const debug25d = '/debug/25d';
 }
