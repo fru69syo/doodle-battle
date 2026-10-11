@@ -30,14 +30,21 @@ class StrokeFigure {
 List<P2> _ellipse(P2 c, double rx, double ry, math.Random r, {int n = 28}) => [
   for (var i = 0; i <= n; i++)
     P2(
-      c.x + rx * math.cos(i / n * 2 * math.pi) * (1 + 0.04 * (r.nextDouble() - 0.5)),
-      c.y + ry * math.sin(i / n * 2 * math.pi) * (1 + 0.04 * (r.nextDouble() - 0.5)),
+      c.x +
+          rx *
+              math.cos(i / n * 2 * math.pi) *
+              (1 + 0.04 * (r.nextDouble() - 0.5)),
+      c.y +
+          ry *
+              math.sin(i / n * 2 * math.pi) *
+              (1 + 0.04 * (r.nextDouble() - 0.5)),
     ),
 ];
 
 List<P2> _line(P2 a, P2 b, math.Random r, {int n = 10}) => [
   for (var i = 0; i <= n; i++)
-    a.lerp(b, i / n) + P2((r.nextDouble() - 0.5) * 2, (r.nextDouble() - 0.5) * 2),
+    a.lerp(b, i / n) +
+        P2((r.nextDouble() - 0.5) * 2, (r.nextDouble() - 0.5) * 2),
 ];
 
 /// Figure [seed]: sizes, line width and arm pose vary.
@@ -79,7 +86,10 @@ StrokeFigure strokeFigure(int seed, {ArmPose? pose}) {
         hands.add(hand);
       case ArmPose.along:
         // Hanging right next to the body.
-        final hand = P2(cx + side * (bodyRx + lw * 0.6), bodyC.y + bodyRy * 0.55);
+        final hand = P2(
+          cx + side * (bodyRx + lw * 0.6),
+          bodyC.y + bodyRy * 0.55,
+        );
         arm = _line(shoulder + P2(side * 6, 0), hand, r);
         hands.add(hand);
     }
@@ -99,7 +109,13 @@ StrokeFigure strokeFigure(int seed, {ArmPose? pose}) {
   for (final s in strokes) {
     for (var i = 1; i < s.points.length; i++) {
       final a = s.points[i - 1], b = s.points[i];
-      m.line(a.x.round(), a.y.round(), b.x.round(), b.y.round(), (s.width / 2).round());
+      m.line(
+        a.x.round(),
+        a.y.round(),
+        b.x.round(),
+        b.y.round(),
+        (s.width / 2).round(),
+      );
     }
   }
   return StrokeFigure(strokes, hands, m, p);

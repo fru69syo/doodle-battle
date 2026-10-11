@@ -372,6 +372,7 @@ class MoveButton extends StatelessWidget {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 Row(
                   children: [
@@ -412,8 +413,8 @@ class MoveButton extends StatelessWidget {
                 ),
                 if (selected)
                   Positioned(
-                    right: 0,
-                    top: 0,
+                    right: -6,
+                    top: -16,
                     child: _tag(
                       ready ? 'これ！' : 'つぎ！',
                       bg: const Color(0xFFFFD83A),
@@ -583,7 +584,7 @@ class BattleControls extends StatelessWidget {
     } else if (casting) {
       prompt = 'ためているよ…';
     } else {
-      prompt = 'つぎの わざを えらんでおけるよ';
+      prompt = 'つぎの わざを えらべるよ';
     }
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),

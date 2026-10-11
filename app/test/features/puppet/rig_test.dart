@@ -281,10 +281,7 @@ void main() {
       final back = CharacterRig.tryDecode(await store.loadRigJson('abc'));
       expect(back!.limbs[arm].tip.x, 10);
       // The edited rig drives the build.
-      final c = buildPuppetMeshFromPng(
-        samplePng(Sample.hero),
-        rig: back,
-      );
+      final c = buildPuppetMeshFromPng(samplePng(Sample.hero), rig: back);
       expect(c.rig.limbs[arm].tip.x, 10 + 6, reason: 'shifted by border');
     });
   });

@@ -1,41 +1,54 @@
-import 'package:doodle_battle/features/spike25d/battle/battle_session25.dart';
-import 'package:doodle_battle/features/spike25d/battle/director25d.dart';
-import 'package:doodle_battle/features/spike25d/samples25d.dart';
+import 'package:doodle_battle/domain/battle_v2/battle_v2.dart' show typeChart;
+import 'package:doodle_battle/features/battle_stage/adapters/battle_v2_feed.dart';
+import 'package:doodle_battle/features/battle_stage/battle_stage.dart';
+import 'package:doodle_battle/features/battle_stage/debug/demo_battle.dart';
+import 'package:doodle_battle/features/battle_stage/stage_director.dart';
+import 'package:doodle_battle/features/puppet/puppet_builder.dart';
+import 'package:doodle_battle/features/puppet/samples.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-BattleSession25 session({
+/// A stage controller over the prototype engine, without widgets.
+(BattleStageController, BattleV2Feed) stage({
   int seed = 7,
   bool auto = true,
   bool bloomer = false,
+  int level = 12,
 }) {
   final sides = [
-    Side25(png: sample25dPng(Sample25d.hero), name: 'a', genomeSeed: 11),
-    Side25(
-      png: sample25dPng(Sample25d.dog),
+    DemoSide(
+      png: samplePng(Sample.hero),
+      name: 'a',
+      genomeSeed: 11,
+      level: level,
+    ),
+    DemoSide(
+      png: samplePng(Sample.dog),
       name: 'b',
       genomeSeed: 5,
-      bloomer: bloomer,
+      lateBloomer: bloomer,
+      level: level,
     ),
   ];
-  return BattleSession25(
-    sides: sides,
-    characters: [for (final s in sides) buildSideCharacter(s)],
-    seed: seed,
-    alwaysAuto: auto,
+  final feed = BattleV2Feed(demoEngine(sides, seed: seed), alwaysAuto: auto);
+  final c = BattleStageController(feed: feed, seed: seed);
+  c.attach(
+    [for (final s in sides) buildPuppetSync(s.puppet())],
+    [for (final s in sides) s.look],
   );
+  return (c, feed);
 }
 
 void main() {
   test('おまかせ battle runs to a KO; fighters stay on screen', () {
-    final s = session();
+    final (s, feed) = stage();
     const dt = 1 / 30;
     var frames = 0, inView = 0;
     while (!s.over && frames < 30 * 200) {
       s.advance(dt);
       frames++;
       var ok = true;
-      for (final f in s.director.fighters) {
-        final (x, y, k) = s.director.camera.project(f.x, f.z, 393, 851);
+      for (final f in s.director!.fighters) {
+        final (x, y, k) = s.director!.camera.project(f.x, f.z, 393, 851);
         if (x - 0.3 * k < 0 ||
             x + 0.3 * k > 393 ||
             y > 851 ||
@@ -46,80 +59,133 @@ void main() {
       if (ok) inView++;
     }
     expect(s.over, isTrue);
-    expect(s.engine.finished, isTrue);
-    expect(s.director.winner, s.engine.winner);
+    expect(feed.engine.finished, isTrue);
+    expect(s.winner, feed.engine.winner);
     expect(inView / frames, greaterThan(0.97));
     // Shown HP matches the engine once everything has played out.
     for (var i = 0; i < 60; i++) {
       s.advance(dt);
     }
     for (var i = 0; i < 2; i++) {
-      expect(s.director.fighters[i].shownHp, s.engine.fighters[i].hp);
+      expect(s.shownHp(i), feed.engine.fighters[i].hp);
+    }
+    // The adapter turned the engine log into stage events.
+    expect(s.log.whereType<StageAction>(), isNotEmpty);
+    expect(s.log.whereType<StageEnd>().single.winner, feed.engine.winner);
+  });
+
+  test('actions carry hits, crits and effectiveness from the engine', () {
+    final (s, feed) = stage(seed: 5);
+    while (!s.over) {
+      s.advance(1 / 20);
+    }
+    final hits = s.log
+        .whereType<StageAction>()
+        .expand((a) => a.hits)
+        .where((h) => !h.missed)
+        .length;
+    final damage = feed.engine.events
+        .where((e) => e.type == 'damage' && e.data['cause'] != 'poison')
+        .length;
+    expect(hits, damage);
+    // Every hit's matchup is what the engine's type chart says.
+    for (final a in s.log.whereType<StageAction>()) {
+      final m = feed.engine.fighters[a.side].moves[a.slot];
+      final pct = typeChart(
+        m.attr,
+        feed.engine.fighters[1 - a.side].attr,
+        feed.engine.spec,
+      );
+      for (final h in a.hits.where((h) => !h.missed)) {
+        expect(
+          h.effectiveness,
+          pct > 100
+              ? StageEffectiveness.strong
+              : (pct < 100
+                    ? StageEffectiveness.weak
+                    : StageEffectiveness.normal),
+        );
+      }
     }
   });
 
   test('さきどり: a move tapped early fires on the tick the gauge fills', () {
-    final s = session(auto: false);
-    s.tap(0);
-    while (s.engine.events
-        .where((e) => e.type == 'choose' && e.data['side'] == 0)
+    final (s, feed) = stage(auto: false);
+    expect(feed.tap(0), isTrue);
+    final e = feed.engine;
+    while (e.events
+        .where((x) => x.type == 'choose' && x.data['side'] == 0)
         .isEmpty) {
       s.advance(0.05);
     }
-    final ready = s.engine.events.firstWhere(
-      (e) => e.type == 'ready' && e.data['side'] == 0,
+    final ready = e.events.firstWhere(
+      (x) => x.type == 'ready' && x.data['side'] == 0,
     );
-    final choose = s.engine.events.firstWhere(
-      (e) => e.type == 'choose' && e.data['side'] == 0,
+    final choose = e.events.firstWhere(
+      (x) => x.type == 'choose' && x.data['side'] == 0,
     );
     expect(choose.tick, ready.tick);
-    expect(s.pending, isNull);
+    expect(feed.pending, isNull);
   });
 
   test('time-out: no tap → おまかせ after 5 s of a full gauge', () {
-    final s = session(auto: false);
-    while (s.engine.events
-        .where((e) => e.type == 'autoPick' && e.data['side'] == 0)
+    final (s, feed) = stage(auto: false);
+    final e = feed.engine;
+    double? maxLeft;
+    while (e.events
+        .where((x) => x.type == 'autoPick' && x.data['side'] == 0)
         .isEmpty) {
       s.advance(0.1);
-      expect(s.engine.tick, lessThan(600));
+      final left = feed.choiceLeft;
+      if (left != null) maxLeft = left;
+      expect(e.tick, lessThan(600));
     }
-    final ready = s.engine.events.firstWhere(
-      (e) => e.type == 'ready' && e.data['side'] == 0,
+    final ready = e.events.firstWhere(
+      (x) => x.type == 'ready' && x.data['side'] == 0,
     );
-    final auto = s.engine.events.firstWhere(
-      (e) => e.type == 'autoPick' && e.data['side'] == 0,
+    final auto = e.events.firstWhere(
+      (x) => x.type == 'autoPick' && x.data['side'] == 0,
     );
-    expect(auto.tick - ready.tick, s.engine.spec.decisionTicks - 1);
+    expect(auto.tick - ready.tick, e.spec.decisionTicks - 1);
+    expect(maxLeft, isNotNull);
+    expect(
+      s.log.whereType<StageChoose>().where((c) => c.side == 0).first.auto,
+      isTrue,
+    );
   });
 
   test('deterministic for a seed (director included)', () {
     String run() {
-      final s = session(seed: 3);
+      final (s, feed) = stage(seed: 3);
       for (var i = 0; i < 600; i++) {
         s.advance(1 / 30);
       }
-      final f = s.director.fighters;
-      return '${s.engine.events.length} ${f[0].x.toStringAsFixed(4)} ${f[1].z.toStringAsFixed(4)}';
+      final f = s.director!.fighters;
+      return '${feed.engine.events.length} ${f[0].x.toStringAsFixed(4)} '
+          '${f[1].z.toStringAsFixed(4)}';
     }
 
     expect(run(), run());
   });
 
-  test('hidden late bloomer below Lv50 gets the simplified look', () {
-    final s = Side25(
-      png: sample25dPng(Sample25d.hero),
+  test('hidden late bloomer: simple look below Lv50, でんせつ at 50', () {
+    final low = DemoSide(
+      png: samplePng(Sample.hero),
       name: 'x',
-      bloomer: true,
+      lateBloomer: true,
     );
-    expect(buildSideCharacter(s).simplified, isTrue);
-    final s50 = Side25(
-      png: sample25dPng(Sample25d.hero),
+    expect(buildPuppetSync(low.puppet()).simplified, isTrue);
+    expect(low.look.fxScale, 0.5);
+    final at50 = DemoSide(
+      png: samplePng(Sample.hero),
       name: 'x',
-      bloomer: true,
+      lateBloomer: true,
       level: 50,
     );
-    expect(buildSideCharacter(s50).simplified, isFalse);
+    expect(buildPuppetSync(at50.puppet()).simplified, isFalse);
+    expect(at50.look.legend, isTrue);
+    final kid50 = DemoSide(png: samplePng(Sample.hero), name: 'y', level: 50);
+    expect(at50.look, kid50.look, reason: 'same look as everyone at Lv50');
   });
 
   test('camera projection: nearer is lower and bigger', () {
@@ -128,5 +194,33 @@ void main() {
     final (_, yFar, kFar) = c.project(0, 2.5, 393, 851);
     expect(yNear, greaterThan(yFar));
     expect(kNear, greaterThan(kFar));
+  });
+
+  test('stage themes cover the 10 worlds', () {
+    final ids = {for (var w = 1; w <= 10; w++) StageTheme.forWorld(w).id};
+    expect(ids.length, greaterThanOrEqualTo(7));
+    for (final t in StageTheme.all) {
+      expect(t.props, isNotEmpty);
+      expect(StageTheme.byId(t.id), t);
+    }
+  });
+
+  test('adaptive quality drops to low after sustained slow frames only', () {
+    final q = AdaptiveQuality();
+    for (var i = 0; i < 300; i++) {
+      q.addFrame(i % 50 == 0 ? 60 : 9); // occasional hitch: stays high
+    }
+    expect(q.quality, StageQuality.high);
+    StageQuality? changed;
+    final q2 = AdaptiveQuality(onChange: (v) => changed = v);
+    for (var i = 0; i < 200; i++) {
+      q2.addFrame(i.isEven ? 28 : 12); // half the frames over budget
+    }
+    expect(q2.quality, StageQuality.low);
+    expect(changed, StageQuality.low);
+    for (var i = 0; i < 400; i++) {
+      q2.addFrame(5);
+    }
+    expect(q2.quality, StageQuality.low, reason: 'no flapping back');
   });
 }

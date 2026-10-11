@@ -109,13 +109,7 @@ void main() {
   });
 }
 
-void _drawRig(
-  Canvas c,
-  CharacterRig rig,
-  Offset feet,
-  double s,
-  PuppetMesh d,
-) {
+void _drawRig(Canvas c, CharacterRig rig, Offset feet, double s, PuppetMesh d) {
   Offset m(P2 p) => Offset(
     feet.dx + (p.x - rig.root.x) * s,
     feet.dy + (p.y - rig.groundY) * s,
@@ -162,10 +156,5 @@ Uint8List _png(Uint8List rgba, int w, int h) {
 }
 
 Uint8List encodeRgbaPng(Uint8List rgba, int w, int h) => img.encodePng(
-  img.Image.fromBytes(
-    width: w,
-    height: h,
-    bytes: rgba.buffer,
-    numChannels: 4,
-  ),
+  img.Image.fromBytes(width: w, height: h, bytes: rgba.buffer, numChannels: 4),
 );

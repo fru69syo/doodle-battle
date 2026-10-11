@@ -50,10 +50,7 @@ void main() {
         // A closed elongated outline.
         HintStroke([
           for (var i = 0; i <= 20; i++)
-            P2(
-              200 + 60 * (i <= 10 ? i / 10 : (20 - i) / 10),
-              i <= 10 ? 0 : 14,
-            ),
+            P2(200 + 60 * (i <= 10 ? i / 10 : (20 - i) / 10), i <= 10 ? 0 : 14),
         ], 4),
         // A scribble (not straight) is not a limb.
         const HintStroke([P2(0, 0), P2(30, 30), P2(0, 30), P2(30, 0)], 6),

@@ -11,6 +11,22 @@ Future<void> loadAppFonts() async {
     final bytes = File('assets/fonts/ZenMaruGothic-$f.ttf').readAsBytesSync();
     await ui.loadFontFromList(bytes, fontFamily: 'ZenMaruGothic');
   }
+  // Material icons (handles, buttons, status badges) from the SDK cache:
+  // walk up from the test runner binary to the Flutter root.
+  var dir = File(Platform.resolvedExecutable).parent;
+  for (var i = 0; i < 8; i++) {
+    final f = File(
+      '${dir.path}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+    );
+    if (f.existsSync()) {
+      await ui.loadFontFromList(
+        f.readAsBytesSync(),
+        fontFamily: 'MaterialIcons',
+      );
+      break;
+    }
+    dir = dir.parent;
+  }
 }
 
 /// Output directory for PNGs: PUPPET_RENDER_DIR, else docs/v2_25d when
