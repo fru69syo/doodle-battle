@@ -38,6 +38,9 @@ export const COL = {
   rateLimits: "rateLimits",
   moderationLog: "moderationLog",
   aiSuggestionReports: "aiSuggestionReports",
+  /** v2 realtime battles (written by server/realtime). */
+  rtMatches: "rtMatches",
+  replays: "replays",
 } as const;
 
 export function snapshotImagePath(snapshotId: string): string {

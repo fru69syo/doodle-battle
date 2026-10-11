@@ -125,6 +125,8 @@ export class FirestoreStore implements Store {
       tx.set(this.db.collection(COL.rtMatches).doc(summary.matchId), {
         mode: summary.mode,
         playerUids: humans,
+        // deleteMyData also removes matches where a deleted child's character was the ghost.
+        snapshotIds: summary.sides.map((s) => s.snapshotId),
         sides: { a: side(0), b: side(1) },
         winner: summary.winner === null ? null : summary.winner === 0 ? "a" : "b",
         reason: summary.reason,

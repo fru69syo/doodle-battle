@@ -5,6 +5,7 @@
 //   shared/ng_words/*.json            -> src/vendor/ng_words/
 //   shared/names/*.json               -> src/vendor/names/        (display-name words; the app bundles a copy)
 //   shared/battle_spec/*.json         -> src/vendor/battle_spec/      (if present)
+//   shared/cost_mode/*.json           -> src/vendor/cost_mode/        (normal/saving/minimal flags)
 //   shared/battle_engine_ts/src/**    -> src/vendor/battle_engine/    (if present)
 //
 // src/vendor/ is git-ignored: the shared/ directory is the single source of truth.
@@ -36,6 +37,7 @@ function copyJsonDir(from, to, required) {
 
 copyJsonDir("shared/ng_words", join(vendor, "ng_words"), true);
 copyJsonDir("shared/names", join(vendor, "names"), true);
+copyJsonDir("shared/cost_mode", join(vendor, "cost_mode"), true);
 copyJsonDir("shared/battle_spec", join(vendor, "battle_spec"), false);
 
 const engineSrc = join(repoRoot, "shared", "battle_engine_ts", "src");

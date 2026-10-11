@@ -1,6 +1,7 @@
 import type { CallableRequest } from "firebase-functions/v2/https";
 import { afterEach, beforeEach, vi } from "vitest";
 import { setAiServiceForTesting, type AiService, type DrawingJudgement, type ModerationVerdict } from "../../src/ai";
+import { resetCostModeCacheForTesting } from "../../src/cost/costMode";
 import { codeOf } from "../../src/lib/errors";
 import { clock } from "../../src/lib/clock";
 import { bucket, COL, db } from "../../src/lib/firebase";
@@ -120,6 +121,7 @@ export function useEmulatorEnv(): { ai: ReturnType<typeof fakeAi>; setNow: (ms: 
     setAiServiceForTesting(state.ai.svc);
     state.now = 1_800_000_000_000;
     clock.now = () => state.now;
+    resetCostModeCacheForTesting();
   });
   afterEach(() => {
     setAiServiceForTesting(undefined);

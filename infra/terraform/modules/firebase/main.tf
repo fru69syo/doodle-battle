@@ -2,8 +2,8 @@
 # the default Cloud Storage bucket, the Android/iOS apps and App Check.
 #
 # What is deliberately NOT here (the Firebase CLI owns it; see docs/LEARN_GCP.md §4):
-#   - Firestore / Storage security rules and composite indexes (firebase/firestore.rules,
-#     storage.rules, firestore.indexes.json) -> `firebase deploy --only firestore,storage`
+#   - Firestore / Storage security rules, composite indexes and TTL policies (firebase/
+#     firestore.rules, storage.rules, firestore.indexes.json) -> `firebase deploy --only firestore,storage`
 #   - Cloud Functions -> `firebase deploy --only functions`
 # One resource must have exactly one owner. If both Terraform and the Firebase CLI managed the
 # rules, each deploy would silently undo the other.
@@ -35,19 +35,8 @@ resource "google_firestore_database" "default" {
   depends_on = [google_firebase_project.this]
 }
 
-# Replays (seed + input log of each online match) expire after 30 days: Firestore deletes a
-# document some time after the timestamp in `expireAt` has passed (TTL deletes are free).
-resource "google_firestore_field" "replay_ttl" {
-  project    = var.project_id
-  database   = google_firestore_database.default.name
-  collection = "replays"
-  field      = "expireAt"
-
-  ttl_config {}
-
-  # Do not build a single-field index for a field that is only used for TTL.
-  index_config {}
-}
+# The TTL policy for replays/{id}.expireAt (30 days) is declared in firebase/firestore.indexes.json
+# (fieldOverrides, "ttl": true) because the Firebase CLI owns index configuration.
 
 # Firebase Authentication. The app only uses anonymous sign-in (no e-mail, no phone: children's
 # data minimisation). Managing Auth from Terraform upgrades the project to "Firebase
