@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doodle-battle.invalid/battle_spec_v3/ai_moves.schema.json",
+  "title": "AI-proposed moves for one character (battle spec v3 DRAFT)",
+  "description": "Output of the cloud judge (Claude) when the parent allowed cloud features. The AI only chooses names, flavour, visual effect and a template with parameters; the server/app validator (docs/GAME_DESIGN_V2.md §5.6) clamps every number, enforces slot rules and scales the move down to the slot budget, or rejects it and substitutes the offline move for that slot. Numbers in this schema are the template ranges; the budget is enforced by the validator, not by the schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["moves"],
+  "properties": {
+    "moves": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/move" },
+      "description": "Index 0 = slot 1 (Lv1, いつもの わざ), 1 = slot 2 (Lv1), 2 = slot 3 (Lv10), 3 = slot 4 (Lv50, ひっさつ)."
+    }
+  },
+  "$defs": {
+    "move": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template", "name", "vfx", "colour"],
+      "properties": {
+        "template": {
+          "enum": ["strike", "combo", "blast", "barrage", "heal", "power_up", "weaken", "poison", "paralyze", "barrier"]
+        },
+        "attribute": {
+          "enum": ["gu", "choki", "pa", "none"],
+          "description": "Slot 1 must be the character's own attribute, slot 2 must differ from it, slot 4 is always none; heal/power_up/barrier are none."
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[ぁ-ゖァ-ヺー]{1,10}$",
+          "description": "Hiragana/katakana only, 1-10 characters. NG-word checked."
+        },
+        "flavor": {
+          "type": "string",
+          "pattern": "^[ぁ-ゖァ-ヺー、。！？ 　]{0,30}$",
+          "description": "One short kana sentence. Dropped (not rejected) when invalid."
+        },
+        "vfx": {
+          "enum": ["slash", "punch", "beam", "orb", "burst", "wave", "rain", "spiral", "stars", "hearts", "bubbles", "leaves", "sparks", "shield", "glow"]
+        },
+        "colour": {
+          "enum": ["red", "orange", "yellow", "green", "cyan", "blue", "purple", "pink", "black", "white", "rainbow"]
+        },
+        "atkFormula": {
+          "enum": ["STR80_AGI20", "STR70_VIT30", "STR60_DEX40", "INT80_DEX20", "INT70_RES30", "INT60_LUK40"],
+          "description": "Damage templates only: strike/combo use STR*, blast/barrage use INT*."
+        },
+        "power": { "type": "integer", "minimum": 40, "maximum": 200 },
+        "hits": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "accuracy": { "type": "integer", "minimum": 60, "maximum": 100 },
+        "critBonus": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "spCost": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "castTicks": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "cooldownTicks": { "type": "integer", "minimum": 0, "maximum": 150 },
+        "healPct": { "type": "integer", "minimum": 10, "maximum": 40 },
+        "stat": { "enum": ["STR", "DEF", "INT", "RES", "AGI", "DEX", "LUK"] },
+        "stages": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "durationTicks": { "type": "integer", "minimum": 20, "maximum": 120 },
+        "chance": { "type": "integer", "minimum": 30, "maximum": 100 },
+        "shieldPct": { "type": "integer", "minimum": 20, "maximum": 60 },
+        "secondary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["none", "poison", "paralyze", "debuff", "drain"] },
+            "chance": { "type": "integer", "minimum": 10, "maximum": 50 },
+            "stat": { "enum": ["STR", "DEF", "INT", "RES", "AGI", "DEX", "LUK"] },
+            "drainPct": { "type": "integer", "minimum": 10, "maximum": 50 }
+          }
+        }
+      }
+    }
+  }
+}
