@@ -8,6 +8,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/big_button.dart';
 import '../../data/app_state.dart';
 import '../birth/pending_birth.dart';
+import '../draw_canvas/draw_canvas_screen.dart';
+import '../draw_canvas/stroke_drawing.dart';
 import 'album_import.dart';
 import 'capture_guide.dart';
 import 'draw_flow.dart';
@@ -57,12 +59,32 @@ class _DrawScreenState extends ConsumerState<DrawScreen> {
     await _pick(PhotoSource.camera);
   }
 
+  /// In-app drawing tool (SPEC §12.2 input ②).
+  /// Retakes reopen the canvas with the same drawing (draw more on it).
+  Future<void> _drawInApp([StrokeDrawing? initial]) async {
+    final drawing = await Navigator.of(context).push<StrokeDrawing>(
+      MaterialPageRoute(builder: (_) => DrawCanvasScreen(initial: initial)),
+    );
+    if (drawing == null || !mounted) return;
+    _lastCanvas = drawing;
+    setState(() => _busy = true);
+    final outcome = await ref.read(drawFlowProvider).processCanvas(drawing);
+    if (!mounted) return;
+    await _handle(outcome, canvas: true);
+  }
+
+  StrokeDrawing? _lastCanvas;
+
   Future<void> _pick(PhotoSource source) async {
     final bytes = await ref.read(drawingImageSourceProvider).pick(source);
     if (bytes == null || !mounted) return;
     setState(() => _busy = true);
     final outcome = await ref.read(drawFlowProvider).process(bytes);
     if (!mounted) return;
+    await _handle(outcome);
+  }
+
+  Future<void> _handle(DrawOutcome outcome, {bool canvas = false}) async {
     setState(() => _busy = false);
     final RetakeKind kind;
     final String message;
@@ -80,6 +102,10 @@ class _DrawScreenState extends ConsumerState<DrawScreen> {
     }
     final again = await showRetake(context, kind: kind, message: message);
     if (!again || !mounted) return;
+    if (canvas) {
+      await _drawInApp(_lastCanvas);
+      return;
+    }
     if (kind != RetakeKind.drawMore) {
       ref.read(captureGuideSeenProvider.notifier).set(false);
     }
@@ -97,15 +123,16 @@ class _DrawScreenState extends ConsumerState<DrawScreen> {
             ? const _Analyzing()
             : full
             ? const _CollectionFull()
-            : _Choices(onShoot: _shoot),
+            : _Choices(onShoot: _shoot, onDrawInApp: _drawInApp),
       ),
     );
   }
 }
 
 class _Choices extends StatelessWidget {
-  const _Choices({required this.onShoot});
+  const _Choices({required this.onShoot, required this.onDrawInApp});
   final VoidCallback onShoot;
+  final VoidCallback onDrawInApp;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -127,6 +154,24 @@ class _Choices extends StatelessWidget {
         label: 'しゃしんを とる',
         color: AppColors.primary,
         onPressed: onShoot,
+      ),
+      const SizedBox(height: 12),
+      // The camera stays the main way; drawing in the app is the second.
+      OutlinedButton.icon(
+        key: const Key('draw-in-app'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(60),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          side: const BorderSide(color: AppColors.primary, width: 3),
+        ),
+        onPressed: onDrawInApp,
+        icon: const Icon(Icons.brush, size: 28),
+        label: const Text(
+          'アプリで かく',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+        ),
       ),
     ],
   );

@@ -375,7 +375,8 @@ void evaluateAnim(Anim clip, double t, AnimContext c, int fwd, Pose p) {
     case Anim.squash:
       final dn = _bump(t, 0, 0.22);
       final up = _bump(t, 0.18, 0.48);
-      final settle = math.exp(-8 * math.max(0, t - 0.4)) *
+      final settle =
+          math.exp(-8 * math.max(0, t - 0.4)) *
           math.sin(30 * math.max(0, t - 0.4));
       p.sy = 1 - 0.28 * k * dn + 0.16 * k * up + 0.05 * settle;
       p.sx = 1 / math.sqrt(p.sy);

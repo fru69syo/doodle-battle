@@ -15,6 +15,7 @@ import '../drawing_loop/drawing_loop.dart';
 import '../drawing_loop/loop_labels.dart' show showOdaiStampMessage;
 import '../drawing_loop/odai/stamp_card.dart' show StampKind;
 import '../ng_filter/name_rules.dart';
+import '../puppet/puppet_store.dart';
 import 'ai_report.dart';
 import '../video_export/video_export_entry.dart';
 import 'pending_birth.dart';
@@ -109,6 +110,11 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
       return;
     }
     await keepBeforePhoto(repo, id, birth.beforePhoto);
+    // Drawn in the app: keep the stroke list (local only) for the rigger.
+    final strokes = birth.strokesJson;
+    if (strokes != null) {
+      await ref.read(puppetStoreProvider).saveStrokesJson(id, strokes);
+    }
     final stamp = await completeActiveOdai(
       ref.read,
       kind: StampKind.character,
@@ -120,7 +126,8 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
     ref.read(pendingBirthProvider.notifier).clear();
     // Video export: the detail page offers 「どうがに する」 prominently.
     ref.read(justBornCharacterProvider.notifier).set(id);
-    context.go(Routes.character(id));
+    // 「うごく ところを なおそう」 (skippable), then the character page.
+    context.go(Routes.characterJoints(id, first: true));
   }
 
   @override

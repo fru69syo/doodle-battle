@@ -119,9 +119,7 @@ AutoRigResult autoRig(
       .close(1)
       .fillHoles();
   final work = o.bridgeGapFrac > 0
-      ? closed
-            .largestBridged(maxGap: o.bridgeGapFrac * o.workSize)
-            .fillHoles()
+      ? closed.largestBridged(maxGap: o.bridgeGapFrac * o.workSize).fillHoles()
       : closed.largestComponents();
   final dist = work.insideDistance();
   final b = work.bounds();
@@ -305,8 +303,8 @@ CharacterRig _assign(
           l.ty < b[1] + 0.55 * bh &&
           (l.tx - cx).abs() > 0.3 * bw,
     );
-    final central = lows.length == 2 &&
-        lows.every((l) => (l.tx - cx).abs() < 0.3 * bw);
+    final central =
+        lows.length == 2 && lows.every((l) => (l.tx - cx).abs() < 0.3 * bw);
     if (central && highSide(true) && highSide(false)) landscape = false;
   }
   final used = <_Leaf>{};
@@ -360,7 +358,8 @@ CharacterRig _assign(
         const steps = 24;
         for (var k = 0; k <= steps; k++) {
           final t = k / steps;
-          final x = (ux + (bx0 - ux) * t).round(), y = (uy + (by0 - uy) * t).round();
+          final x = (ux + (bx0 - ux) * t).round(),
+              y = (uy + (by0 - uy) * t).round();
           neck = math.min(neck, dist[y * w + x]);
         }
         if (neck < 0.8 * ur) headDisc = upper;
@@ -393,7 +392,9 @@ CharacterRig _assign(
           dHead(l.junction.x, l.junction.y) < 1.25 * hr ||
           (dHead(l.tx, l.ty) < 1.6 * hr && (l.tx - hx).abs() < 1.1 * hr);
     } else {
-      near = dHead(l.tx, l.ty) < 1.6 * hr || dHead(l.junction.x, l.junction.y) < hr;
+      near =
+          dHead(l.tx, l.ty) < 1.6 * hr ||
+          dHead(l.junction.x, l.junction.y) < hr;
     }
     return near && l.ty < hy - 0.3 * hr;
   }
@@ -561,9 +562,11 @@ CharacterRig _assign(
           continue;
         }
         // Not already a limb.
-        final taken = [...arms, ...legs, ?head].any(
-          (l) => P2(l.tx, l.ty).dist(tip) < 0.12 * size,
-        );
+        final taken = [
+          ...arms,
+          ...legs,
+          ?head,
+        ].any((l) => P2(l.tx, l.ty).dist(tip) < 0.12 * size);
         if (taken) continue;
         final len = h.length;
         if (len < 0.16 * size || len > 0.75 * size) continue;

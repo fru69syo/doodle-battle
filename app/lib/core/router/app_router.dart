@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/app_state.dart';
 import '../../domain/character.dart';
 import '../../domain/cosmetics.dart';
+import '../../features/battle_stage/debug/stage_debug_page.dart';
 import '../../features/battle_ui/battle_outcome.dart';
 import '../../features/battle_ui/battle_result_screen.dart';
 import '../../features/battle_ui/battle_select_screen.dart';
@@ -29,7 +30,7 @@ import '../../features/online/online_battle_screen.dart';
 import '../../features/online/online_lobby_screen.dart';
 import '../../features/parent/parent_session.dart';
 import '../../features/parent/parent_settings_screen.dart';
-import '../../features/spike25d/spike25d_debug_page.dart';
+import '../../features/puppet/editor/character_joints_page.dart';
 import 'routes.dart';
 
 /// Where the router should send [location] given the app state; null to
@@ -64,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         : Routes.home,
     refreshListenable: refresh,
     redirect: (context, state) {
-      // 2.5D spike debug route: reachable before setup in debug builds only.
+      // 2.5D debug route: reachable before setup in debug builds only.
       if (kDebugMode && state.matchedLocation.startsWith(Routes.debug25d)) {
         return null;
       }
@@ -117,6 +118,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (_, s) =>
                     CharacterDetailScreen(characterId: s.pathParameters['id']!),
                 routes: [
+                  GoRoute(
+                    path: 'joints',
+                    builder: (_, s) => CharacterJointsPage(
+                      characterId: s.pathParameters['id']!,
+                      firstTime: s.uri.queryParameters['first'] == '1',
+                    ),
+                  ),
                   GoRoute(
                     path: 'ar',
                     builder: (_, s) =>
@@ -213,11 +221,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'parent',
             builder: (_, _) => const ParentSettingsScreen(),
           ),
-          // v2.0 2.5D spike (docs/V2_25D_TECH.md); debug builds only.
+          // 2.5D puppets / stage / drawing tool (docs/PUPPET.md); debug
+          // builds only.
           if (kDebugMode)
             GoRoute(
               path: 'debug/25d',
-              builder: (_, _) => const Spike25dDebugPage(),
+              builder: (_, _) => const StageDebugPage(),
             ),
         ],
       ),

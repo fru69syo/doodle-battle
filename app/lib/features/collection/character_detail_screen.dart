@@ -77,6 +77,16 @@ class CharacterDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
+              key: const Key('detail-joints'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFF8A00),
+              ),
+              icon: const Icon(Icons.accessibility_new),
+              label: const Text('うごく ところを なおす'),
+              onPressed: () => context.push(Routes.characterJoints(c.id)),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
               key: const Key('detail-ar'),
               style: FilledButton.styleFrom(backgroundColor: AppColors.purple),
               icon: const Icon(Icons.view_in_ar),

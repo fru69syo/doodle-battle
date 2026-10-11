@@ -1,45 +1,33 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
-import '../../data/app_state.dart';
-import 'battle/battle_25d_screen.dart';
-import 'battle/battle_session25.dart';
-import 'editor/joint_editor_screen.dart';
-import 'editor/rig_edit.dart';
-import 'samples25d.dart';
+import '../../../data/app_state.dart';
+import '../../draw_canvas/draw_canvas_screen.dart';
+import '../../puppet/editor/joint_editor_screen.dart';
+import '../../puppet/samples.dart';
+import '../battle_stage.dart';
+import 'demo_battle.dart';
 
-/// Debug entry for the v2.0 2.5D spike (route `/debug/25d`, debug builds
-/// only). See docs/V2_25D_TECH.md.
-class Spike25dDebugPage extends ConsumerStatefulWidget {
-  const Spike25dDebugPage({super.key});
+/// Debug entry for the 2.5D puppets and stage (route `/debug/25d`, debug
+/// builds only). See docs/PUPPET.md.
+class StageDebugPage extends ConsumerStatefulWidget {
+  const StageDebugPage({super.key});
 
   @override
-  ConsumerState<Spike25dDebugPage> createState() => _Spike25dDebugPageState();
+  ConsumerState<StageDebugPage> createState() => _StageDebugPageState();
 }
 
-class _Spike25dDebugPageState extends ConsumerState<Spike25dDebugPage> {
-  Uint8List _player = sample25dPng(Sample25d.hero);
+class _StageDebugPageState extends ConsumerState<StageDebugPage> {
+  Uint8List _player = samplePng(Sample.hero);
   String _playerLabel = 'hero';
-  Sample25d _cpu = Sample25d.dog;
+  Sample _cpu = Sample.dog;
   bool _cpuBloomer = false;
   int _level = 12;
   bool _low = false;
-  RigStore? _store;
-
-  @override
-  void initState() {
-    super.initState();
-    getApplicationDocumentsDirectory().then((d) {
-      if (mounted) setState(() => _store = FileRigStore(d));
-    });
-  }
-
-  String get _hash => sha256.convert(_player).toString().substring(0, 16);
+  StageTheme _theme = StageTheme.meadow;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +35,7 @@ class _Spike25dDebugPageState extends ConsumerState<Spike25dDebugPage> {
     void open(Widget w) =>
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => w));
     return Scaffold(
-      appBar: AppBar(title: const Text('2.5D spike (debug)')),
+      appBar: AppBar(title: const Text('2.5D puppets (debug)')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -55,11 +43,11 @@ class _Spike25dDebugPageState extends ConsumerState<Spike25dDebugPage> {
           Wrap(
             spacing: 8,
             children: [
-              for (final s in Sample25d.values)
+              for (final s in Sample.values)
                 ActionChip(
                   label: Text(s.name),
                   onPressed: () => setState(() {
-                    _player = sample25dPng(s);
+                    _player = samplePng(s);
                     _playerLabel = s.name;
                   }),
                 ),
@@ -74,7 +62,9 @@ class _Spike25dDebugPageState extends ConsumerState<Spike25dDebugPage> {
                         _player = bytes;
                         _playerLabel = c.name;
                       });
-                    } catch (_) {}
+                    } on Object {
+                      // Missing file: keep the current picture.
+                    }
                   },
                 ),
             ],
@@ -84,11 +74,24 @@ class _Spike25dDebugPageState extends ConsumerState<Spike25dDebugPage> {
           Wrap(
             spacing: 8,
             children: [
-              for (final s in Sample25d.values)
+              for (final s in Sample.values)
                 ChoiceChip(
                   label: Text(s.name),
                   selected: _cpu == s,
                   onSelected: (_) => setState(() => _cpu = s),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text('ステージ'),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final t in StageTheme.all)
+                ChoiceChip(
+                  label: Text(t.name),
+                  selected: _theme == t,
+                  onSelected: (_) => setState(() => _theme = t),
                 ),
             ],
           ),
@@ -109,42 +112,42 @@ class _Spike25dDebugPageState extends ConsumerState<Spike25dDebugPage> {
           ),
           const Divider(),
           FilledButton(
-            onPressed: () async {
-              final rig = await _store?.load(_hash);
-              open(
-                Battle25dScreen(
-                  player: Side25(
-                    png: _player,
-                    name: 'きみ',
-                    level: _level,
-                    rig: rig,
-                    genomeSeed: 11,
-                  ),
-                  cpu: Side25(
-                    png: sample25dPng(_cpu),
-                    name: _cpu.name,
-                    level: _level,
-                    bloomer: _cpuBloomer,
-                    genomeSeed: 5,
-                  ),
-                  lowQuality: _low,
+            onPressed: () => open(
+              DemoBattleScreen(
+                player: DemoSide(
+                  png: _player,
+                  name: 'きみ',
+                  level: _level,
+                  genomeSeed: 11,
                 ),
-              );
-            },
+                cpu: DemoSide(
+                  png: samplePng(_cpu),
+                  name: _cpu.name,
+                  level: _level,
+                  lateBloomer: _cpuBloomer,
+                  genomeSeed: 5,
+                ),
+                theme: _theme,
+                quality: _low ? StageQuality.low : null,
+              ),
+            ),
             child: const Text('2.5D バトル'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: _store == null
-                ? null
-                : () => open(
-                    JointEditorScreen(
-                      png: _player,
-                      imageHash: _hash,
-                      store: _store!,
-                    ),
-                  ),
+            onPressed: () => open(
+              JointEditorScreen(
+                characterId: 'debug',
+                png: _player,
+                firstTime: true,
+              ),
+            ),
             child: const Text('うごく ところを なおす（ジョイント エディタ）'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => open(const DrawCanvasScreen()),
+            child: const Text('アプリで かく（お絵かきツール）'),
           ),
         ],
       ),

@@ -17,7 +17,8 @@ BinMask raster(List<double> p, int w, int h) {
     for (var i = 0; i < n; i++) {
       final x0 = p[2 * i], y0 = p[2 * i + 1];
       final x1 = p[(2 * i + 2) % (2 * n)], y1 = p[(2 * i + 3) % (2 * n)];
-      if ((y0 <= yc) != (y1 <= yc)) xs.add(x0 + (yc - y0) / (y1 - y0) * (x1 - x0));
+      if ((y0 <= yc) != (y1 <= yc))
+        xs.add(x0 + (yc - y0) / (y1 - y0) * (x1 - x0));
     }
     xs.sort();
     for (var k = 0; k + 1 < xs.length; k += 2) {
@@ -31,20 +32,33 @@ BinMask raster(List<double> p, int w, int h) {
 
 void main() {
   test('debug', () {
-    final ann = (jsonDecode(File('/home/user/datasets/ad_meta_ann/sample_annotations.json').readAsStringSync()) as Map);
+    final ann = (jsonDecode(
+      File('/home/user/datasets/ad_meta_ann/sample_annotations.json')
+          .readAsStringSync(),
+    ) as Map);
     final keys = ann.keys.toList();
-    for (final idx in (Platform.environment['IDX'] ?? '16').split(',').map(int.parse)) {
+    for (final idx
+        in (Platform.environment['IDX'] ?? '16').split(',').map(int.parse)) {
       final key = keys[idx - 1];
       final v = ann[key] as Map;
       final a = (v['anns'] as List).first as Map;
-      final bytes = File('/home/user/datasets/ad_meta/${v['split']}/$key').readAsBytesSync();
+      final bytes = File('/home/user/datasets/ad_meta/${v['split']}/$key')
+          .readAsBytesSync();
       final im = img.decodeImage(bytes)!;
-      final poly = ((a['segmentation'] as List).first as List).map((e) => (e as num).toDouble()).toList();
+      final poly = ((a['segmentation'] as List).first as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
       final mask = raster(poly, im.width, im.height);
-      final rgba = Uint8List.fromList(im.convert(numChannels: 4, format: img.Format.uint8).getBytes(order: img.ChannelOrder.rgba));
+      final rgba = Uint8List.fromList(
+        im
+            .convert(numChannels: 4, format: img.Format.uint8)
+            .getBytes(order: img.ChannelOrder.rgba),
+      );
       final r = autoRig(mask, rgba: rgba, debug: true);
       // ignore: avoid_print
-      print('#$idx ${r.rig.limbs.map((l) => '${l.kind.name}${l.tip}').join(' ')}');
+      print(
+        '#$idx ${r.rig.limbs.map((l) => '${l.kind.name}${l.tip}').join(' ')}',
+      );
     }
   });
 }

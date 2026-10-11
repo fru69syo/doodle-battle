@@ -2,7 +2,18 @@ import 'dart:ui';
 
 /// Background props scattered on the ground (drawn with the fighters, by
 /// depth).
-enum PropKind { flower, stone, bush, tuft, shell, snowman, candy, cactus, mushroom, star }
+enum PropKind {
+  flower,
+  stone,
+  bush,
+  tuft,
+  shell,
+  snowman,
+  candy,
+  cactus,
+  mushroom,
+  star,
+}
 
 /// Tree-line silhouettes behind the arena.
 enum TreeKind { round, pine, palm, lollipop, cactus, none }
@@ -186,7 +197,16 @@ class StageTheme {
     hillOutline: Color(0x55301810),
   );
 
-  static const all = [meadow, forest, beach, desert, snow, candy, night, volcano];
+  static const all = [
+    meadow,
+    forest,
+    beach,
+    desert,
+    snow,
+    candy,
+    night,
+    volcano,
+  ];
 
   /// The stage look of world 1–10 (one-player mode: 3 stages per world).
   /// Worlds 9 and 10 revisit the first lands at night / in candy colours.

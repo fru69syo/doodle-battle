@@ -9,6 +9,9 @@ import '../../data/backend/backend_api.dart';
 import '../../domain/drawing_analysis_result.dart';
 import '../birth/pending_birth.dart';
 import 'drawing_services.dart';
+import '../draw_canvas/canvas_analysis.dart';
+import '../draw_canvas/stroke_drawing.dart';
+import '../draw_canvas/stroke_painter.dart';
 import '../drawing_analysis/drawing_analyzer.dart'
     show UndecodableImageException, applyCloudSkill, kPaperDrawingMessage;
 
@@ -77,6 +80,33 @@ class DrawFlow {
     );
   }
 
+  /// A drawing made with the in-app tool (docs/PUPPET.md §4): rendered,
+  /// then the same analysis minus the paper / authenticity checks, the same
+  /// cloud judgement (a "not hand-drawn" verdict is ignored — it was drawn
+  /// with a finger in the app), and the stroke list is kept for rigging.
+  Future<DrawOutcome> processCanvas(StrokeDrawing drawing) async {
+    final png = await renderDrawingPng(drawing);
+    final CanvasAnalysis a;
+    try {
+      a = await _ref.read(canvasAnalyzerProvider)(png);
+    } on UndecodableImageException {
+      return const DrawUnreadable();
+    }
+    final reject = a.rejectReason;
+    if (reject != null) return DrawRetake(reject.message);
+    final judged = await _judge(a.result);
+    final cloud = judged != null && judged.appropriate ? judged : null;
+    return DrawReady(
+      PendingBirth(
+        result: cloud == null
+            ? a.result
+            : applyCloudSkill(a.result, cloud.skillEstimate.toDouble()),
+        cloud: cloud,
+        strokesJson: strokesRecordJson(drawing, a.mapping),
+      ),
+    );
+  }
+
   /// Cloud judgement, or null when not allowed / unavailable / failed (the
   /// local result is used silently). An inappropriate judgement is returned
   /// so that a "not hand-drawn" verdict ([CloudJudgement.rejectCode]) can
@@ -99,3 +129,9 @@ class DrawFlow {
 }
 
 final drawFlowProvider = Provider<DrawFlow>(DrawFlow.new);
+
+/// Seam over the in-app drawing analysis (tests use a synchronous one).
+final canvasAnalyzerProvider =
+    Provider<Future<CanvasAnalysis> Function(Uint8List)>(
+      (ref) => analyzeCanvasDrawing,
+    );

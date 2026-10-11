@@ -330,7 +330,10 @@ class JointEditorScreenState extends ConsumerState<JointEditorScreen>
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFFC94D), width: 3),
+                    border: Border.all(
+                      color: const Color(0xFFFFC94D),
+                      width: 3,
+                    ),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(17),
@@ -432,7 +435,10 @@ class JointEditorScreenState extends ConsumerState<JointEditorScreen>
                     icon: const Icon(Icons.check_circle, size: 32),
                     label: const Text(
                       'できた！',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),

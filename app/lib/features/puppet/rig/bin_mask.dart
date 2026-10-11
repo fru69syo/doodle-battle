@@ -272,7 +272,8 @@ class BinMask {
     final n = math.max((x1 - x0).abs(), (y1 - y0).abs());
     for (var i = 0; i <= n; i++) {
       final t = n == 0 ? 0.0 : i / n;
-      final cx = (x0 + (x1 - x0) * t).round(), cy = (y0 + (y1 - y0) * t).round();
+      final cx = (x0 + (x1 - x0) * t).round(),
+          cy = (y0 + (y1 - y0) * t).round();
       for (var y = cy - r; y <= cy + r; y++) {
         for (var x = cx - r; x <= cx + r; x++) {
           if (x < 0 || y < 0 || x >= w || y >= h) continue;

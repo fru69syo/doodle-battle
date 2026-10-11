@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -53,7 +52,10 @@ class PuppetSpec {
   /// Cache key: picture + rig + look + quality.
   String get key {
     final h = sha1.convert(png).toString().substring(0, 16);
-    final r = rig?.encode() ?? rigJson ?? (strokes == null ? '' : 's${strokes!.length}');
+    final r =
+        rig?.encode() ??
+        rigJson ??
+        (strokes == null ? '' : 's${strokes!.length}');
     final rh = sha1.convert(r.codeUnits).toString().substring(0, 10);
     return '$h:$rh:${look.simple}:${quality.name}';
   }
@@ -107,7 +109,7 @@ class PuppetBuilder {
 
   final PuppetRunner runner;
   final int maxBytes;
-  final _meshes = LinkedHashMap<String, PuppetMesh>();
+  final _meshes = <String, PuppetMesh>{};
   final _pending = <String, Future<PuppetMesh>>{};
 
   int get cachedBytes => _meshes.values.fold(0, (a, m) => a + m.bytes);
@@ -120,17 +122,20 @@ class PuppetBuilder {
       _meshes[key] = hit; // most recent last
       return Future.value(hit);
     }
-    return _pending[key] ??= runner(() => buildPuppetSync(spec)).then((m) {
-      _pending.remove(key);
-      _meshes[key] = m;
-      while (cachedBytes > maxBytes && _meshes.length > 1) {
-        _meshes.remove(_meshes.keys.first);
-      }
-      return m;
-    }, onError: (Object e) {
-      _pending.remove(key);
-      throw e;
-    });
+    return _pending[key] ??= runner(() => buildPuppetSync(spec)).then(
+      (m) {
+        _pending.remove(key);
+        _meshes[key] = m;
+        while (cachedBytes > maxBytes && _meshes.length > 1) {
+          _meshes.remove(_meshes.keys.first);
+        }
+        return m;
+      },
+      onError: (Object e) {
+        _pending.remove(key);
+        throw e;
+      },
+    );
   }
 
   /// A GPU-ready sprite (the caller disposes it).

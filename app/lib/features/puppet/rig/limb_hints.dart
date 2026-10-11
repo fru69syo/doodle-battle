@@ -10,7 +10,12 @@ import 'character_rig.dart';
 /// skeleton can not see. Coordinates are drawing pixels; the two ends are
 /// unordered.
 class LimbHint {
-  const LimbHint(this.a, this.b, {required this.thickness, this.fromStroke = false});
+  const LimbHint(
+    this.a,
+    this.b, {
+    required this.thickness,
+    this.fromStroke = false,
+  });
 
   final P2 a, b;
 
@@ -93,7 +98,8 @@ List<LimbHint> inkLimbHints(
       final c = cy * ww + ((x - fb[0]) / s).floor();
       final r = rgba[i * 4], g = rgba[i * 4 + 1], b = rgba[i * 4 + 2];
       lum[c] += (0.3 * r + 0.59 * g + 0.11 * b) / 255;
-      chroma[c] += (math.max(r, math.max(g, b)) - math.min(r, math.min(g, b))) / 255;
+      chroma[c] +=
+          (math.max(r, math.max(g, b)) - math.min(r, math.min(g, b))) / 255;
       cnt[c] += 1;
     }
   }

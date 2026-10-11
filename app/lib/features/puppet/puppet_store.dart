@@ -146,4 +146,6 @@ class InMemoryPuppetStore implements PuppetStore {
 }
 
 /// Overridden with [FilePuppetStore] in `main.dart`.
-final puppetStoreProvider = Provider<PuppetStore>((ref) => InMemoryPuppetStore());
+final puppetStoreProvider = Provider<PuppetStore>(
+  (ref) => InMemoryPuppetStore(),
+);

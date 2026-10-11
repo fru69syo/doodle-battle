@@ -28,7 +28,10 @@ void main() {
   final dir = Platform.environment['AD_DIR'];
   final annPath = Platform.environment['AD_ANN'];
   final out = Platform.environment['AD_OUT'];
-  final modes = (Platform.environment['AD_MODES'] ?? 'gt-spike,gt,app-spike,app').split(',');
+  final modes =
+      (Platform.environment['AD_MODES'] ?? 'gt-spike,gt,app-spike,app').split(
+        ',',
+      );
   final limit = int.tryParse(Platform.environment['AD_LIMIT'] ?? '') ?? 1000;
 
   test('auto-rig accuracy on Amateur Drawings', () {
@@ -120,12 +123,7 @@ void main() {
         if (out != null &&
             mode == (Platform.environment['AD_OV_MODE'] ?? 'gt') &&
             k <= int.parse(Platform.environment['AD_OV'] ?? '48')) {
-          _overlay(
-            image,
-            r,
-            kp,
-            '$out/ov_${k.toString().padLeft(3, '0')}.png',
-          );
+          _overlay(image, r, kp, '$out/ov_${k.toString().padLeft(3, '0')}.png');
         }
       }
     }

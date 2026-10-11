@@ -144,7 +144,12 @@ PuppetMesh buildPuppetMesh(
   final tex = options.simplified
       ? _posterise(rgba, w, h, b)
       : _withBorder(rgba, w, h, b);
-  final shifted = r.shifted(b.toDouble(), b.toDouble(), padW: 2.0 * b, padH: 2.0 * b);
+  final shifted = r.shifted(
+    b.toDouble(),
+    b.toDouble(),
+    padW: 2.0 * b,
+    padH: 2.0 * b,
+  );
   lap('texture');
   final texMask = BinMask.fromRgba(tex, tw, th, threshold: 1);
   final cells = options.simplified ? 14 : options.gridCells;

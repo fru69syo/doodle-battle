@@ -143,15 +143,8 @@ class RigLimb {
     );
   }
 
-  RigLimb copy() => RigLimb(
-    kind,
-    base,
-    mid,
-    tip,
-    edited: edited,
-    attach: attach,
-    part: part,
-  );
+  RigLimb copy() =>
+      RigLimb(kind, base, mid, tip, edited: edited, attach: attach, part: part);
 }
 
 /// How a rig was made.
@@ -245,7 +238,12 @@ class CharacterRig {
 
   /// Same rig with every point moved by ([dx], [dy]) and the frame grown by
   /// 2·[pad] (e.g. the sticker border, or a composite canvas).
-  CharacterRig shifted(double dx, double dy, {double padW = 0, double padH = 0}) {
+  CharacterRig shifted(
+    double dx,
+    double dy, {
+    double padW = 0,
+    double padH = 0,
+  }) {
     P2 s(P2 p) => P2(p.x + dx, p.y + dy);
     return CharacterRig(
       width: width + padW,
@@ -345,7 +343,8 @@ class CharacterRig {
         p.y >= -0.5 * height &&
         p.y <= 1.5 * height;
     if (!ok(root) || !ok(chest)) return 'body out of range';
-    if (ground != null && !(ground! >= -0.5 * height && ground! <= 1.5 * height)) {
+    if (ground != null &&
+        !(ground! >= -0.5 * height && ground! <= 1.5 * height)) {
       return 'ground out of range';
     }
     if (limbs.length > maxLimbs) return 'too many limbs';
@@ -408,7 +407,9 @@ List<Bone> bonesOf(CharacterRig rig) {
     final a = l.attach;
     if (a != null && a >= 0 && a < endBone.length) parent = endBone[a];
     if (l.kind == LimbKind.head || l.kind == LimbKind.item) {
-      bones.add(Bone('${l.kind.name}$i', parent, l.base, l.tip, limb: i, segment: 0));
+      bones.add(
+        Bone('${l.kind.name}$i', parent, l.base, l.tip, limb: i, segment: 0),
+      );
       endBone.add(bones.length - 1);
       continue;
     }

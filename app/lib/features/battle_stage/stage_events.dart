@@ -28,6 +28,7 @@ class StageMove {
     this.colour = 'yellow',
     this.hits = 1,
     this.special = false,
+    this.drawnEffect = false,
   });
 
   final String name;
@@ -45,6 +46,10 @@ class StageMove {
 
   /// ひっさつ (the 4th move): bigger effects.
   final bool special;
+
+  /// The child drew this move's effect (ぞくせいわざ / ひっさつ, docs/LOOP.md):
+  /// the stage flies their drawing instead of the generic effect.
+  final bool drawnEffect;
 }
 
 /// What happened, in order.

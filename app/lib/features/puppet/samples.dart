@@ -6,14 +6,14 @@ import 'package:image/image.dart' as img;
 /// Synthetic "crayon" cut-outs (transparent background) covering the
 /// shapes kids draw: a person, a stick figure, a limbless blob, a
 /// four-legged animal in profile and a car. No binary assets needed.
-enum Sample25d { hero, stick, blob, dog, car }
+enum Sample { hero, stick, blob, dog, car }
 
-Uint8List sample25dPng(Sample25d s, {int seed = 3}) => switch (s) {
-  Sample25d.hero => _hero(seed),
-  Sample25d.stick => _stick(seed),
-  Sample25d.blob => _blob(seed),
-  Sample25d.dog => _dog(seed),
-  Sample25d.car => _car(seed),
+Uint8List samplePng(Sample s, {int seed = 3}) => switch (s) {
+  Sample.hero => _hero(seed),
+  Sample.stick => _stick(seed),
+  Sample.blob => _blob(seed),
+  Sample.dog => _dog(seed),
+  Sample.car => _car(seed),
 };
 
 class _Pen {
