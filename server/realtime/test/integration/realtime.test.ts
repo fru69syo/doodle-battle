@@ -12,6 +12,7 @@ import { silentLogger } from "../../src/log";
 import { RealtimeServer } from "../../src/server";
 import { TestClient } from "../helpers/client";
 import { MemoryStore } from "../helpers/memoryStore";
+import { serverMessageValidator } from "../helpers/schema";
 
 const TICK_MS = 2;
 
@@ -134,6 +135,11 @@ describe("realtime server (integration)", () => {
 
     const { replayed, stored } = await replayHash(e, mA.matchId);
     expect(replayed).toBe(stored);
+
+    // Every message the children received matches the published protocol schema.
+    const valid = serverMessageValidator();
+    const invalid = [...alice.messages, ...bob.messages].filter((m) => !valid(m));
+    expect(invalid).toEqual([]);
   });
 
   it("falls back to a ghost when nobody else is queuing (cost mode decides how soon)", async () => {

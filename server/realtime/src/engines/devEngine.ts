@@ -95,7 +95,8 @@ export class DevEngine implements BattleEngine {
     const moves = parseMoves(d.moves, unlockedMoveCount(source.level));
     const attr = d.attr === "gu" || d.attr === "choki" || d.attr === "pa" ? d.attr : "gu";
     const fighter: DevFighter = { stats, moves };
-    return { attr, moves, maxHp: maxHpOf(stats), engineData: fighter };
+    const pub: MovePublic[] = moves.map((m) => ({ slot: m.slot, name: m.name, templateId: m.templateId, attr: m.attr, spCost: m.spCost }));
+    return { attr, moves: pub, maxHp: maxHpOf(stats), engineData: fighter };
   }
 
   createBattle(a: FighterSetup, b: FighterSetup, opts: { seed: number }): BattleSim {
