@@ -1,20 +1,21 @@
 import 'dart:convert';
 
-import 'package:doodle_battle/features/spike25d/anim/clips.dart';
-import 'package:doodle_battle/features/spike25d/anim/skinner.dart';
-import 'package:doodle_battle/features/spike25d/editor/rig_edit.dart';
-import 'package:doodle_battle/features/spike25d/rig/auto_rig.dart';
-import 'package:doodle_battle/features/spike25d/rig/bin_mask.dart';
-import 'package:doodle_battle/features/spike25d/rig/rig.dart';
-import 'package:doodle_battle/features/spike25d/rig/rigged_character.dart';
-import 'package:doodle_battle/features/spike25d/rig/skeleton.dart';
-import 'package:doodle_battle/features/spike25d/samples25d.dart';
+import 'package:doodle_battle/features/puppet/anim/clips.dart';
+import 'package:doodle_battle/features/puppet/anim/skinner.dart';
+import 'package:doodle_battle/features/puppet/editor/rig_edits.dart';
+import 'package:doodle_battle/features/puppet/mesh/puppet_mesh.dart';
+import 'package:doodle_battle/features/puppet/puppet_store.dart';
+import 'package:doodle_battle/features/puppet/rig/auto_rig.dart';
+import 'package:doodle_battle/features/puppet/rig/bin_mask.dart';
+import 'package:doodle_battle/features/puppet/rig/character_rig.dart';
+import 'package:doodle_battle/features/puppet/rig/skeleton.dart';
+import 'package:doodle_battle/features/puppet/samples.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 int count(CharacterRig r, LimbKind k) => r.of(k).length;
 
 void main() {
-  final hero = buildRiggedCharacterFromPng(sample25dPng(Sample25d.hero));
+  final hero = buildPuppetMeshFromPng(samplePng(Sample.hero));
 
   group('auto-rig', () {
     test('person: head, 2 arms, 2 legs in the right places', () {
@@ -35,14 +36,14 @@ void main() {
     });
 
     test('stick figure (1-px lines + circle head)', () {
-      final r = buildRiggedCharacterFromPng(sample25dPng(Sample25d.stick)).rig;
+      final r = buildPuppetMeshFromPng(samplePng(Sample.stick)).rig;
       expect(count(r, LimbKind.head), 1);
       expect(count(r, LimbKind.arm), 2);
       expect(count(r, LimbKind.leg), 2);
     });
 
     test('dog in profile: 4 legs, head on the right, tail', () {
-      final r = buildRiggedCharacterFromPng(sample25dPng(Sample25d.dog)).rig;
+      final r = buildPuppetMeshFromPng(samplePng(Sample.dog)).rig;
       expect(count(r, LimbKind.leg), 4);
       expect(count(r, LimbKind.head), 1);
       expect(count(r, LimbKind.tail), 1);
@@ -50,7 +51,7 @@ void main() {
     });
 
     test('blob without limbs falls back to a body-only rig', () {
-      final c = buildRiggedCharacterFromPng(sample25dPng(Sample25d.blob));
+      final c = buildPuppetMeshFromPng(samplePng(Sample.blob));
       expect(count(c.rig, LimbKind.arm) + count(c.rig, LimbKind.leg), 0);
     });
 
@@ -60,11 +61,11 @@ void main() {
     });
 
     test('deterministic and fast', () {
-      final a = buildRiggedCharacterFromPng(sample25dPng(Sample25d.hero));
+      final a = buildPuppetMeshFromPng(samplePng(Sample.hero));
       expect(jsonEncode(a.rig.toJson()), jsonEncode(hero.rig.toJson()));
       expect(a.indices, hero.indices);
       final sw = Stopwatch()..start();
-      buildRiggedCharacterFromPng(sample25dPng(Sample25d.dog));
+      buildPuppetMeshFromPng(samplePng(Sample.dog));
       expect(sw.elapsedMilliseconds, lessThan(2000));
     });
 
@@ -88,7 +89,95 @@ void main() {
         (jsonDecode(j) as Map).cast<String, Object?>(),
       );
       expect(jsonEncode(back.toJson()), j);
-      expect(j.length, lessThan(1500));
+      expect(j.length, lessThan(CharacterRig.maxJsonBytes));
+      expect(back.validate(), isNull);
+    });
+
+    test('v1 (spike) JSON still loads', () {
+      final v1 = {
+        'v': 1,
+        'size': [100, 120],
+        'root': [50, 90],
+        'chest': [50, 50],
+        'limbs': [
+          {
+            'kind': 'arm',
+            'base': [50, 50],
+            'mid': [70, 55],
+            'tip': [90, 60],
+            'edited': true,
+          },
+        ],
+        'source': 'edited',
+      };
+      final r = CharacterRig.fromJson(v1);
+      expect(r.limbs.single.kind, LimbKind.arm);
+      expect(r.limbs.single.edited, isTrue);
+      expect(r.source, RigSource.edited);
+    });
+
+    test('validation rejects bad rigs (fallback to auto-rig)', () {
+      Map<String, Object?> j() =>
+          (jsonDecode(hero.rig.encode()) as Map).cast<String, Object?>();
+      expect(CharacterRig.tryDecode(hero.rig.encode()), isNotNull);
+      expect(CharacterRig.tryDecode('nope'), isNull);
+      expect(CharacterRig.tryDecode(null), isNull);
+      final far = j()..['root'] = [1e6, 0];
+      expect(CharacterRig.tryDecode(jsonEncode(far)), isNull);
+      final many = j()
+        ..['limbs'] = [
+          for (var i = 0; i < 13; i++)
+            {
+              'k': 'x',
+              'b': [1, 1],
+              't': [2, 2],
+            },
+        ];
+      expect(CharacterRig.tryDecode(jsonEncode(many)), isNull);
+      final cyc = j()
+        ..['limbs'] = [
+          {
+            'k': 'x',
+            'b': [1, 1],
+            't': [2, 2],
+            'p': 0,
+          },
+        ];
+      expect(CharacterRig.tryDecode(jsonEncode(cyc)), isNull, reason: 'self');
+      final kind = j()
+        ..['limbs'] = [
+          {
+            'k': 'zz',
+            'b': [1, 1],
+            't': [2, 2],
+          },
+        ];
+      expect(CharacterRig.tryDecode(jsonEncode(kind)), isNull);
+      expect(CharacterRig.tryDecode('x' * 3000), isNull, reason: '> 2 KB');
+    });
+
+    test('the largest possible rig still fits in 2 KB', () {
+      final r = CharacterRig(
+        width: 4095.5,
+        height: 4095.5,
+        root: const P2(-1000.5, 4000.5),
+        chest: const P2(-1000.5, 3000.5),
+        limbs: [
+          for (var i = 0; i < CharacterRig.maxLimbs; i++)
+            RigLimb(
+              LimbKind.item,
+              const P2(-1234.5, -1234.5),
+              const P2(-1234.5, -1234.5),
+              const P2(-1234.5, -1234.5),
+              edited: true,
+              attach: i == 0 ? null : 0,
+              part: 'p_1234567890123456',
+            ),
+        ],
+        ground: 4000.5,
+        source: RigSource.edited,
+      );
+      expect(r.encode().length, lessThan(CharacterRig.maxJsonBytes));
     });
 
     test('unknown version is rejected', () {
@@ -132,14 +221,14 @@ void main() {
       final hand = sk.limbTip(arm, hero.rig.limbs[arm]);
       final foot = sk.limbTip(leg, hero.rig.limbs[leg]);
       final l = hero.rig.limbs;
-      expect((V2(hand.$1, hand.$2) - l[arm].tip).length, greaterThan(20));
-      expect((V2(foot.$1, foot.$2) - l[leg].tip).length, lessThan(0.5));
+      expect((P2(hand.$1, hand.$2) - l[arm].tip).length, greaterThan(20));
+      expect((P2(foot.$1, foot.$2) - l[leg].tip).length, lessThan(0.5));
       expect(ctx.hasArms, isTrue);
     });
 
     test('every clip evaluates for every sample (finite poses)', () {
-      for (final s in Sample25d.values) {
-        final c = buildRiggedCharacterFromPng(sample25dPng(s));
+      for (final s in Sample.values) {
+        final c = buildPuppetMeshFromPng(samplePng(s));
         final sk = Skinner(c);
         final ctx = AnimContext(c.rig);
         final p = Pose(c.rig.limbs.length);
@@ -154,8 +243,8 @@ void main() {
     });
 
     test('simplified look: coarse, body only, few colours', () {
-      final c = buildRiggedCharacterFromPng(
-        sample25dPng(Sample25d.hero),
+      final c = buildPuppetMeshFromPng(
+        samplePng(Sample.hero),
         options: const BuildOptions(simplified: true),
       );
       expect(c.rig.isBlob, isTrue);
@@ -177,23 +266,23 @@ void main() {
     test('move a hand, add a tail, remove it, store', () async {
       final r0 = hero.rig;
       final arm = r0.limbs.indexWhere((l) => l.kind == LimbKind.arm);
-      final r1 = RigEdits.moveTip(r0, arm, const V2(10, 10));
-      expect(r1.limbs[arm].tip, isA<V2>());
+      final r1 = RigEdits.moveTip(r0, arm, const P2(10, 10));
+      expect(r1.limbs[arm].tip, isA<P2>());
       expect(r1.limbs[arm].tip.x, 10);
       expect(r1.limbs[arm].edited, isTrue);
-      expect(r1.source, 'edited');
+      expect(r1.source, RigSource.edited);
       expect(r0.limbs[arm].tip.x, isNot(10), reason: 'edits copy');
       final r2 = RigEdits.addLimb(r1, LimbKind.tail);
       expect(count(r2, LimbKind.tail), 1);
       final r3 = RigEdits.removeLimb(r2, r2.limbs.length - 1);
       expect(count(r3, LimbKind.tail), 0);
-      final store = MemoryRigStore();
-      await store.save('abc', r1);
-      final back = await store.load('abc');
+      final store = InMemoryPuppetStore();
+      await store.saveRig('abc', r1);
+      final back = CharacterRig.tryDecode(await store.loadRigJson('abc'));
       expect(back!.limbs[arm].tip.x, 10);
       // The edited rig drives the build.
-      final c = buildRiggedCharacterFromPng(
-        sample25dPng(Sample25d.hero),
+      final c = buildPuppetMeshFromPng(
+        samplePng(Sample.hero),
         rig: back,
       );
       expect(c.rig.limbs[arm].tip.x, 10 + 6, reason: 'shifted by border');

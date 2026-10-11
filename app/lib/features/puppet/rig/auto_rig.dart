@@ -103,7 +103,6 @@ AutoRigResult autoRig(
   AutoRigOptions o = const AutoRigOptions(),
   Uint8List? rgba,
   List<HintStroke>? strokes,
-  bool debug = false,
 }) {
   final sw = Stopwatch()..start();
   // Work on the figure's own box so small figures get the full
@@ -165,9 +164,10 @@ AutoRigResult autoRig(
         toWork(h.b),
         thickness: h.thickness / scale,
         fromStroke: h.fromStroke,
+        mid: h.mid == null ? null : toWork(h.mid!),
       ),
   ];
-  final rig = _assign(work, dist, skel, b, size, o, d, workHints, debug)
+  final rig = _assign(work, dist, skel, b, size, o, d, workHints)
     ..ground = (b[3] - pad + 1) * scale + offY;
   return AutoRigResult(
     rig: CharacterRig(
@@ -214,9 +214,8 @@ CharacterRig _assign(
   double size,
   AutoRigOptions o,
   P2 Function(double, double) d,
-  List<LimbHint> hints, [
-  bool debug = false,
-]) {
+  List<LimbHint> hints,
+) {
   final w = work.w;
   final bw = (b[2] - b[0] + 1).toDouble();
   final bh = (b[3] - b[1] + 1).toDouble();
@@ -494,28 +493,6 @@ CharacterRig _assign(
     if (tail != null) used.add(tail);
   }
 
-  if (debug) {
-    // ignore: avoid_print
-    print('bbox $b c=($cx,$cy) landscape=$landscape head=$headDisc');
-    for (final l in leaves) {
-      final role = legs.contains(l)
-          ? 'leg'
-          : arms.contains(l)
-          ? 'arm'
-          : headExtras.contains(l)
-          ? 'hx'
-          : l == head
-          ? 'head'
-          : 'x';
-      // ignore: avoid_print
-      print(
-        '  $role tip=(${l.tx},${l.ty}) j=(${l.junction.x.toStringAsFixed(0)},${l.junction.y.toStringAsFixed(0)}) '
-        'len=${l.length.toStringAsFixed(0)} ang=${ang(l).toStringAsFixed(0)}',
-      );
-    }
-    // ignore: avoid_print
-    print('  hints: $hints');
-  }
   // Root / chest.
   P2 avgJ(List<_Leaf> ls) {
     var x = 0.0, y = 0.0;
@@ -542,16 +519,26 @@ CharacterRig _assign(
   // Arms drawn against the body (hands on hips, arms along a dress): the
   // silhouette has no leaf for them, but the drawing's own lines or the
   // drawing tool's strokes outline an elongated part on that side.
-  final hintArms = <(P2, P2)>[];
-  if (o.v2Rules && !quadruped && !landscape && arms.length < 2) {
+  final hintArms = <(P2, P2, P2?)>[];
+  // The drawing tool's strokes are the strongest evidence: a stroke arm
+  // also replaces a skeleton "arm" on its side (with a hand on the hip, the
+  // silhouette's only bump is the elbow).
+  final strokesGiven = hints.any((h) => h.fromStroke);
+  if (o.v2Rules &&
+      !quadruped &&
+      !landscape &&
+      (arms.length < 2 || strokesGiven)) {
     final topY = headDisc != null
         ? headDisc.$2 + 0.6 * headDisc.$3
         : b[1] + 0.15 * bh;
     for (final left in [true, false]) {
-      if (armSides.contains(left)) continue;
-      (P2, P2)? best;
+      final own = arms.where((a) => (a.tx < cx) == left).firstOrNull;
+      if (own == null && armSides.contains(left)) continue;
+      if (own != null && !strokesGiven) continue;
+      (P2, P2, P2?)? best;
       var bestScore = 0.0;
       for (final h in hints) {
+        if (own != null && !h.fromStroke) continue;
         // Base = the end nearer the shoulders.
         final aUp = h.a.y <= h.b.y;
         final base = aUp ? h.a : h.b, tip = aUp ? h.b : h.a;
@@ -566,7 +553,7 @@ CharacterRig _assign(
           ...arms,
           ...legs,
           ?head,
-        ].any((l) => P2(l.tx, l.ty).dist(tip) < 0.12 * size);
+        ].any((l) => l != own && P2(l.tx, l.ty).dist(tip) < 0.12 * size);
         if (taken) continue;
         final len = h.length;
         if (len < 0.16 * size || len > 0.75 * size) continue;
@@ -574,12 +561,13 @@ CharacterRig _assign(
         final s = len / size + side + (h.fromStroke ? 0.5 : 0);
         if (s > bestScore) {
           bestScore = s;
-          best = (base, tip);
+          best = (base, tip, h.mid);
         }
       }
       if (best != null) {
         hintArms.add(best);
         armSides.add(left);
+        if (own != null) arms.remove(own); // stays used: dropped
       }
     }
   }
@@ -589,7 +577,7 @@ CharacterRig _assign(
     var x = 0.0, y = 0.0;
     final ends = [
       if (arms.isNotEmpty) avgJ(arms),
-      for (final (base, _) in hintArms) base,
+      for (final (base, _, _) in hintArms) base,
     ];
     for (final e in ends) {
       x += e.x;
@@ -648,11 +636,13 @@ CharacterRig _assign(
     ?headLimb,
     if (head != null) limb(LimbKind.head, head),
     for (final a in arms) limb(LimbKind.arm, a),
-    for (final (base, tip) in hintArms)
+    for (final (base, tip, mid) in hintArms)
       RigLimb(
         LimbKind.arm,
         d(base.x, base.y),
-        d((base.x + tip.x) / 2, (base.y + tip.y) / 2),
+        mid == null
+            ? d((base.x + tip.x) / 2, (base.y + tip.y) / 2)
+            : d(mid.x, mid.y),
         d(tip.x, tip.y),
       ),
     for (final l in legs) limb(LimbKind.leg, l),

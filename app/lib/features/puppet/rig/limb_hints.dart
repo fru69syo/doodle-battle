@@ -15,9 +15,13 @@ class LimbHint {
     this.b, {
     required this.thickness,
     this.fromStroke = false,
+    this.mid,
   });
 
   final P2 a, b;
+
+  /// Bend point (elbow) when known (a bent stroke).
+  final P2? mid;
 
   /// Mean width (px).
   final double thickness;
@@ -54,11 +58,29 @@ List<LimbHint> strokeLimbHints(List<HintStroke> strokes, double figureSize) {
     if (len < 0.12 * figureSize) continue;
     final closed = pts.first.dist(pts.last) < math.max(2 * s.width, 0.12 * len);
     if (!closed) {
-      // Straight-ish lines only (a scribble fill is not a limb).
+      // Lines that bend at most once or twice (an arm with an elbow); a
+      // scribble fill turns round and round and is not a limb.
+      if (_turning(pts, s.width) > 4.2) continue;
       final chord = pts.first.dist(pts.last);
-      if (chord < 0.55 * len) continue;
+      if (chord < 0.3 * len) continue;
+      // The elbow: the point at half the path length.
+      var acc = 0.0;
+      var mid = pts.first.lerp(pts.last, 0.5);
+      for (var i = 1; i < pts.length; i++) {
+        acc += pts[i].dist(pts[i - 1]);
+        if (acc >= len / 2) {
+          mid = pts[i];
+          break;
+        }
+      }
       out.add(
-        LimbHint(pts.first, pts.last, thickness: s.width, fromStroke: true),
+        LimbHint(
+          pts.first,
+          pts.last,
+          thickness: s.width,
+          fromStroke: true,
+          mid: mid,
+        ),
       );
       continue;
     }
@@ -70,6 +92,25 @@ List<LimbHint> strokeLimbHints(List<HintStroke> strokes, double figureSize) {
     if (h != null && h.length >= 0.12 * figureSize) out.add(h);
   }
   return out;
+}
+
+/// Total absolute turning (radians) of a polyline, measured on points at
+/// least a line width apart (hand jitter is ignored).
+double _turning(List<P2> pts, double width) {
+  final step = math.max(4.0, 1.5 * width);
+  final q = <P2>[pts.first];
+  for (final p in pts.skip(1)) {
+    if (p.dist(q.last) >= step) q.add(p);
+  }
+  var total = 0.0;
+  for (var i = 2; i < q.length; i++) {
+    final a1 = math.atan2(q[i - 1].y - q[i - 2].y, q[i - 1].x - q[i - 2].x);
+    final a2 = math.atan2(q[i].y - q[i - 1].y, q[i].x - q[i - 1].x);
+    var d = (a2 - a1).abs();
+    if (d > math.pi) d = 2 * math.pi - d;
+    total += d;
+  }
+  return total;
 }
 
 /// Limb hints from the picture itself: regions of the drawing separated by

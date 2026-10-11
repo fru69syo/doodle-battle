@@ -110,9 +110,29 @@ CharacterRig rigWithParts(
   );
   // The ground must not move up because a part hangs below the feet.
   out.ground ??= baseTop + base.groundY * k;
-  final headIdx = out.limbs.indexWhere((l) => l.kind == LimbKind.head);
   for (final p in parts) {
-    if (out.limbs.length >= CharacterRig.maxLimbs) break;
+    // A drawn part matters more than an auto-found bump (hair, ears): make
+    // room by dropping the shortest auto extra nothing hangs from.
+    if (out.limbs.length >= CharacterRig.maxLimbs) {
+      var drop = -1;
+      var len = double.infinity;
+      for (final (i, l) in out.limbs.indexed) {
+        if (l.kind != LimbKind.extra || l.part != null || l.edited) continue;
+        if (out.limbs.any((o) => o.attach == i)) continue;
+        final d = l.base.dist(l.tip);
+        if (d < len) {
+          len = d;
+          drop = i;
+        }
+      }
+      if (drop < 0) break;
+      out.limbs.removeAt(drop);
+      for (final l in out.limbs) {
+        final a = l.attach;
+        if (a != null && a > drop) l.attach = a - 1;
+      }
+    }
+    final headIdx = out.limbs.indexWhere((l) => l.kind == LimbKind.head);
     final c = p.centre;
     int? attach;
     P2 anchor;
