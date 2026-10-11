@@ -1,0 +1,36 @@
+{
+  "name": "doodle-battle-realtime",
+  "private": true,
+  "description": "おえかきファイターズ realtime battle server (Cloud Run, WebSocket, server-authoritative 10 Hz ATB)",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "sync-shared": "node scripts/sync-shared.mjs",
+    "prebuild": "npm run sync-shared",
+    "build": "tsc -p tsconfig.build.json",
+    "prelint": "npm run sync-shared",
+    "lint": "tsc -p tsconfig.json --noEmit && eslint .",
+    "pretest": "npm run sync-shared",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "start": "node lib/index.js",
+    "dev": "npm run build && BATTLE_ENGINE=dev AUTH_MODE=insecure-dev LOG_PRETTY=1 node lib/index.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.0",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
+    "eslint": "^10.12.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}
