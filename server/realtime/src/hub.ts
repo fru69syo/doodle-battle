@@ -67,6 +67,8 @@ export class Hub {
   private readonly recentGhosts = new Map<string, string[]>();
   private readonly lastEnd = new Map<string, { msg: ServerMsg; atMs: number }>();
   private readonly inflight = new Set<Promise<unknown>>();
+  /** Settlement still running for these uids: a new queue entry waits for it (fresh rating). */
+  private readonly settling = new Map<string, Promise<void>>();
   private readonly now: () => number;
   private readonly seed: () => number;
   private readonly newId: () => string;
@@ -99,6 +101,9 @@ export class Hub {
     const old = this.conns.get(uid);
     this.conns.set(uid, conn);
     if (old && old.id !== conn.id) {
+      // A queue entry belongs to the old socket; the app re-sends `queue` after reconnecting.
+      this.mm.remove(uid);
+      this.pairing.delete(uid);
       old.send({ t: "bye", reason: "replaced", reconnect: false });
       old.close(4409, "replaced");
     }
@@ -139,6 +144,7 @@ export class Hub {
       conn.send({ t: "queued", snapshotId });
       return;
     }
+    await this.settling.get(uid);
     const snap = await this.d.store.loadSnapshot(snapshotId);
     if (snap?.status !== "active") throw new HubError("NOT_FOUND", "snapshot not found or not active");
     if (snap.ownerUid !== uid) throw new HubError("NOT_OWNER", "not your character");
@@ -322,7 +328,14 @@ export class Hub {
     const summary = m.summary(this.now());
     this.endedSinceStats++;
     this.d.log.info("match ended", { event: "match_end", matchId: m.matchId, mode: summary.mode, reason: summary.reason, ticks: summary.ticks, inputs: summary.inputs.length });
-    this.track(this.settleAndNotify(m, summary));
+    const p = this.settleAndNotify(m, summary);
+    for (const uid of m.humanUids()) {
+      const done = p.finally(() => {
+        if (this.settling.get(uid) === done) this.settling.delete(uid);
+      });
+      this.settling.set(uid, done);
+    }
+    this.track(p);
   }
 
   private async settleAndNotify(m: Match, summary: MatchSummary): Promise<void> {

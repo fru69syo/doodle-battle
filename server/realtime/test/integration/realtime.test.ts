@@ -213,6 +213,31 @@ describe("realtime server (integration)", () => {
     await second.waitFor("pong");
   });
 
+  it("a reconnect while queued drops the old entry; queuing again finds a match", async () => {
+    const quick: CostModeSource = { current: (): CostMode => ({ mode: "saving", flags: { ...COST_MODES.saving, ghostAfterSec: 0.2 } }) };
+    const e = await start(quick);
+    const first = await client(e, "alice");
+    first.send({ t: "queue", snapshotId: "snapA" });
+    await first.waitFor("queued");
+    const second = await client(e, "alice");
+    second.autoplay(0);
+    second.send({ t: "queue", snapshotId: "snapA" });
+    await second.waitFor("queued");
+    const m = await second.waitFor("match");
+    expect(first.messages.some((x) => x.t === "match")).toBe(false);
+    await second.waitFor("end", (x) => x.matchId === m.matchId, 20_000);
+    // Play again: the next match uses the settled rating. (Accelerated ticks make autoplay send
+    // selects faster than a child could; let the 5 msg/s rate limit refill first.)
+    second.onMessage = null;
+    await new Promise((r) => setTimeout(r, 2100));
+    second.autoplay(0);
+    second.send({ t: "queue", snapshotId: "snapA" });
+    const m2 = await second.waitFor("match", (x) => x.matchId !== m.matchId).catch((err: unknown) => {
+      throw new Error(`${String(err)} errors=${JSON.stringify(second.messages.filter((x) => x.t === "error"))}`);
+    });
+    expect(m2.matchId).not.toBe(m.matchId);
+  });
+
   it("rejects bad tokens, missing consent, foreign or low-level characters", async () => {
     const e = await start();
     const bad = await client(e);
