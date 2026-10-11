@@ -17,7 +17,7 @@ lib/features/
     puppet_store.dart     リグ JSON とストロークの保存（端末内）
     character_puppet.dart Character → PuppetSpec（統合用）
   battle_stage/    2.5D ステージ（カメラ・演出・背景テーマ・VFX）、エンジンとのアダプタ、オーバーレイ部品
-    adapters/battle_v2_feed.dart   試作 v3 エンジン（domain/battle_v2）→ StageEvent
+    adapters/battle_v3_feed.dart   エンジン v3（domain/battle_v3）の描画イベント → StageEvent
     debug/         /debug/25d（デモバトル・エディタ・お絵かきツール）
   draw_canvas/     アプリ内お絵かきツール（SPEC §12.2 入力②）と解析
 ```
@@ -26,23 +26,24 @@ lib/features/
 
 | 項目 | 決定 |
 |---|---|
-| リグ JSON | **v2**（短いキー、`v:2`）。**2 KB 以下**・骨 12 本以下・座標は絵の外 50 % まで・`attach` は自分より前の頭/腕/つの・未知の版や不正値は**捨てて自動リグに戻す**（`CharacterRig.tryDecode`）。v1（スパイク）も読める。最大構成で 2 KB 未満をテストで確認 |
-| リグの保存先 | `PuppetStore`（`<documents>/puppet/<id>/rig.json`、`strokes.json`）。Engine v3 の Character v2 `rig`（不透明 JSON）が入ったら、統合時に `loadRigJson` をそこへ写す（§6）。おわかれ・全削除で消える |
+| リグ JSON | **`CharacterV2.rig` の blob（`domain/rig_blob.dart` v1、サーバーと同じ規則）**をそのまま使う: `CharacterRig.toBlob()` / `fromBlob()`。製品側はさらに厳しく **2 KB 以下**・座標は絵の外 50 % まで・`attach`（髪・帽子が頭に付く。blob の規則が許す追加キー）は自分より前の頭/腕/つの。描いたパーツの骨（はね・もちもの）は保存しない（パーツから毎回作る）。未知の版や不正値は**捨てて自動リグに戻す**。最大構成で 2 KB 未満をテストで確認 |
+| リグの保存先 | `CharacterV2.rig`（統合後）。それまでは `PuppetStore`（`<documents>/puppet/<id>/rig.json` に同じ blob、`strokes.json`）。おわかれ・全削除で消える |
 | 精度改善 | 頭の取り違え（胴の円を頭にする）を直す・ばんざいの腕を髪と間違えない・腕を広げた人を動物と間違えない・横の「つの」を足りない腕に昇格・**絵の線で囲まれた細長い部分**（体にくっついた腕）を腕にする・少し離れた手を橋渡し・**お絵かきツールのストローク**で体に描いた腕を見つける（§2） |
 | ジョイントエディタ | 誕生直後に「うごく ところを なおそう」（**あとで** で飛ばせる）、キャラ詳細の「うごく ところを なおす」からも。丸ハンドル（直径 52dp・当たり判定 44dp 半径）にアイコン（かお・て・あるく・しっぽ・ハート）、右上で**常に動くプレビュー**、もどす（undo 40 段）・さいしょ・＋て/＋あし/＋しっぽ・けす・できた！（§3） |
 | お絵かきツール | クレヨン・ペン・ふで・けしごむ（筆圧なし・太さ固定）、12 色、もどす/やりなおす、ぜんぶけす（確認つき・もどせる）、紙の質感の背景、**画像の取り込み・貼り付けは無し**。かく画面のカメラの下に「アプリで かく」（カメラが主）（§4） |
 | 解析 | 写真と同じパイプライン（正規化・ハッシュ・ホワイトバランス・切り抜き・特徴・子どもの絵らしさ・属性・能力・「もうすこし」）。**省くのは紙の検出／台形補正と本物チェック（印刷・画面・写真・デジタル）だけ**（§4.2） |
 | ステージ | 遠近の地面・影・パララックス背景（**8 テーマ、10 ワールドに割当**）・自動移動・カメラのパン/ズーム/ゆれ・15 vfx × 11 色（＋描いたわざの絵）・ダメージ数字・「ばつぐん！」「いまひとつ…」・状態アイコン。エンジンとは `StageFeed` だけでつながる（§5） |
 | 性能 | 2 体＋ステージの 1 フレーム CPU 記録 **約 0.66 ms（高）/ 0.27 ms（低）**（デスクトップ JIT）。低ティアへの**自動切り替え**（実フレーム時間）。メモリ 2 体 約 1.5 MB、キャッシュ上限 8 MB（§7） |
-| かくし要素 | `PuppetLook.of(level, lateBloomer)` で見た目だけに変換。Lv49 まではシンプル（3 色・骨なし・ぷにぷに・エフェクト半分）、**Lv50 は全員でんせつ**（金のオーラ・エフェクト 1.4 倍）。UI にフラグは渡さない |
+| かくし要素 | `drawsSimpleLook(CharacterV2)`（domain 層）→ `PuppetLook` で見た目だけに変換。Lv49 まではシンプル（3 色・骨なし・ぷにぷに・エフェクト半分）、**Lv50 は全員でんせつ**（金のオーラ・エフェクト 1.4 倍）。UI にフラグは渡さない |
 
 ## 1. 公開 API（統合チーム向け）
 
 ```dart
 // パペット（ずかん・誕生・エディタのプレビューなど）
-final spec = await characterPuppetSpec(ref, character, lateBloomer: engineFlag);   // 描いたパーツ込み
+final spec = characterV2PuppetSpec(characterV2, cutoutPng, strokes: ...);   // CharacterV2.rig + 見た目
+final spec1 = await characterPuppetSpec(ref, v1Character);                // v1 の記録: 描いたパーツ込み
 PuppetView(spec: spec, clip: Anim.idle /* or clips: [...] */, facing: 1);
-PuppetLook.of(level: 50, lateBloomer: true);   // simple / legend だけを持つ
+PuppetLook(simple:, legend:)   // simple / legend だけを持つ（フラグは持たない）
 puppetBuilderProvider        // テストは PuppetBuilder(runner: syncRunner) で上書き
 puppetStoreProvider          // main.dart で FilePuppetStore
 
@@ -51,7 +52,7 @@ context.go(Routes.characterJoints(id, first: true));   // 誕生直後（NamingS
 JointEditorScreen(characterId:, png:, strokes:, initialRigJson:, firstTime:, onFinished:)
 
 // ステージ
-final feed = MyEngineFeed(...);                       // implements StageFeed（advance(dt) → List<StageEvent>, fighter(side)）
+final feed = BattleV3Feed(Battle(spec, a, b, seed: s));   // StageFeed（ローカル）。オンラインは translate(serverEvents, moves:)
 final c = BattleStageController(feed: feed, theme: StageTheme.forWorld(w), seed: s);
 Stack(children: [
   BattleStage(controller: c, fighters: [specA, specB], drawnEffects: {0: uiImage}),
@@ -68,7 +69,7 @@ final outcome = await ref.read(drawFlowProvider).processCanvas(drawing);   // Dr
 ```
 
 - `StageEvent`（`stage_events.dart`）: `StageReady` / `StageChoose(castSeconds, auto)` / `StageAction(side, slot, StageMove, hits[StageHit(amount, hpAfter, crit, effectiveness)], outcomes[Healed/Status/StatChange/ShieldUp])` / `StagePoisonTick` / `StageEnd`。`StageMove` は名前・`StageMoveKind`（physical/ranged/self）・`vfx`・`colour`・hits・ひっさつ・描いたわざの絵を使うか。**画面の HP は当たった瞬間に減る**（`shownHp`）。
-- `BattleV2Feed`（約 200 行）が試作エンジンの見本。Engine v3 の本番エンジンも同じイベント型なので、統合はこの形のアダプタを 1 つ書くだけ。オンラインはサーバーのイベント列を 150〜250 ms 遅らせて `advance` で渡す。
+- `BattleV3Feed` がエンジン v3 の描画イベント（ready, select, moveStart, effective, hit, miss, dot, heal, stage, status, shield, expire, heatUp, faint, end）を `StageEvent` に変換する。`moveStart` と同じ tick の結果（hit/miss/heal/stage/status/shield、hit の `pct` で「ばつぐん／いまひとつ」）をまとめて 1 つの `StageAction` にする。`dot` は `StagePoisonTick`、`heatUp` は「ヒートアップ！」、`expire` は毎フレームの状態（`fighterState`）で反映、`faint` は最後の K.O. 演出で見せる。さきどりはエンジンの `queueInput`。オンラインはサーバーのイベント列を 150〜250 ms 遅らせて `translate()` に渡すだけ。
 - `DemoBattleScreen`（`debug/demo_battle.dart`）が部品を組み合わせた完全な画面の例。
 
 ## 2. 自動リグの精度（Meta Amateur Drawings, MIT, 手元のみ）
@@ -165,7 +166,7 @@ RESULTS_TABLE
 
 ## 6. データ・他チームへ
 
-- **Engine v3**: Character v2 の `rig` に `CharacterRig.encode()`（≤ 2 KB）を入れ、`registerCharacter` で送る。サーバー側の検証は `CharacterRig.validate()` と同じ規則（版・大きさ・座標の範囲・12 本・attach）で、不正なら空にして自動リグ。`drawingSource`（camera / canvas）は `PendingBirth.strokesJson != null` で分かる。かくし要素のフラグは `PuppetLook.of` にだけ渡す。ステージには `StageFeed` を実装したアダプタを 1 つ。
+- **Engine v3**（マージ済み）: `CharacterV2.rig` に `rig.toBlob()` を入れ、読み出しは `CharacterRig.fromBlob(c.rig)`（`validate()` は `rigProblem` も通す）。`DrawingSource.canvas` は `PendingBirth.strokesJson != null` のとき。見た目は `drawsSimpleLook(c)`（domain）→ `PuppetLook`。ステージは `BattleV3Feed`。
 - **統合**: 命名後の遷移は `Routes.characterJoints(id, first: true)` に変更済み。キャラ詳細に「うごく ところを なおす」（`detail-joints`）を追加済み。`main.dart` で `FilePuppetStore`。おわかれ・全削除で `PuppetStore` も消す（`CharactersController`）。
 - **Trust**: アプリの絵は本物チェックを通さない（§4.2）。取り込み手段が無いことはウィジェットテストで固定。
 - **Loop**: 描いたパーツは `characterPuppetSpec` が合成画像＋パーツごとの骨にする（帽子・つの → 頭に付く、もちもの → いちばん近い手、はね → はばたく、しっぽ → 腰から振る、かざり → 体）。骨が 12 本を超えるときは自動で見つけた短い「つの」から外す。
