@@ -7,6 +7,7 @@
 - 仕様: [docs/SPEC.md](docs/SPEC.md)
 - チーム体制: [docs/TEAM.md](docs/TEAM.md)
 - 広告・課金・プライバシー（ファミリーポリシー対応）: [docs/COMPLIANCE.md](docs/COMPLIANCE.md)、ポリシーのページ: [site/](site/)
+- サーバー（GCP）: [docs/LEARN_GCP.md](docs/LEARN_GCP.md)（オーナー向けの学習ガイド）、対戦サーバー [server/realtime/](server/realtime/)、構成 [infra/terraform/](infra/terraform/)、通信の決まり [docs/REALTIME_PROTOCOL.md](docs/REALTIME_PROTOCOL.md)
 
 ## 開発
 ```sh
