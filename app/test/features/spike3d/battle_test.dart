@@ -98,7 +98,14 @@ void main() {
         // orbits the winner.
         for (final f in d.fighters) {
           if (b.over && f.side != b.winner) continue;
-          if (!inView(c, f.position + Vector3(0, 0.5, 0))) outOfView++;
+          // Body centre and both sides (characters are ~1 m wide).
+          final cam = c.target - c.eye;
+          final side = Vector3(cam.z, 0, -cam.x).normalized() * 0.45;
+          final centre = f.position + Vector3(0, 0.5, 0);
+          final sides = b.over ? <Vector3>[] : [side, -side];
+          if (!inView(c, centre) || sides.any((s) => !inView(c, centre + s))) {
+            outOfView++;
+          }
         }
       }
       expect(b.over, isTrue);

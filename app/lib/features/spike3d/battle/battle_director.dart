@@ -88,7 +88,7 @@ class BattleDirector {
 
   late Vector3 _eye;
   late Vector3 _target;
-  double _fov = 40;
+  double _fov = 52;
 
   /// Impact cues produced since the last [takeCues].
   List<ImpactCue> takeCues() {
@@ -344,7 +344,7 @@ class BattleDirector {
   (Vector3, Vector3, double) _desiredCamera() {
     final a = fighters[0].position, b = fighters[1].position;
     // Aim a little toward the player, who is closer to the lens.
-    final mid = a + (b - a) * 0.42;
+    final mid = a + (b - a) * 0.46;
     final axis = (b - a)..y = 0;
     if (axis.length2 < 1e-6) axis.setValues(1, 0, 0);
     axis.normalize();
@@ -352,33 +352,32 @@ class BattleDirector {
     // CPU (further along the axis) is to the right of the player.
     final perp = Vector3(-axis.z, 0, axis.x);
     final sep = a.distanceTo(b);
-    var theta = 0.95 + 0.1 * math.sin(_time * 0.25);
-    var dist = (3.6 + sep * 1.25).clamp(5.4, 8.5);
-    var height = 2.5;
-    var fov = 42.0;
+    var theta = 1.2 + 0.08 * math.sin(_time * 0.25);
+    var dist = (3.8 + sep * 1.45).clamp(6.0, 9.5);
+    var pitch = 0.5; // radians above the horizon
+    var fov = 52.0;
     final target = mid.clone()..y = 0.45;
     Vector3 forward;
 
     if (_winner != null) {
       // Slow orbit around the winner.
       final w = fighters[_winner!];
-      target
-        ..setValues(w.position.x, 0.5, w.position.z);
+      target.setValues(w.position.x, 0.5, w.position.z);
       forward = Vector3(math.sin(_time * 0.5), 0, math.cos(_time * 0.5));
       dist = 3.6;
-      height = 1.4;
+      pitch = 0.3;
     } else {
       if (_punch > 0 && _focusSide != null) {
         // Swing toward the attacker's back and move in.
         theta += (_focusSide == 0 ? 0.25 : -0.45) * _punch;
         dist *= 1 - 0.1 * _punch;
         fov -= 3 * _punch;
-        height -= 0.2 * _punch;
+        pitch -= 0.12 * _punch;
       }
       forward = perp * math.cos(theta) + axis * math.sin(theta);
     }
-    final eye = target - forward * dist
-      ..y = height;
+    final eye = target - forward * (dist * math.cos(pitch))
+      ..y = target.y + dist * math.sin(pitch);
     return (eye, target, fov);
   }
 
