@@ -10,6 +10,11 @@ abstract final class Routes {
   static String character(String id) => '/zukan/$id';
   static String characterAr(String id) => '/zukan/$id/ar';
 
+  /// 「うごく ところを なおそう」 joint editor (docs/PUPPET.md §3);
+  /// [first]: right after birth (skippable, then the character page).
+  static String characterJoints(String id, {bool first = false}) =>
+      '/zukan/$id/joints${first ? '?first=1' : ''}';
+
   /// Drawing loop (docs/LOOP.md): move the parts / draw a new part / draw
   /// a move effect (`move` = `DrawnMove.name`), and the おだい calendar.
   static String characterParts(String id) => '/zukan/$id/parts';
@@ -38,6 +43,7 @@ abstract final class Routes {
   static String cardPrint(Iterable<String> ids) =>
       '/zukan/cards/print?ids=${ids.map(Uri.encodeQueryComponent).join(',')}';
 
-  /// v2.0 2.5D spike (debug builds only): `features/spike25d/`.
+  /// 2.5D puppets / stage debug page (debug builds only),
+  /// `features/battle_stage/debug/`.
   static const debug25d = '/debug/25d';
 }

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
 import '../domain/character.dart';
+import '../features/puppet/puppet_store.dart';
 import 'app_settings.dart';
 import 'character_repository.dart';
 import 'drawing_loop_storage.dart';
@@ -120,6 +121,8 @@ class CharactersController extends AsyncNotifier<List<Character>> {
     await _repo.delete(id);
     // Drawn parts / effects / composite of this character (docs/LOOP.md).
     await ref.read(drawingLoopStorageProvider).deleteCharacter(id);
+    // Rig and drawing-tool strokes (docs/PUPPET.md).
+    await ref.read(puppetStoreProvider).deleteCharacter(id);
     state = AsyncData([
       for (final x in await future)
         if (x.id != id) x,
@@ -131,6 +134,7 @@ class CharactersController extends AsyncNotifier<List<Character>> {
   Future<void> deleteAll() async {
     await _repo.deleteAll();
     await ref.read(drawingLoopStorageProvider).deleteAll();
+    await ref.read(puppetStoreProvider).deleteAll();
     state = const AsyncData([]);
   }
 }

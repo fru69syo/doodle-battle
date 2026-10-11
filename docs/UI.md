@@ -30,6 +30,8 @@ lib/
 | `/draw` | 撮影 or アルバム → 端末内解析 →（許可時）クラウド判定 |
 | `/birth` → `/birth/name` | 誕生演出 → 名前（オフライン NG フィルタ） |
 | `/zukan`, `/zukan/:id`, `/zukan/:id/ar` | 一覧、詳細（Lv・XP・進化・パワーのたね・わざ）、AR |
+| `/zukan/:id/joints` (`?first=1`) | うごく ところを なおそう（ジョイントエディタ。誕生直後は first=1 で、あとで／できた！のあと詳細へ。docs/PUPPET.md §3） |
+| `/debug/25d` | 2.5D パペット・ステージ・お絵かきツールのデバッグ（debug ビルドのみ） |
 | `/battle`, `/battle/:id/stages`, `/battle/:id/stage/:n`, `/battle/result` | キャラ選択、ステージ 1–30、CPU 戦、結果 |
 | `/online`, `/online/queue/:id`, `/online/match/:matchId?c=:id` | ロビー（Lv5+）、審査とマッチング、対戦 |
 | `/parent` | おうちのひと（ゲートを通ったときだけ。離れると再ロック） |

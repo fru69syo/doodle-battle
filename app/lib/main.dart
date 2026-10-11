@@ -19,6 +19,7 @@ import 'features/monetization/admob_gateway.dart';
 import 'features/monetization/app_monetization_service.dart';
 import 'features/monetization/monetization_service.dart';
 import 'features/monetization/play_store_gateway.dart';
+import 'features/puppet/puppet_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,7 @@ Future<void> main() async {
         drawingLoopStorageProvider.overrideWithValue(
           FileDrawingLoopStorage(docs),
         ),
+        puppetStoreProvider.overrideWithValue(FilePuppetStore(docs)),
         aiReportStoreProvider.overrideWithValue(FileAiReportStore(docs)),
         backendApiProvider.overrideWithValue(backend),
         crashReporterProvider.overrideWithValue(crash),
