@@ -92,6 +92,12 @@
             android:name="com.google.ar.core"
             android:value="optional"
             tools:replace="android:value" />
+        <!-- 3D spike (docs/V2_3D_TECH.md): enables the Flutter GPU API used by
+             flutter_scene. Only takes effect where Impeller runs (Android 10+);
+             elsewhere Scene() throws and the app falls back to 2D. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableFlutterGPU"
+            android:value="true" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

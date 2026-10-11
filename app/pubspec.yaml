@@ -64,6 +64,8 @@ dependencies:
   in_app_purchase_platform_interface: ^1.4.1
   pdf: ^3.13.1
   printing: ^5.15.1
+  flutter_scene: ^0.24.3
+  vector_math: ^2.4.3
 
 dev_dependencies:
   flutter_test:
