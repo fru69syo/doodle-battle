@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 /// glTF component types.
 abstract final class GltfComponentType {
+  static const unsignedByte = 5121;
   static const unsignedShort = 5123;
   static const unsignedInt = 5125;
   static const float = 5126;
@@ -92,6 +93,26 @@ class GlbWriter {
       'componentType': GltfComponentType.unsignedShort,
       'count': indices.length,
       'type': 'SCALAR',
+    });
+    return accessors.length - 1;
+  }
+
+  /// Adds an accessor over raw little-endian [data] (one bufferView).
+  /// Used for non-float attributes (e.g. `JOINTS_0` as UNSIGNED_BYTE VEC4)
+  /// and 32-bit indices.
+  int addRawAccessor(
+    Uint8List data, {
+    required int componentType,
+    required String type,
+    required int count,
+    int? target = GltfTarget.arrayBuffer,
+  }) {
+    final view = addBufferView(data, target: target);
+    accessors.add({
+      'bufferView': view,
+      'componentType': componentType,
+      'count': count,
+      'type': type,
     });
     return accessors.length - 1;
   }
