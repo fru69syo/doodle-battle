@@ -1,0 +1,1730 @@
+{
+  "specVersion": 3,
+  "draft": "DRAFT — prototype numbers from the v2 design spike",
+  "integerMath": "All values are integers. Every division is floor division of non-negative integers; every intermediate stays below 2^53.",
+  "rng": {
+    "algorithm": "mulberry32 (same as battle spec v2, docs/BATTLE.md §2)",
+    "imageSeed": "uint32 from the first 8 hex digits of imageHash",
+    "streams": {
+      "statJitter": 10,
+      "growth": 11,
+      "moves": 12,
+      "rebirthStats": 13,
+      "rebirthMoves": 14,
+      "battle": 0,
+      "aiA": 1,
+      "aiB": 2
+    }
+  },
+  "character": {
+    "kid": {
+      "energyWeight": 6,
+      "skillWeight": 4,
+      "formula": "kid = (ew*e10 + sw*(1000 - s10) + 50) / 100"
+    },
+    "budget": {
+      "base": 1400,
+      "perKid": 3,
+      "div": 400,
+      "jitterMinPct": 97,
+      "jitterSpan": 7,
+      "formula": "budget = (base + perKid*kid) * jitterPct / div; jitterPct = jitterMinPct + rng(statJitter).next() % jitterSpan"
+    },
+    "bloomer": {
+      "skillAbove10": 750,
+      "originFlags": [
+        "ai_generated",
+        "digital",
+        "printed",
+        "screen"
+      ],
+      "preBudgetPct": 50,
+      "preGrowthPct": 100,
+      "rebirthLevel": 50,
+      "rebirthKid": 75,
+      "rebirthBudgetPct": 100,
+      "postGrowthBoostPct": 12,
+      "visibility": "never shown in any UI text, store copy or API response"
+    },
+    "distribution": {
+      "minShareMille": 50,
+      "affinityJitterMinPct": 85,
+      "affinityJitterSpan": 31,
+      "affinityFloor": 50,
+      "affinities": {
+        "HP": {
+          "round": 40,
+          "size": 35,
+          "ink": 25
+        },
+        "SP": {
+          "hues": 40,
+          "ink": 30,
+          "parts": 30
+        },
+        "STR": {
+          "spiky": 40,
+          "red": 30,
+          "thick": 30
+        },
+        "VIT": {
+          "dark": 40,
+          "solid": 30,
+          "size": 30
+        },
+        "DEF": {
+          "thick": 45,
+          "solid": 35,
+          "inv:elong": 20
+        },
+        "INT": {
+          "colour": 50,
+          "detail": 30,
+          "inv:sym": 20
+        },
+        "RES": {
+          "dark": 40,
+          "thick": 35,
+          "colour": 25
+        },
+        "DEX": {
+          "inv:thick": 40,
+          "parts": 30,
+          "detail": 30
+        },
+        "AGI": {
+          "elong": 45,
+          "inv:thick": 35,
+          "inv:size": 20
+        },
+        "LUK": {
+          "luck": 50,
+          "hues": 25,
+          "inv:sym": 25
+        }
+      },
+      "ramps": {
+        "round": [
+          "roundness",
+          200,
+          800
+        ],
+        "size": [
+          "silhouetteCoverage",
+          30,
+          350
+        ],
+        "ink": [
+          "inkCoverage",
+          0,
+          300
+        ],
+        "solid": [
+          "solidity",
+          500,
+          950
+        ],
+        "spiky": [
+          "spikiness",
+          0,
+          300
+        ],
+        "red": [
+          "redShare",
+          0,
+          1000
+        ],
+        "thick": [
+          "lineThickness",
+          10,
+          120
+        ],
+        "dark": [
+          "darkness",
+          200,
+          800
+        ],
+        "colour": [
+          "colorUnits",
+          1,
+          10
+        ],
+        "hues": [
+          "balancedHueCount",
+          1,
+          4
+        ],
+        "detail": [
+          "detailDensity",
+          0,
+          600
+        ],
+        "parts": [
+          "convexityDefects",
+          0,
+          8
+        ],
+        "elong": [
+          "elongation",
+          100,
+          300
+        ],
+        "sym": [
+          "symmetry",
+          400,
+          900
+        ]
+      }
+    },
+    "growth": {
+      "totalMillePerLevel": 400,
+      "rawBase": 700,
+      "rawAffinityDiv": 3,
+      "rawJitterSpan": 301
+    },
+    "maxHp": {
+      "perHp": 3,
+      "perVit": 2,
+      "perAvg": 5,
+      "formula": "maxHp = perHp*HP + perVit*VIT + perAvg*(sum of 10 stats)/10"
+    },
+    "attribute": {
+      "gu": [
+        "solid",
+        "round",
+        "thick"
+      ],
+      "choki": [
+        "spiky",
+        "elong",
+        "inv:thick"
+      ],
+      "pa": [
+        "colour",
+        "hues",
+        "size"
+      ],
+      "tieOrder": [
+        "gu",
+        "choki",
+        "pa"
+      ]
+    }
+  },
+  "levels": {
+    "max": 100,
+    "xpToNext": {
+      "base": 60,
+      "perLevel": 20,
+      "quadNum": 3,
+      "quadDen": 4
+    }
+  },
+  "moves": {
+    "slotBudgets": [
+      100,
+      100,
+      120,
+      150
+    ],
+    "slotUnlockLevels": [
+      1,
+      1,
+      10,
+      50
+    ],
+    "moveFactorBasePct": 95,
+    "moveFactorKidDiv": 10,
+    "bloomerPreMoveFactorPct": 70,
+    "legendMoveBonusPct": 5,
+    "bloomerRebirthMoveBonusPct": 0,
+    "maxDiscountPct": 50
+  },
+  "atb": {
+    "tickHz": 10,
+    "gaugeMax": 10000,
+    "gaugeFillPerTick": 280,
+    "agiWeightPct": 30,
+    "decisionTicks": 50,
+    "spMaxCenti": 10000,
+    "spStartCenti": 4000,
+    "spRegenCentiPerTick": 25,
+    "spWeightPct": 50
+  },
+  "damage": {
+    "scalePct": 60,
+    "typeAdvantagePct": 150,
+    "typeDisadvantagePct": 75,
+    "typeStrengthPct": 100,
+    "triangle": {
+      "gu": "choki",
+      "choki": "pa",
+      "pa": "gu"
+    },
+    "varianceMinPct": 90,
+    "varianceSpan": 11,
+    "critBaseMille": 50,
+    "critLukMille": 60,
+    "critMultiplierPct": 150,
+    "hitSkewPct": 15,
+    "hitMinPct": 30,
+    "stageDen": 4,
+    "maxStage": 2
+  },
+  "status": {
+    "poisonMillePerSecond": 15,
+    "poisonTicks": 80,
+    "paralyzeFillPct": 60,
+    "paralyzeTicks": 60,
+    "lukSkewPct": 50,
+    "healDecaySteps": [
+      100,
+      75,
+      50,
+      25
+    ]
+  },
+  "termination": {
+    "heatUpStartTick": 600,
+    "heatUpPctPerSecond": 3,
+    "hardCapTick": 1800
+  },
+  "featureUnits": {
+    "roundness": "per-mille (round(1000*x))",
+    "silhouetteCoverage": "per-mille",
+    "inkCoverage": "per-mille",
+    "solidity": "per-mille",
+    "spikiness": "per-mille",
+    "redShare": "per-mille",
+    "lineThickness": "tenths of a px (round(10*x)), 0..600",
+    "darkness": "per-mille",
+    "colorUnits": "colorCount*2 + achromaticCount (half-colour units)",
+    "balancedHueCount": "count",
+    "detailDensity": "per-mille",
+    "convexityDefects": "count",
+    "elongation": "hundredths (round(100*x)), 100..1000",
+    "symmetry": "per-mille",
+    "energy10": "energy in tenths, 0..1000",
+    "skill10": "skill in tenths, 0..1000"
+  },
+  "moveTemplates": {
+    "strike": {
+      "kind": "physical",
+      "ranges": {
+        "power": [
+          40,
+          200
+        ],
+        "hits": [
+          1,
+          1
+        ],
+        "accuracy": [
+          60,
+          100
+        ],
+        "critBonus": [
+          0,
+          20
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "combo": {
+      "kind": "physical",
+      "ranges": {
+        "power": [
+          40,
+          200
+        ],
+        "hits": [
+          2,
+          3
+        ],
+        "accuracy": [
+          60,
+          100
+        ],
+        "critBonus": [
+          0,
+          20
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "blast": {
+      "kind": "special",
+      "ranges": {
+        "power": [
+          40,
+          200
+        ],
+        "hits": [
+          1,
+          1
+        ],
+        "accuracy": [
+          60,
+          100
+        ],
+        "critBonus": [
+          0,
+          20
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "barrage": {
+      "kind": "special",
+      "ranges": {
+        "power": [
+          40,
+          200
+        ],
+        "hits": [
+          2,
+          3
+        ],
+        "accuracy": [
+          60,
+          100
+        ],
+        "critBonus": [
+          0,
+          20
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "heal": {
+      "kind": "heal",
+      "ranges": {
+        "healPct": [
+          10,
+          40
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          60,
+          150
+        ]
+      }
+    },
+    "power_up": {
+      "kind": "buff",
+      "ranges": {
+        "stages": [
+          1,
+          2
+        ],
+        "durationTicks": [
+          40,
+          120
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "weaken": {
+      "kind": "debuff",
+      "ranges": {
+        "stages": [
+          1,
+          2
+        ],
+        "durationTicks": [
+          40,
+          120
+        ],
+        "accuracy": [
+          60,
+          100
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "poison": {
+      "kind": "status",
+      "ranges": {
+        "chance": [
+          30,
+          100
+        ],
+        "accuracy": [
+          60,
+          100
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "paralyze": {
+      "kind": "status",
+      "ranges": {
+        "chance": [
+          30,
+          100
+        ],
+        "accuracy": [
+          60,
+          100
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          20
+        ],
+        "cooldownTicks": [
+          0,
+          150
+        ]
+      }
+    },
+    "barrier": {
+      "kind": "shield",
+      "ranges": {
+        "shieldPct": [
+          20,
+          60
+        ],
+        "durationTicks": [
+          20,
+          60
+        ],
+        "spCost": [
+          0,
+          50
+        ],
+        "castTicks": [
+          0,
+          5
+        ],
+        "cooldownTicks": [
+          40,
+          150
+        ]
+      }
+    }
+  },
+  "moveRules": {
+    "secondaryRanges": {
+      "chance": [
+        10,
+        50
+      ],
+      "drainPct": [
+        10,
+        50
+      ]
+    },
+    "atkFormulas": {
+      "STR80_AGI20": {
+        "a": "STR",
+        "pa": 80,
+        "b": "AGI",
+        "pb": 20,
+        "physical": true
+      },
+      "STR70_VIT30": {
+        "a": "STR",
+        "pa": 70,
+        "b": "VIT",
+        "pb": 30,
+        "physical": true
+      },
+      "STR60_DEX40": {
+        "a": "STR",
+        "pa": 60,
+        "b": "DEX",
+        "pb": 40,
+        "physical": true
+      },
+      "INT80_DEX20": {
+        "a": "INT",
+        "pa": 80,
+        "b": "DEX",
+        "pb": 20,
+        "physical": false
+      },
+      "INT70_RES30": {
+        "a": "INT",
+        "pa": 70,
+        "b": "RES",
+        "pb": 30,
+        "physical": false
+      },
+      "INT60_LUK40": {
+        "a": "INT",
+        "pa": 60,
+        "b": "LUK",
+        "pb": 40,
+        "physical": false
+      }
+    },
+    "stageStats": [
+      "STR",
+      "DEF",
+      "INT",
+      "RES",
+      "AGI",
+      "DEX",
+      "LUK"
+    ],
+    "vfx": [
+      "slash",
+      "punch",
+      "beam",
+      "orb",
+      "burst",
+      "wave",
+      "rain",
+      "spiral",
+      "stars",
+      "hearts",
+      "bubbles",
+      "leaves",
+      "sparks",
+      "shield",
+      "glow"
+    ],
+    "colours": [
+      "red",
+      "orange",
+      "yellow",
+      "green",
+      "cyan",
+      "blue",
+      "purple",
+      "pink",
+      "black",
+      "white",
+      "rainbow"
+    ],
+    "values": {
+      "damage": "power*accuracy*(200+critBonus)*hitsAdjPct[hits]/(100*200*100) + secondary",
+      "hitsAdjPct": [
+        100,
+        100,
+        103,
+        106
+      ],
+      "secondary": {
+        "poison": "chance*120/100",
+        "paralyze": "chance*80/100",
+        "debuff": "chance*40/100 (1 stage, 60 ticks)",
+        "drain": "drainPct*power/100"
+      },
+      "heal": "healPct*6",
+      "buff": "stages*durationTicks*5*(AGI?120:100)/800",
+      "debuff": "stages*durationTicks*5*(AGI?120:100)*accuracy/80000",
+      "status": "statusValue*chance*accuracy/10000 (poison 120, paralyze 80)",
+      "shield": "shieldPct*durationTicks/30"
+    },
+    "discount": "spCost*5/4 + castTicks*2 + max(0, cooldownTicks - freeCooldown)/2, capped at value*maxDiscountPct/100; freeCooldown: heal 60, buff/debuff max(20,durationTicks), shield 40, else 20",
+    "cost": "value - discount <= slotBudgets[slot]*moveFactorPct/100",
+    "slotRules": [
+      "slot1: damage template, attribute = own, spCost 0, cooldown 0, cast <= 5",
+      "slot2: attribute != own (support moves: none)",
+      "slot3: any template",
+      "slot4 (ひっさつ): damage template, attribute none",
+      "heal/buff/shield: attribute none",
+      "buff/debuff: cooldownTicks >= durationTicks"
+    ]
+  },
+  "ai": {
+    "randomPct": {
+      "weak": 40,
+      "normal": 10,
+      "strong": 0
+    },
+    "cpuThinkTicks": 10,
+    "note": "chooseMove in ai_v2.dart is normative (server ghosts, timeouts)"
+  },
+  "progression": {
+    "evolutions": {
+      "10": "kagayaki",
+      "25": "kirakira",
+      "50": "densetsu",
+      "75": "niji",
+      "100": "oukan"
+    },
+    "xpSinglePlayer": {
+      "win": 100,
+      "lose": 40,
+      "stagePct": "100 + 4*(stage-1)",
+      "replayPct": "level-stage <= 10: 100, <= 20: 50, else 20",
+      "firstClearMultiplier": 2,
+      "adBoostMultiplier": 2,
+      "adBoostPerDay": 3,
+      "hiddenBloomerMultiplier": 2,
+      "hiddenBloomerReplayExempt": true
+    },
+    "xpOnline": {
+      "win": 150,
+      "lose": 60,
+      "levelPct": "100 + 4*(level-1)",
+      "battlesPerDay": 20,
+      "sameOpponentCooldownMinutes": 60,
+      "adBoost": false
+    },
+    "stages": {
+      "count": 100,
+      "worlds": [
+        "らくがき のはら",
+        "クレヨン もり",
+        "えのぐ うみ",
+        "いろえんぴつ やま",
+        "ペンギン こおり",
+        "マーカー まち",
+        "ねんど さばく",
+        "はさみ おしろ",
+        "にじいろ そら",
+        "まっしろ ノート"
+      ],
+      "powerPctByPosition": [
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        98
+      ],
+      "aiTier": "stage 1-20 weak, 21-60 normal, 61-100 strong",
+      "table": [
+        {
+          "stage": 1,
+          "world": 1,
+          "recommendedLevel": 1,
+          "cpuLevel": 1,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 2,
+          "world": 1,
+          "recommendedLevel": 2,
+          "cpuLevel": 2,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 3,
+          "world": 1,
+          "recommendedLevel": 3,
+          "cpuLevel": 3,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 4,
+          "world": 1,
+          "recommendedLevel": 4,
+          "cpuLevel": 4,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 5,
+          "world": 1,
+          "recommendedLevel": 5,
+          "cpuLevel": 5,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 6,
+          "world": 1,
+          "recommendedLevel": 6,
+          "cpuLevel": 6,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 7,
+          "world": 1,
+          "recommendedLevel": 7,
+          "cpuLevel": 7,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 8,
+          "world": 1,
+          "recommendedLevel": 8,
+          "cpuLevel": 8,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 9,
+          "world": 1,
+          "recommendedLevel": 9,
+          "cpuLevel": 9,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 10,
+          "world": 1,
+          "recommendedLevel": 10,
+          "cpuLevel": 10,
+          "aiTier": "weak",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 11,
+          "world": 2,
+          "recommendedLevel": 11,
+          "cpuLevel": 11,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 12,
+          "world": 2,
+          "recommendedLevel": 12,
+          "cpuLevel": 12,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 13,
+          "world": 2,
+          "recommendedLevel": 13,
+          "cpuLevel": 13,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 14,
+          "world": 2,
+          "recommendedLevel": 14,
+          "cpuLevel": 14,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 15,
+          "world": 2,
+          "recommendedLevel": 15,
+          "cpuLevel": 15,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 16,
+          "world": 2,
+          "recommendedLevel": 16,
+          "cpuLevel": 16,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 17,
+          "world": 2,
+          "recommendedLevel": 17,
+          "cpuLevel": 17,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 18,
+          "world": 2,
+          "recommendedLevel": 18,
+          "cpuLevel": 18,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 19,
+          "world": 2,
+          "recommendedLevel": 19,
+          "cpuLevel": 19,
+          "aiTier": "weak",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 20,
+          "world": 2,
+          "recommendedLevel": 20,
+          "cpuLevel": 20,
+          "aiTier": "weak",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 21,
+          "world": 3,
+          "recommendedLevel": 21,
+          "cpuLevel": 21,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 22,
+          "world": 3,
+          "recommendedLevel": 22,
+          "cpuLevel": 22,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 23,
+          "world": 3,
+          "recommendedLevel": 23,
+          "cpuLevel": 23,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 24,
+          "world": 3,
+          "recommendedLevel": 24,
+          "cpuLevel": 24,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 25,
+          "world": 3,
+          "recommendedLevel": 25,
+          "cpuLevel": 25,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 26,
+          "world": 3,
+          "recommendedLevel": 26,
+          "cpuLevel": 26,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 27,
+          "world": 3,
+          "recommendedLevel": 27,
+          "cpuLevel": 27,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 28,
+          "world": 3,
+          "recommendedLevel": 28,
+          "cpuLevel": 28,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 29,
+          "world": 3,
+          "recommendedLevel": 29,
+          "cpuLevel": 29,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 30,
+          "world": 3,
+          "recommendedLevel": 30,
+          "cpuLevel": 30,
+          "aiTier": "normal",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 31,
+          "world": 4,
+          "recommendedLevel": 31,
+          "cpuLevel": 31,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 32,
+          "world": 4,
+          "recommendedLevel": 32,
+          "cpuLevel": 32,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 33,
+          "world": 4,
+          "recommendedLevel": 33,
+          "cpuLevel": 33,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 34,
+          "world": 4,
+          "recommendedLevel": 34,
+          "cpuLevel": 34,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 35,
+          "world": 4,
+          "recommendedLevel": 35,
+          "cpuLevel": 35,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 36,
+          "world": 4,
+          "recommendedLevel": 36,
+          "cpuLevel": 36,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 37,
+          "world": 4,
+          "recommendedLevel": 37,
+          "cpuLevel": 37,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 38,
+          "world": 4,
+          "recommendedLevel": 38,
+          "cpuLevel": 38,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 39,
+          "world": 4,
+          "recommendedLevel": 39,
+          "cpuLevel": 39,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 40,
+          "world": 4,
+          "recommendedLevel": 40,
+          "cpuLevel": 40,
+          "aiTier": "normal",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 41,
+          "world": 5,
+          "recommendedLevel": 41,
+          "cpuLevel": 41,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 42,
+          "world": 5,
+          "recommendedLevel": 42,
+          "cpuLevel": 42,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 43,
+          "world": 5,
+          "recommendedLevel": 43,
+          "cpuLevel": 43,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 44,
+          "world": 5,
+          "recommendedLevel": 44,
+          "cpuLevel": 44,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 45,
+          "world": 5,
+          "recommendedLevel": 45,
+          "cpuLevel": 45,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 46,
+          "world": 5,
+          "recommendedLevel": 46,
+          "cpuLevel": 46,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 47,
+          "world": 5,
+          "recommendedLevel": 47,
+          "cpuLevel": 47,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 48,
+          "world": 5,
+          "recommendedLevel": 48,
+          "cpuLevel": 48,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 49,
+          "world": 5,
+          "recommendedLevel": 49,
+          "cpuLevel": 49,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 50,
+          "world": 5,
+          "recommendedLevel": 50,
+          "cpuLevel": 50,
+          "aiTier": "normal",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 51,
+          "world": 6,
+          "recommendedLevel": 51,
+          "cpuLevel": 51,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 52,
+          "world": 6,
+          "recommendedLevel": 52,
+          "cpuLevel": 52,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 53,
+          "world": 6,
+          "recommendedLevel": 53,
+          "cpuLevel": 53,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 54,
+          "world": 6,
+          "recommendedLevel": 54,
+          "cpuLevel": 54,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 55,
+          "world": 6,
+          "recommendedLevel": 55,
+          "cpuLevel": 55,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 56,
+          "world": 6,
+          "recommendedLevel": 56,
+          "cpuLevel": 56,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 57,
+          "world": 6,
+          "recommendedLevel": 57,
+          "cpuLevel": 57,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 58,
+          "world": 6,
+          "recommendedLevel": 58,
+          "cpuLevel": 58,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 59,
+          "world": 6,
+          "recommendedLevel": 59,
+          "cpuLevel": 59,
+          "aiTier": "normal",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 60,
+          "world": 6,
+          "recommendedLevel": 60,
+          "cpuLevel": 60,
+          "aiTier": "normal",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 61,
+          "world": 7,
+          "recommendedLevel": 61,
+          "cpuLevel": 61,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 62,
+          "world": 7,
+          "recommendedLevel": 62,
+          "cpuLevel": 62,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 63,
+          "world": 7,
+          "recommendedLevel": 63,
+          "cpuLevel": 63,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 64,
+          "world": 7,
+          "recommendedLevel": 64,
+          "cpuLevel": 64,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 65,
+          "world": 7,
+          "recommendedLevel": 65,
+          "cpuLevel": 65,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 66,
+          "world": 7,
+          "recommendedLevel": 66,
+          "cpuLevel": 66,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 67,
+          "world": 7,
+          "recommendedLevel": 67,
+          "cpuLevel": 67,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 68,
+          "world": 7,
+          "recommendedLevel": 68,
+          "cpuLevel": 68,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 69,
+          "world": 7,
+          "recommendedLevel": 69,
+          "cpuLevel": 69,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 70,
+          "world": 7,
+          "recommendedLevel": 70,
+          "cpuLevel": 70,
+          "aiTier": "strong",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 71,
+          "world": 8,
+          "recommendedLevel": 71,
+          "cpuLevel": 71,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 72,
+          "world": 8,
+          "recommendedLevel": 72,
+          "cpuLevel": 72,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 73,
+          "world": 8,
+          "recommendedLevel": 73,
+          "cpuLevel": 73,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 74,
+          "world": 8,
+          "recommendedLevel": 74,
+          "cpuLevel": 74,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 75,
+          "world": 8,
+          "recommendedLevel": 75,
+          "cpuLevel": 75,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 76,
+          "world": 8,
+          "recommendedLevel": 76,
+          "cpuLevel": 76,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 77,
+          "world": 8,
+          "recommendedLevel": 77,
+          "cpuLevel": 77,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 78,
+          "world": 8,
+          "recommendedLevel": 78,
+          "cpuLevel": 78,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 79,
+          "world": 8,
+          "recommendedLevel": 79,
+          "cpuLevel": 79,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 80,
+          "world": 8,
+          "recommendedLevel": 80,
+          "cpuLevel": 80,
+          "aiTier": "strong",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 81,
+          "world": 9,
+          "recommendedLevel": 81,
+          "cpuLevel": 81,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 82,
+          "world": 9,
+          "recommendedLevel": 82,
+          "cpuLevel": 82,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 83,
+          "world": 9,
+          "recommendedLevel": 83,
+          "cpuLevel": 83,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 84,
+          "world": 9,
+          "recommendedLevel": 84,
+          "cpuLevel": 84,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 85,
+          "world": 9,
+          "recommendedLevel": 85,
+          "cpuLevel": 85,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 86,
+          "world": 9,
+          "recommendedLevel": 86,
+          "cpuLevel": 86,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 87,
+          "world": 9,
+          "recommendedLevel": 87,
+          "cpuLevel": 87,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 88,
+          "world": 9,
+          "recommendedLevel": 88,
+          "cpuLevel": 88,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 89,
+          "world": 9,
+          "recommendedLevel": 89,
+          "cpuLevel": 89,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 90,
+          "world": 9,
+          "recommendedLevel": 90,
+          "cpuLevel": 90,
+          "aiTier": "strong",
+          "boss": true,
+          "cpuPowerPct": 98
+        },
+        {
+          "stage": 91,
+          "world": 10,
+          "recommendedLevel": 91,
+          "cpuLevel": 91,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 88
+        },
+        {
+          "stage": 92,
+          "world": 10,
+          "recommendedLevel": 92,
+          "cpuLevel": 92,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 89
+        },
+        {
+          "stage": 93,
+          "world": 10,
+          "recommendedLevel": 93,
+          "cpuLevel": 93,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 90
+        },
+        {
+          "stage": 94,
+          "world": 10,
+          "recommendedLevel": 94,
+          "cpuLevel": 94,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 91
+        },
+        {
+          "stage": 95,
+          "world": 10,
+          "recommendedLevel": 95,
+          "cpuLevel": 95,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 92
+        },
+        {
+          "stage": 96,
+          "world": 10,
+          "recommendedLevel": 96,
+          "cpuLevel": 96,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 93
+        },
+        {
+          "stage": 97,
+          "world": 10,
+          "recommendedLevel": 97,
+          "cpuLevel": 97,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 94
+        },
+        {
+          "stage": 98,
+          "world": 10,
+          "recommendedLevel": 98,
+          "cpuLevel": 98,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 95
+        },
+        {
+          "stage": 99,
+          "world": 10,
+          "recommendedLevel": 99,
+          "cpuLevel": 99,
+          "aiTier": "strong",
+          "boss": false,
+          "cpuPowerPct": 96
+        },
+        {
+          "stage": 100,
+          "world": 10,
+          "recommendedLevel": 100,
+          "cpuLevel": 100,
+          "aiTier": "strong",
+          "boss": true,
+          "cpuPowerPct": 98
+        }
+      ]
+    },
+    "rated": {
+      "unlockLevel": 5,
+      "syncLevel": 50,
+      "ratingStart": 1000,
+      "ratingFloor": 600,
+      "k": "first 20 games 48, then 24; ghost matches half",
+      "badges": [
+        {
+          "min": 0,
+          "name": "たまご"
+        },
+        {
+          "min": 1050,
+          "name": "ひよこ"
+        },
+        {
+          "min": 1150,
+          "name": "うさぎ"
+        },
+        {
+          "min": 1250,
+          "name": "きつね"
+        },
+        {
+          "min": 1350,
+          "name": "くま"
+        },
+        {
+          "min": 1450,
+          "name": "ライオン"
+        },
+        {
+          "min": 1600,
+          "name": "ドラゴン"
+        },
+        {
+          "min": 1800,
+          "name": "でんせつ"
+        }
+      ],
+      "badgeRule": "shown badge = best ever (never goes down)",
+      "matchBand": "100 + 50*(waitSeconds/5), max 400",
+      "ghostAfterSeconds": 20
+    }
+  }
+}
