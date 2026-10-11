@@ -4,7 +4,7 @@ SPEC §12（オーナーの決定、2026-10-10）を、数式と数値に落と�
 **§12 の要件は変えていない。ここで決めたのは §12 が空けている数値と仕組み。**
 
 - 正（normative）: `shared/battle_spec_v3/battle_spec_v3.json`（全定数・テンプレート・規則）と `golden_vectors.json`（入出力の正解例）。AI 出力の形は `ai_moves.schema.json`
-- 参照実装 / 調整用シミュレータ（PROTOTYPE、アプリには未接続）: `app/lib/domain/battle_v2/`、`app/tool/v2_sim.dart`、テスト `app/test/domain/battle_v2/`
+- 製品のエンジン（2026-10-11 にプロトタイプ `battle_v2` から置き換え）: Dart `app/lib/domain/battle_v3/`、TS `shared/battle_engine_v3_ts/`、シミュレータ `app/tool/v3_sim.dart`。コードの地図・設計からの変更点・再計測は **`docs/BATTLE_V3.md`**
 - **クライアントのエンジンに依存しない**（PM 指示 2026-10-10: Flutter は必須でなく、Unity/Godot に移る可能性がある）。全部を整数演算と Mulberry32 で定義し、TS / C# / GDScript に移植してビット単位で一致させる（§9）
 - 「隠し要素」（§4.4）の名前・数値・存在は**どの画面・文言・ストア説明・API レスポンスにも出さない**。この文書と spec JSON は社内用
 
@@ -361,8 +361,8 @@ dmg = raw × 60 × 相性% / 10000                                   // damageSc
 - 入力の特徴量は**量子化した整数**（spec の `featureUnits`）。Vision は解析のときに 1 回だけ量子化して保存・送信する。サーバーは同じ整数から能力を計算し直して照合する（改ざん対策。v1 の `maxStatsAtLevel` はもう使わない）
 - 正解例（`golden_vectors.json`、Dart の参照実装で生成）: deriveSeed 5、ゲノム 12（隠し要素 4 を含む、Lv 1/10/49/50/75/100 の能力、最大 HP、技の倍率）、端末の技生成 6、AI 出力の検証 10（受け入れ・範囲外を寄せる・スロットのきまり・予算に合わせて縮める・不採用）、技のコスト、**バトル 6 件**（Lv1–100、さきどり、時間切れのおまかせ、隠し要素）、経験値、Elo
   - バトルは入力（両方の能力・技・seed・考える tick）だけで再現でき、結果（勝者・tick・HP）と**イベント列の FNV-1a**（`"<tick> <type> k=v,..."` をキーの順に並べ、`\n` でつなぐ）で照合する。2 件はイベント列を全部入れてある（どこでずれたか調べるため）
-  - `test/domain/battle_v2/spec_files_test.dart` が、JSON がコードと一致すること、JSON の入力だけでバトルを再現できることを確かめる
-- 再生成: `cd app && dart run tool/v2_sim.dart spec` / `golden`
+  - `test/domain/battle_v3/spec_files_test.dart` が、JSON がコードと一致すること、JSON の入力だけでバトルを再現できることを確かめる
+- 再生成: `cd app && dart run tool/v3_sim.dart spec` / `golden`（docs/BATTLE_V3.md §1）
 
 ## 10. バランスのシミュレーション
 
