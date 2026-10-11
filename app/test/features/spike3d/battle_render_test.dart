@@ -9,7 +9,6 @@ import 'package:doodle_battle/features/spike3d/battle/spike_battle_setup.dart';
 import 'package:doodle_battle/features/spike3d/inflate/inflate_mesh.dart';
 import 'package:doodle_battle/features/spike3d/inflate/inflated_glb.dart';
 import 'package:doodle_battle/features/spike3d/samples.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Renders the battle stage headlessly with Flutter GPU (Impeller on
@@ -28,9 +27,14 @@ void main() {
     final simplified = Platform.environment['SPIKE3D_CPU_SIMPLIFIED'] == '1';
     final cpu = buildInflatedGlb(
       buildSampleCutoutPng(),
-      options: simplified ? const InflateOptions.simplified() : const InflateOptions(),
+      options: simplified
+          ? const InflateOptions.simplified()
+          : const InflateOptions(),
     );
-    final stage = await BattleStage.create(playerGlb: player.glb, cpuGlb: cpu.glb);
+    final stage = await BattleStage.create(
+      playerGlb: player.glb,
+      cpuGlb: cpu.glb,
+    );
     final battle = spikeBattle(seed: 4)..alwaysAuto = true;
     final director = BattleDirector(seed: 4);
     const size = ui.Size(393, 851);
@@ -56,14 +60,16 @@ void main() {
         stage.scene.render(
           stage.cameraFor(director.camera),
           ui.Canvas(recorder),
-          viewport: Offset.zero & size,
+          viewport: ui.Offset.zero & size,
           pixelRatio: 1,
         );
         final image = await recorder.endRecording().toImage(393, 851);
         renderUs += sw.elapsedMicroseconds;
         final png = await image.toByteData(format: ui.ImageByteFormat.png);
         // Not a blank frame: the sky alone would be a smooth gradient.
-        final raw = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        final raw = (await image.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        ))!;
         final colours = <int>{};
         for (var i = 0; i < raw.lengthInBytes; i += 4 * 97) {
           colours.add(raw.getUint32(i));
@@ -80,8 +86,10 @@ void main() {
     expect(rendered, shots.length);
     expect(battle.over, isTrue);
     // ignore: avoid_print
-    print('rendered $rendered frames, mean ${renderUs ~/ rendered ~/ 1000} ms '
-        '(SwiftShader CPU rasteriser, not representative of a phone)');
+    print(
+      'rendered $rendered frames, mean ${renderUs ~/ rendered ~/ 1000} ms '
+      '(SwiftShader CPU rasteriser, not representative of a phone)',
+    );
     // Silence unused warning for AtbEvent import in some analyzers.
     expect(GaugeFull(0).side, 0);
   }, skip: gpu ? false : 'needs --enable-impeller --enable-flutter-gpu');

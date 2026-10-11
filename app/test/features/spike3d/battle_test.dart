@@ -80,7 +80,12 @@ void main() {
       var minSep = double.infinity;
       var outOfView = 0, frames = 0;
       final clips = <String>{};
-      for (var i = 0; i < 30 * 120 && !(b.over && d.fighters.any((f) => f.mode == StageMode.fainted)); i++) {
+      for (
+        var i = 0;
+        i < 30 * 120 &&
+            !(b.over && d.fighters.any((f) => f.mode == StageMode.fainted));
+        i++
+      ) {
         for (final e in b.tick(1 / 30)) {
           if (e is ActionStarted) actions++;
           d.handle(e);
@@ -91,7 +96,10 @@ void main() {
           expect(f.position.length, lessThanOrEqualTo(d.arenaRadius + 1e-5));
           clips.add(f.clip);
         }
-        minSep = math.min(minSep, d.fighters[0].position.distanceTo(d.fighters[1].position));
+        minSep = math.min(
+          minSep,
+          d.fighters[0].position.distanceTo(d.fighters[1].position),
+        );
         frames++;
         final c = d.camera;
         // While fighting both must be framed; after the KO the camera
@@ -112,7 +120,16 @@ void main() {
       expect(hits, actions);
       expect(minSep, greaterThanOrEqualTo(BattleDirector.minDistance - 1e-5));
       expect(outOfView / (2 * frames), lessThan(0.01));
-      expect(clips, containsAll([RigClips.idle, RigClips.hop, RigClips.attack, RigClips.hit, RigClips.faint]));
+      expect(
+        clips,
+        containsAll([
+          RigClips.idle,
+          RigClips.hop,
+          RigClips.attack,
+          RigClips.hit,
+          RigClips.faint,
+        ]),
+      );
       final loser = d.fighters[1 - b.winner!];
       expect(loser.mode, StageMode.fainted);
     });

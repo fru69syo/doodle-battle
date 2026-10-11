@@ -25,7 +25,8 @@ Uint8List buildLargeSampleCutoutPng({
       for (var x = (cx - r * 1.2).floor(); x <= (cx + r * 1.2).ceil(); x++) {
         if (x < 0 || y < 0 || x >= size || y >= size) continue;
         final a = math.atan2(y - cy, x - cx);
-        final rr = r * (1 + 0.04 * math.sin(a * 5 + seed) + 0.025 * math.sin(a * 11));
+        final rr =
+            r * (1 + 0.04 * math.sin(a * 5 + seed) + 0.025 * math.sin(a * 11));
         final dx = x - cx, dy = y - cy;
         if (dx * dx + dy * dy <= rr * rr) im.setPixel(x, y, c);
       }
@@ -33,7 +34,8 @@ Uint8List buildLargeSampleCutoutPng({
   }
 
   void limb(double x0, double y0, double x1, double y1, double r, img.Color c) {
-    final n = (math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) / 2).ceil();
+    final n = (math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) / 2)
+        .ceil();
     for (var i = 0; i <= n; i++) {
       final t = i / n;
       img.fillCircle(

@@ -175,7 +175,10 @@ class AtbBattle {
     final move = f.moves[moveIndex.clamp(0, f.moves.length - 1)];
     final def = fighters[1 - side].def;
     final roll = 0.9 + _rng.nextDouble() * 0.2;
-    final dmg = math.max(1, (move.power * f.str / math.max(1, def) * 0.5 * roll).round());
+    final dmg = math.max(
+      1,
+      (move.power * f.str / math.max(1, def) * 0.5 * roll).round(),
+    );
     _queue.add(ActionStarted(side, move, dmg, auto: auto));
   }
 

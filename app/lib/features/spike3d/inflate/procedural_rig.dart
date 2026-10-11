@@ -100,31 +100,56 @@ List<RigClip> buildRigClips(double height, {double fps = 30}) {
     final air = t > 0.15 && t < 0.45;
     final u = ((t - 0.15) / 0.3).clamp(0.0, 1.0);
     final y = air ? 0.3 * h * 4 * u * (1 - u) : 0.0;
-    final sy = _keys(
-      [(0, 1), (0.13, 0.82), (0.2, 1.14), (0.4, 1.05), (0.47, 0.8), (0.53, 1.06), (0.6, 1)],
-      t,
-    );
+    final sy = _keys([
+      (0, 1),
+      (0.13, 0.82),
+      (0.2, 1.14),
+      (0.4, 1.05),
+      (0.47, 0.8),
+      (0.53, 1.06),
+      (0.6, 1),
+    ], t);
     return [
       JointPose(ty: y, sy: sy, sx: 1 / math.sqrt(sy)),
-      JointPose(rx: _keys([(0, 0), (0.13, 8), (0.25, -6), (0.47, 6), (0.6, 0)], t)),
+      JointPose(
+        rx: _keys([(0, 0), (0.13, 8), (0.25, -6), (0.47, 6), (0.6, 0)], t),
+      ),
       const JointPose(),
     ];
   }
 
   List<JointPose> attack(double t) {
-    final tz = _keys([(0, 0), (0.2, -0.06 * h), (0.32, 0.42 * h), (0.45, 0.38 * h), (0.7, 0)], t);
-    final sy = _keys([(0, 1), (0.2, 0.9), (0.32, 1.1), (0.45, 0.95), (0.7, 1)], t);
+    final tz = _keys([
+      (0, 0),
+      (0.2, -0.06 * h),
+      (0.32, 0.42 * h),
+      (0.45, 0.38 * h),
+      (0.7, 0),
+    ], t);
+    final sy = _keys([
+      (0, 1),
+      (0.2, 0.9),
+      (0.32, 1.1),
+      (0.45, 0.95),
+      (0.7, 1),
+    ], t);
     return [
       JointPose(tz: tz, sy: sy, sx: 1 / math.sqrt(sy)),
-      JointPose(rx: _keys([(0, 0), (0.2, -16), (0.32, 30), (0.45, 22), (0.7, 0)], t)),
-      JointPose(rx: _keys([(0, 0), (0.2, -8), (0.32, 14), (0.45, 6), (0.7, 0)], t)),
+      JointPose(
+        rx: _keys([(0, 0), (0.2, -16), (0.32, 30), (0.45, 22), (0.7, 0)], t),
+      ),
+      JointPose(
+        rx: _keys([(0, 0), (0.2, -8), (0.32, 14), (0.45, 6), (0.7, 0)], t),
+      ),
     ];
   }
 
   List<JointPose> hit(double t) {
     // Snap back, then a damped wobble home.
     final snap = _smooth(0, 0.07, t);
-    final decay = t < 0.07 ? 1.0 : math.exp(-(t - 0.07) * 9) * math.cos((t - 0.07) * 22);
+    final decay = t < 0.07
+        ? 1.0
+        : math.exp(-(t - 0.07) * 9) * math.cos((t - 0.07) * 22);
     final k = snap * decay * (1 - _smooth(0.38, 0.5, t));
     final sy = 1 - 0.15 * k;
     return [
@@ -135,11 +160,25 @@ List<RigClip> buildRigClips(double height, {double fps = 30}) {
   }
 
   List<JointPose> faint(double t) {
-    final wob = t < 0.35 ? 10 * math.sin(t / 0.35 * 2 * math.pi) * (1 - t / 0.35) : 0.0;
-    final fall = _keys([(0.3, 0), (0.85, -84), (0.97, -76), (1.1, -82), (1.2, -80)], t);
+    final wob = t < 0.35
+        ? 10 * math.sin(t / 0.35 * 2 * math.pi) * (1 - t / 0.35)
+        : 0.0;
+    final fall = _keys([
+      (0.3, 0),
+      (0.85, -84),
+      (0.97, -76),
+      (1.1, -82),
+      (1.2, -80),
+    ], t);
     final sy = _keys([(0, 1), (0.3, 0.93), (0.85, 0.9), (1.2, 0.85)], t);
     return [
-      JointPose(rz: wob, rx: fall, ty: 0.04 * h * math.sin(_smooth(0.3, 0.85, t) * math.pi) , sy: sy, sx: 1 / math.sqrt(sy)),
+      JointPose(
+        rz: wob,
+        rx: fall,
+        ty: 0.04 * h * math.sin(_smooth(0.3, 0.85, t) * math.pi),
+        sy: sy,
+        sx: 1 / math.sqrt(sy),
+      ),
       JointPose(rx: _keys([(0, 0), (0.3, 10), (0.85, -10), (1.2, -4)], t)),
       JointPose(rx: _keys([(0, 0), (0.85, -14), (1.2, -10)], t)),
     ];

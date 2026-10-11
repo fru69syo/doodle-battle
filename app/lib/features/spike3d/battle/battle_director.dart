@@ -37,7 +37,12 @@ class CameraView {
 
 /// One-shot visual cue (the renderer spawns particles / numbers).
 class ImpactCue {
-  const ImpactCue(this.targetSide, this.damage, this.position, {this.ko = false});
+  const ImpactCue(
+    this.targetSide,
+    this.damage,
+    this.position, {
+    this.ko = false,
+  });
   final int targetSide;
   final int damage;
   final Vector3 position;
@@ -181,18 +186,24 @@ class BattleDirector {
       case StageMode.fainted:
         return;
       case StageMode.victory:
-        f.yaw = _approachAngle(f.yaw, math.atan2(_eye.x - f.position.x, _eye.z - f.position.z), dt * 4);
+        f.yaw = _approachAngle(
+          f.yaw,
+          math.atan2(_eye.x - f.position.x, _eye.z - f.position.z),
+          dt * 4,
+        );
         if (f.modeTime > 0.75) {
           f.modeTime = 0;
           _play(f, RigClips.hop);
         }
         return;
       case StageMode.dashIn:
-        final d = o.position - f.position..y = 0;
+        final d = o.position - f.position
+          ..y = 0;
         final dist = d.length;
         f.yaw = _yawTo(f, o);
         if (dist > contactDistance && f.modeTime < 0.6) {
-          f.position += d.normalized() * math.min(dashSpeed * dt, dist - contactDistance);
+          f.position +=
+              d.normalized() * math.min(dashSpeed * dt, dist - contactDistance);
         } else {
           _setMode(f, StageMode.attack, RigClips.attack);
           for (final p in _pending) {
@@ -233,7 +244,11 @@ class BattleDirector {
           if (f.modeTime % 0.6 < dt) _play(f, RigClips.hop);
           _clampArena(f);
         } else {
-          _setMode(f, _winner == f.side ? StageMode.victory : StageMode.roam, RigClips.idle);
+          _setMode(
+            f,
+            _winner == f.side ? StageMode.victory : StageMode.roam,
+            RigClips.idle,
+          );
         }
         return;
       case StageMode.roam:
@@ -389,7 +404,9 @@ class BattleDirector {
   }
 
   void _updateCamera(double dt) {
-    final attacking = fighters.any((f) => f.mode == StageMode.dashIn || f.mode == StageMode.attack);
+    final attacking = fighters.any(
+      (f) => f.mode == StageMode.dashIn || f.mode == StageMode.attack,
+    );
     _punch += ((attacking ? 1.0 : 0.0) - _punch) * (1 - math.exp(-dt / 0.18));
     final (e, t, f) = _desiredCamera();
     final k = 1 - math.exp(-dt / 0.35);

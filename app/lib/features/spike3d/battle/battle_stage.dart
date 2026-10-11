@@ -36,7 +36,7 @@ class BattleStage {
   BattleStage._(this.scene, this._fighters, this._impacts);
 
   final Scene scene;
-  final List<_FighterRig> _fighters;
+  final List<RiggedModel> _fighters;
   final List<_ImpactFx> _impacts;
   int _nextImpact = 0;
 
@@ -49,22 +49,32 @@ class BattleStage {
   }) async {
     await Scene.initializeStaticResources();
     final scene = Scene();
-    _buildEnvironment(scene, quality);
-    final fighters = <_FighterRig>[];
+    buildStageEnvironment(scene, quality);
+    final fighters = <RiggedModel>[];
     for (final glb in [playerGlb, cpuGlb]) {
       final model = await Node.fromGlbBytes(glb);
       final holder = Node(name: 'fighter${fighters.length}')..add(model);
       scene.add(holder);
       final shadow = Node(
         name: 'blob_shadow',
-        mesh: Mesh(DiscGeometry(radius: 0.5, segments: 24), _blobShadow(quality)),
+        mesh: Mesh(
+          DiscGeometry(radius: 0.5, segments: 24),
+          blobShadow(quality),
+        ),
       );
       shadow.position = Vector3(0, 0.004, 0);
       scene.add(shadow);
-      fighters.add(_FighterRig(holder, model, shadow));
+      fighters.add(RiggedModel(holder, model, shadow));
     }
     final impacts = [for (var i = 0; i < 3; i++) _ImpactFx.create(scene)];
     return BattleStage._(scene, fighters, impacts);
+  }
+
+  /// Forgets clip state (call when a new director takes over).
+  void reset() {
+    for (final f in _fighters) {
+      f.token = -1;
+    }
   }
 
   /// Applies positions, facing, clips (with a short cross-fade) and effects.
@@ -74,7 +84,10 @@ class BattleStage {
       rig.holder.position = f.position;
       // The importer mirrors glTF +Z to engine −Z, so the model's face is
       // local −Z: add π to face along (sin yaw, 0, cos yaw).
-      rig.holder.rotation = Quaternion.axisAngle(Vector3(0, 1, 0), f.yaw + math.pi);
+      rig.holder.rotation = Quaternion.axisAngle(
+        Vector3(0, 1, 0),
+        f.yaw + math.pi,
+      );
       rig.shadow.position = Vector3(f.position.x, 0.004, f.position.z);
       rig.play(f.clip, f.clipToken);
       rig.fade(dt);
@@ -93,7 +106,8 @@ class BattleStage {
     target: v.target,
   );
 
-  static void _buildEnvironment(Scene scene, StageQuality q) {
+  /// Sky, sun (optionally with shadows), ground and props.
+  static void buildStageEnvironment(Scene scene, StageQuality q) {
     scene.skybox = Skybox(
       GradientSkySource(
         zenithColor: Vector3(0.25, 0.55, 1.0),
@@ -114,7 +128,12 @@ class BattleStage {
     final ground = PhysicallyBasedMaterial(baseColorTexture: _groundTexture())
       ..metallicFactor = 0
       ..roughnessFactor = 0.95;
-    scene.add(Node(name: 'ground', mesh: Mesh(DiscGeometry(radius: 14, segments: 64), ground)));
+    scene.add(
+      Node(
+        name: 'ground',
+        mesh: Mesh(DiscGeometry(radius: 14, segments: 64), ground),
+      ),
+    );
     if (q.props) {
       // A few low-poly trees and rocks for parallax (depth cues).
       final rnd = math.Random(5);
@@ -138,26 +157,39 @@ class BattleStage {
           final s = 0.8 + rnd.nextDouble() * 0.7;
           scene.add(
             Node(
-              mesh: Mesh(CylinderGeometry(topRadius: 0.12 * s, bottomRadius: 0.16 * s, height: 1.0 * s, radialSegments: 8), trunk),
+              mesh: Mesh(
+                CylinderGeometry(
+                  topRadius: 0.12 * s,
+                  bottomRadius: 0.16 * s,
+                  height: 1.0 * s,
+                  radialSegments: 8,
+                ),
+                trunk,
+              ),
             )..position = p + Vector3(0, 0.5 * s, 0),
           );
           scene.add(
             Node(
-              mesh: Mesh(IcosphereGeometry(radius: 0.8 * s, subdivisions: 1), leaves),
+              mesh: Mesh(
+                IcosphereGeometry(radius: 0.8 * s, subdivisions: 1),
+                leaves,
+              ),
             )..position = p + Vector3(0, 1.5 * s, 0),
           );
         } else {
           final s = 0.3 + rnd.nextDouble() * 0.4;
           scene.add(
-            Node(mesh: Mesh(IcosphereGeometry(radius: s, subdivisions: 1), rock))
-              ..position = p + Vector3(0, s * 0.5, 0),
+            Node(
+              mesh: Mesh(IcosphereGeometry(radius: s, subdivisions: 1), rock),
+            )..position = p + Vector3(0, s * 0.5, 0),
           );
         }
       }
     }
   }
 
-  static Material _blobShadow(StageQuality q) {
+  /// Soft round contact shadow (cheap; the only shadow on low quality).
+  static Material blobShadow(StageQuality q) {
     const n = 64;
     final px = Uint8List(n * n * 4);
     for (var y = 0; y < n; y++) {
@@ -182,9 +214,13 @@ class BattleStage {
         // Disc UVs span the disc's bounding square; r in metres.
         final dx = ((x + 0.5) / n - 0.5) * 28, dz = ((y + 0.5) / n - 0.5) * 28;
         final r = math.sqrt(dx * dx + dz * dz);
-        final stripe = ((dx / 1.6).floor() + (dz / 1.6).floor()).isEven ? 1.0 : 0.94;
+        final stripe = ((dx / 1.6).floor() + (dz / 1.6).floor()).isEven
+            ? 1.0
+            : 0.94;
         var g = [0.62 * stripe, 0.85 * stripe, 0.5 * stripe];
-        if (r < 3.4) g = [0.93, 0.86 * stripe + 0.04, 0.66 * stripe]; // sandy ring
+        if (r < 3.4) {
+          g = [0.93, 0.86 * stripe + 0.04, 0.66 * stripe]; // sandy ring
+        }
         if ((r - 3.4).abs() < 0.08) g = [1, 1, 1];
         final i = (y * n + x) * 4;
         px[i] = (g[0] * 255).round();
@@ -197,8 +233,9 @@ class BattleStage {
   }
 }
 
-class _FighterRig {
-  _FighterRig(this.holder, this.model, this.shadow) {
+/// An imported inflated character with its clips, cross-faded by name.
+class RiggedModel {
+  RiggedModel(this.holder, this.model, this.shadow) {
     for (final name in RigClips.all) {
       final anim = model.findAnimationByName(name);
       if (anim == null) continue;
@@ -273,8 +310,12 @@ class _ImpactFx {
     final flashMaterial = UnlitMaterial()
       ..baseColorFactor = Vector4(1, 1, 0.85, 0)
       ..alphaMode = AlphaMode.blend;
-    final flash = Node(mesh: Mesh(IcosphereGeometry(radius: 0.22, subdivisions: 2), flashMaterial))
-      ..visible = false;
+    final flash = Node(
+      mesh: Mesh(
+        IcosphereGeometry(radius: 0.22, subdivisions: 2),
+        flashMaterial,
+      ),
+    )..visible = false;
     node.add(flash);
     scene.add(node);
     return _ImpactFx(node, system, flash, flashMaterial).._emitter = emitter;
@@ -303,7 +344,12 @@ class _ImpactFx {
     if (_t < flashTime) {
       final u = _t / flashTime;
       flash.scale = Vector3.all((0.3 + u) * (_big ? 1.8 : 1));
-      flashMaterial.baseColorFactor = Vector4(1, 1, 0.85, 0.55 * (1 - u) * (1 - u));
+      flashMaterial.baseColorFactor = Vector4(
+        1,
+        1,
+        0.85,
+        0.55 * (1 - u) * (1 - u),
+      );
     } else if (flash.visible) {
       flash.visible = false;
     }

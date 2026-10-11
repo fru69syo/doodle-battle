@@ -145,7 +145,11 @@ Uint8List encodeInflatedGlb(
   if (tex != null) {
     attributes['TEXCOORD_0'] = w.addFloatAccessor(mesh.uvs, 'VEC2');
     final view = w.addBufferView(img.encodePng(tex, level: 6));
-    images.add({'name': 'drawing', 'bufferView': view, 'mimeType': 'image/png'});
+    images.add({
+      'name': 'drawing',
+      'bufferView': view,
+      'mimeType': 'image/png',
+    });
     textures.add({'sampler': 0, 'source': 0});
     (material['pbrMetallicRoughness']! as Map)['baseColorTexture'] = {
       'index': 0,
@@ -175,7 +179,12 @@ Uint8List encodeInflatedGlb(
 
   final animations = <Map<String, Object?>>[];
   for (final clip in clips) {
-    final input = w.addFloatAccessor(clip.times, 'SCALAR', target: null, withBounds: true);
+    final input = w.addFloatAccessor(
+      clip.times,
+      'SCALAR',
+      target: null,
+      withBounds: true,
+    );
     final samplers = <Map<String, Object?>>[];
     final channels = <Map<String, Object?>>[];
     for (var j = 0; j < 3; j++) {
@@ -208,7 +217,11 @@ Uint8List encodeInflatedGlb(
         });
       }
     }
-    animations.add({'name': clip.name, 'samplers': samplers, 'channels': channels});
+    animations.add({
+      'name': clip.name,
+      'samplers': samplers,
+      'channels': channels,
+    });
   }
 
   return w.build({

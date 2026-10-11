@@ -14,25 +14,22 @@ AtbBattle spikeBattle({
     SpikeMove('きらきらビーム', power: 45),
     SpikeMove('どっすんアタック', power: 55),
   ];
-  return AtbBattle(
-    [
-      SpikeFighter(
-        name: 'ぷっくり',
-        maxHp: 220,
-        agi: playerAgi,
-        str: 20,
-        def: 16,
-        moves: moves.take(moveCount).toList(),
-      ),
-      SpikeFighter(
-        name: 'あおまる',
-        maxHp: 200,
-        agi: cpuAgi,
-        str: 18,
-        def: 15,
-        moves: moves.take(2).toList(),
-      ),
-    ],
-    seed: seed,
-  );
+  return AtbBattle([
+    SpikeFighter(
+      name: 'ぷっくり',
+      maxHp: 220,
+      agi: playerAgi,
+      str: 20,
+      def: 16,
+      moves: moves.take(moveCount).toList(),
+    ),
+    SpikeFighter(
+      name: 'あおまる',
+      maxHp: 200,
+      agi: cpuAgi,
+      str: 18,
+      def: 15,
+      moves: moves.take(2).toList(),
+    ),
+  ], seed: seed);
 }

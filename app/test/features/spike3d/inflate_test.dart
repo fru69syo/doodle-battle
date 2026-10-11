@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:doodle_battle/features/ar/glb/glb_reader.dart';
 import 'package:doodle_battle/features/ar/sample_cutout.dart';
 import 'package:doodle_battle/features/spike3d/inflate/inflate_mesh.dart';
@@ -109,8 +110,22 @@ void main() {
 
     test('thin parts are thin (inscribed-disc radius, not global)', () {
       final stick = img.Image(width: 300, height: 300, numChannels: 4);
-      img.fillRect(stick, x1: 20, y1: 100, x2: 280, y2: 200, color: img.ColorRgba8(0, 0, 255, 255));
-      img.fillRect(stick, x1: 140, y1: 0, x2: 160, y2: 100, color: img.ColorRgba8(0, 0, 255, 255));
+      img.fillRect(
+        stick,
+        x1: 20,
+        y1: 100,
+        x2: 280,
+        y2: 200,
+        color: img.ColorRgba8(0, 0, 255, 255),
+      );
+      img.fillRect(
+        stick,
+        x1: 140,
+        y1: 0,
+        x2: 160,
+        y2: 100,
+        color: img.ColorRgba8(0, 0, 255, 255),
+      );
       final s = buildInflatedMesh(stick);
       expectWatertight(s);
       // Max |z| among vertices high up in the 20-px antenna vs the body.
@@ -131,12 +146,18 @@ void main() {
 
     test('rejects an empty cut-out', () {
       final empty = img.Image(width: 10, height: 10, numChannels: 4);
-      expect(() => buildInflatedMesh(empty), throwsA(isA<EmptyCutoutException>()));
+      expect(
+        () => buildInflatedMesh(empty),
+        throwsA(isA<EmptyCutoutException>()),
+      );
     });
   });
 
   group('simplified blob', () {
-    final m = buildInflatedMesh(sample, options: const InflateOptions.simplified());
+    final m = buildInflatedMesh(
+      sample,
+      options: const InflateOptions.simplified(),
+    );
 
     test('low poly, faceted, flat colours, no texture', () {
       expectWatertight(m);
@@ -146,7 +167,12 @@ void main() {
       expect(m.texture, isNull);
       final colours = <String>{};
       for (var v = 0; v < m.vertexCount; v++) {
-        colours.add(m.colors.sublist(v * 4, v * 4 + 3).map((c) => c.toStringAsFixed(3)).join(','));
+        colours.add(
+          m.colors
+              .sublist(v * 4, v * 4 + 3)
+              .map((c) => c.toStringAsFixed(3))
+              .join(','),
+        );
       }
       // 3 palette colours × (front, darker back).
       expect(colours.length, lessThanOrEqualTo(6));
@@ -155,21 +181,37 @@ void main() {
 
   group('GLB', () {
     test('valid container with skin and the five clips', () {
-      for (final options in const [InflateOptions(), InflateOptions.simplified()]) {
+      for (final options in const [
+        InflateOptions(),
+        InflateOptions.simplified(),
+      ]) {
         final r = buildInflatedGlb(buildSampleCutoutPng(), options: options);
         final doc = GlbDocument.parse(r.glb);
         expect(doc.validate(), isEmpty);
         expect(doc.list('skins').single['joints'], [1, 2, 3]);
         expect(doc.list('animations').map((a) => a['name']), RigClips.all);
-        final prim = (doc.list('meshes').single['primitives'] as List).single as Map;
+        final prim =
+            (doc.list('meshes').single['primitives'] as List).single as Map;
         final attrs = (prim['attributes'] as Map).cast<String, int>();
-        expect(attrs.keys, containsAll(['POSITION', 'NORMAL', 'JOINTS_0', 'WEIGHTS_0', 'COLOR_0']));
+        expect(
+          attrs.keys,
+          containsAll([
+            'POSITION',
+            'NORMAL',
+            'JOINTS_0',
+            'WEIGHTS_0',
+            'COLOR_0',
+          ]),
+        );
         // Weights sum to 1.
         final w = doc.floatAccessor(attrs['WEIGHTS_0']!);
         for (var v = 0; v < w.length; v += 4) {
           expect(w[v] + w[v + 1] + w[v + 2] + w[v + 3], closeTo(1, 1e-5));
         }
-        expect(attrs.containsKey('TEXCOORD_0'), options.variant == InflateVariant.puffy);
+        expect(
+          attrs.containsKey('TEXCOORD_0'),
+          options.variant == InflateVariant.puffy,
+        );
       }
     });
 
@@ -202,9 +244,14 @@ void main() {
       final png = buildLargeSampleCutoutPng();
       // Warm up the JIT once, then measure.
       buildInflatedGlb(png);
-      final runs = <InflatedGlb>[for (var i = 0; i < 3; i++) buildInflatedGlb(png)];
+      final runs = <InflatedGlb>[
+        for (var i = 0; i < 3; i++) buildInflatedGlb(png),
+      ];
       final best = runs.map((r) => r.timings.totalUs).reduce(math.min);
-      final simple = buildInflatedGlb(png, options: const InflateOptions.simplified());
+      final simple = buildInflatedGlb(
+        png,
+        options: const InflateOptions.simplified(),
+      );
       // ignore: avoid_print
       print(
         'inflate 512px: ${runs.last.timings}; best ${best ~/ 1000} ms; '

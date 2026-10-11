@@ -154,7 +154,10 @@ InflatedMesh buildInflatedMesh(
   // Room around the drawing so the outline never touches the grid border
   // (the blob variant grows a little when its distance field is blurred).
   final pad = simplified ? 2 + (options.workResolution * 0.06 * 2.5).ceil() : 2;
-  final k = math.min(1.0, (options.workResolution - 2 * pad) / math.max(sw, sh));
+  final k = math.min(
+    1.0,
+    (options.workResolution - 2 * pad) / math.max(sw, sh),
+  );
   final cw = math.max(1, (sw * k).ceil());
   final chh = math.max(1, (sh * k).ceil());
   final ww = cw + 2 * pad;
@@ -542,7 +545,11 @@ Float64List _inscribedRadius(Float64List d, Uint8List mask, int w, int h) {
       final ri = rad.ceil();
       for (var yy = math.max(0, y - ri); yy <= math.min(h - 1, y + ri); yy++) {
         final ddy = (yy - y) * (yy - y);
-        for (var xx = math.max(0, x - ri); xx <= math.min(w - 1, x + ri); xx++) {
+        for (
+          var xx = math.max(0, x - ri);
+          xx <= math.min(w - 1, x + ri);
+          xx++
+        ) {
           if (ddy + (xx - x) * (xx - x) > r2) continue;
           final q = yy * w + xx;
           if (r[q] < dp) r[q] = dp;
@@ -643,7 +650,9 @@ Float32List _vertexNormals(Float32List pos, Uint32List idx) {
   }
   final out = Float32List(pos.length);
   for (var v = 0; v < pos.length; v += 3) {
-    final l = math.sqrt(n[v] * n[v] + n[v + 1] * n[v + 1] + n[v + 2] * n[v + 2]);
+    final l = math.sqrt(
+      n[v] * n[v] + n[v + 1] * n[v + 1] + n[v + 2] * n[v + 2],
+    );
     if (l < 1e-12) {
       out[v + 2] = 1;
       continue;
@@ -811,7 +820,9 @@ int _nearest(List<List<double>> centres, List<double> s) {
 
 double _srgbToLinear(double c) {
   final v = c / 255;
-  return v <= 0.04045 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
+  return v <= 0.04045
+      ? v / 12.92
+      : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
 }
 
 /// Un-welds the mesh (one vertex per corner, face normals) and colours each
@@ -856,7 +867,11 @@ InflatedMesh _flatShaded(
     final py = (sy0 + cv * (sh - 1)).round().clamp(0, src.height - 1);
     final s = src.getPixel(px, py);
     final colour = s.a >= 128
-        ? palette[_nearest(palette, [s.r.toDouble(), s.g.toDouble(), s.b.toDouble()])]
+        ? palette[_nearest(palette, [
+            s.r.toDouble(),
+            s.g.toDouble(),
+            s.b.toDouble(),
+          ])]
         : palette[0];
     final shade = back ? 0.6 : 1.0;
     for (var c = 0; c < 3; c++) {
