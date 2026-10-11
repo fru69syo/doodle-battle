@@ -35,6 +35,9 @@ class StageFighter {
 
   /// Aura while charging a cast.
   bool charging = false;
+
+  /// Gauge full, waiting for a move: bounces on the spot.
+  bool ready = false;
 }
 
 /// A visual effect cue for the renderer (positions in world units).
@@ -180,6 +183,7 @@ class StageDirector {
       fighters[i].poisoned = f.poisoned;
       fighters[i].paralyzed = f.paralyzed;
       fighters[i].shield = f.shield;
+      fighters[i].ready = f.ready;
     }
   }
 
@@ -281,7 +285,12 @@ class StageDirector {
     final zr = s == 0 ? zNear : zFar;
     f.z = (f.z + vz * speed * dt).clamp(zr[0], zr[1]);
     final moving = vx != 0 || vz != 0;
-    _setAnim(f, f.charging ? Anim.cast : (moving ? Anim.walk : Anim.idle));
+    _setAnim(
+      f,
+      f.charging
+          ? Anim.cast
+          : (moving ? Anim.walk : (f.ready ? Anim.hop : Anim.idle)),
+    );
   }
 
   /// Keep the player left of the opponent with a gap (readable layout).
