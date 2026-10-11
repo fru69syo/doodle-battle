@@ -73,6 +73,21 @@ int xpOnline({
   return xp;
 }
 
+/// Whether an online battle earns XP (§4.2): only the first
+/// [kOnlineXpBattlesPerDay] rated battles of the day, never against the same
+/// opponent within [kSameOpponentCooldownMinutes], never a disconnect /
+/// forfeit loss. Ghost battles follow the same rules.
+const int kSameOpponentCooldownMinutes = 60;
+bool onlineXpEligible({
+  required int xpBattlesToday,
+  required int? minutesSinceSameOpponent,
+  required bool disconnectLoss,
+}) =>
+    xpBattlesToday < kOnlineXpBattlesPerDay &&
+    (minutesSinceSameOpponent == null ||
+        minutesSinceSameOpponent >= kSameOpponentCooldownMinutes) &&
+    !disconnectLoss;
+
 // --- Rated play ----------------------------------------------------------------
 
 /// Rated battles are fought at this level (stats re-computed at the sync

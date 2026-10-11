@@ -1,0 +1,26 @@
+{
+  "name": "@doodle-battle/battle-engine-v3",
+  "version": "3.0.0",
+  "private": true,
+  "description": "おえかきファイターズ v2.0 battle engine v3 (real-time ATB) — TypeScript port, bit-exact with app/lib/domain/battle_v3",
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run typecheck && vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

@@ -92,6 +92,12 @@ Map<String, Object?> _battleExpected(Battle b, {bool full = false}) => {
   'eventCount': b.events.length,
   'eventsFnv1a': eventsHash(b.events),
   'stateHash': b.stateHash(),
+  // Every decision as an input: replaying these with the timer disabled
+  // (server mode) reproduces the battle (docs/REALTIME_PROTOCOL.md §9).
+  'inputLog': [
+    for (final e in b.events)
+      if (e.type == 'select') [e.tick, e.i('side'), e.i('slot')],
+  ],
   if (full) 'events': [for (final e in b.events) e.line],
 };
 

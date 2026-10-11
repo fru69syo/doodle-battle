@@ -413,6 +413,7 @@ class Battle {
       final m = f.moves[slot];
       f.sp -= m.spCost * 100;
       f.castSlot = slot;
+      f.readyTicks = 0; // only meaningful while ready
       f.actions++;
       _ev('select', {
         'side': i,
