@@ -1,6 +1,6 @@
 {
   "specVersion": 3,
-  "draft": "DRAFT — prototype numbers from the v2 design spike",
+  "release": "v3.0 production (engine v3). Tuned in docs/GAME_DESIGN_V2.md §10, re-run in docs/BATTLE_V3.md",
   "integerMath": "All values are integers. Every division is floor division of non-negative integers; every intermediate stays below 2^53.",
   "rng": {
     "algorithm": "mulberry32 (same as battle spec v2, docs/BATTLE.md §2)",
@@ -722,8 +722,12 @@
       "normal": 10,
       "strong": 0
     },
-    "cpuThinkTicks": 10,
-    "note": "chooseMove in ai_v2.dart is normative (server ghosts, timeouts)"
+    "thinkTicks": {
+      "weak": 10,
+      "normal": 10,
+      "strong": 4
+    },
+    "note": "chooseMove (ai.dart / ai.ts) is normative; the timeout auto-pick, おまかせ and server ghosts use normal; strong scores with scoreMoveStrong"
   },
   "progression": {
     "evolutions": {
@@ -779,904 +783,1167 @@
         98
       ],
       "aiTier": "stage 1-20 weak, 21-60 normal, 61-100 strong",
+      "strongTierPowerAdjustPct": 0,
+      "worldRosters": [
+        [
+          "cpu_fire_blob",
+          "cpu_leaf_caterpillar",
+          "cpu_stickman",
+          "cpu_leaf_frog"
+        ],
+        [
+          "cpu_bear",
+          "cpu_butterfly",
+          "cpu_hedgehog",
+          "cpu_thunder_bird"
+        ],
+        [
+          "cpu_water_fish",
+          "cpu_octopus",
+          "cpu_jellyfish",
+          "cpu_swordfish"
+        ],
+        [
+          "cpu_rock_golem",
+          "cpu_flower",
+          "cpu_fire_spiky",
+          "cpu_dino"
+        ],
+        [
+          "cpu_penguin",
+          "cpu_snowman",
+          "cpu_water_snake",
+          "cpu_shadow_ghost"
+        ],
+        [
+          "cpu_car",
+          "cpu_train",
+          "cpu_rainbow_robot",
+          "cpu_ufo"
+        ],
+        [
+          "cpu_crab",
+          "cpu_cactus",
+          "cpu_thunder_star",
+          "cpu_shadow_bat"
+        ],
+        [
+          "cpu_knight",
+          "cpu_rainbow_cat",
+          "cpu_rocket",
+          "cpu_castle"
+        ],
+        [
+          "cpu_cloud",
+          "cpu_rainbow_bird",
+          "cpu_kite",
+          "cpu_dragon"
+        ],
+        [
+          "cpu_stickman",
+          "cpu_knight",
+          "cpu_dragon",
+          "cpu_scribble_king"
+        ]
+      ],
       "table": [
         {
           "stage": 1,
           "world": 1,
+          "position": 1,
           "recommendedLevel": 1,
           "cpuLevel": 1,
           "aiTier": "weak",
+          "cpuId": "cpu_fire_blob",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 2,
           "world": 1,
+          "position": 2,
           "recommendedLevel": 2,
           "cpuLevel": 2,
           "aiTier": "weak",
+          "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 3,
           "world": 1,
+          "position": 3,
           "recommendedLevel": 3,
           "cpuLevel": 3,
           "aiTier": "weak",
+          "cpuId": "cpu_stickman",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 4,
           "world": 1,
+          "position": 4,
           "recommendedLevel": 4,
           "cpuLevel": 4,
           "aiTier": "weak",
+          "cpuId": "cpu_fire_blob",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 5,
           "world": 1,
+          "position": 5,
           "recommendedLevel": 5,
           "cpuLevel": 5,
           "aiTier": "weak",
+          "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 6,
           "world": 1,
+          "position": 6,
           "recommendedLevel": 6,
           "cpuLevel": 6,
           "aiTier": "weak",
+          "cpuId": "cpu_stickman",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 7,
           "world": 1,
+          "position": 7,
           "recommendedLevel": 7,
           "cpuLevel": 7,
           "aiTier": "weak",
+          "cpuId": "cpu_fire_blob",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 8,
           "world": 1,
+          "position": 8,
           "recommendedLevel": 8,
           "cpuLevel": 8,
           "aiTier": "weak",
+          "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 9,
           "world": 1,
+          "position": 9,
           "recommendedLevel": 9,
           "cpuLevel": 9,
           "aiTier": "weak",
+          "cpuId": "cpu_stickman",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 10,
           "world": 1,
+          "position": 10,
           "recommendedLevel": 10,
           "cpuLevel": 10,
           "aiTier": "weak",
+          "cpuId": "cpu_leaf_frog",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 11,
           "world": 2,
+          "position": 1,
           "recommendedLevel": 11,
           "cpuLevel": 11,
           "aiTier": "weak",
+          "cpuId": "cpu_bear",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 12,
           "world": 2,
+          "position": 2,
           "recommendedLevel": 12,
           "cpuLevel": 12,
           "aiTier": "weak",
+          "cpuId": "cpu_butterfly",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 13,
           "world": 2,
+          "position": 3,
           "recommendedLevel": 13,
           "cpuLevel": 13,
           "aiTier": "weak",
+          "cpuId": "cpu_hedgehog",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 14,
           "world": 2,
+          "position": 4,
           "recommendedLevel": 14,
           "cpuLevel": 14,
           "aiTier": "weak",
+          "cpuId": "cpu_bear",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 15,
           "world": 2,
+          "position": 5,
           "recommendedLevel": 15,
           "cpuLevel": 15,
           "aiTier": "weak",
+          "cpuId": "cpu_butterfly",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 16,
           "world": 2,
+          "position": 6,
           "recommendedLevel": 16,
           "cpuLevel": 16,
           "aiTier": "weak",
+          "cpuId": "cpu_hedgehog",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 17,
           "world": 2,
+          "position": 7,
           "recommendedLevel": 17,
           "cpuLevel": 17,
           "aiTier": "weak",
+          "cpuId": "cpu_bear",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 18,
           "world": 2,
+          "position": 8,
           "recommendedLevel": 18,
           "cpuLevel": 18,
           "aiTier": "weak",
+          "cpuId": "cpu_butterfly",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 19,
           "world": 2,
+          "position": 9,
           "recommendedLevel": 19,
           "cpuLevel": 19,
           "aiTier": "weak",
+          "cpuId": "cpu_hedgehog",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 20,
           "world": 2,
+          "position": 10,
           "recommendedLevel": 20,
           "cpuLevel": 20,
           "aiTier": "weak",
+          "cpuId": "cpu_thunder_bird",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 21,
           "world": 3,
+          "position": 1,
           "recommendedLevel": 21,
           "cpuLevel": 21,
           "aiTier": "normal",
+          "cpuId": "cpu_water_fish",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 22,
           "world": 3,
+          "position": 2,
           "recommendedLevel": 22,
           "cpuLevel": 22,
           "aiTier": "normal",
+          "cpuId": "cpu_octopus",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 23,
           "world": 3,
+          "position": 3,
           "recommendedLevel": 23,
           "cpuLevel": 23,
           "aiTier": "normal",
+          "cpuId": "cpu_jellyfish",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 24,
           "world": 3,
+          "position": 4,
           "recommendedLevel": 24,
           "cpuLevel": 24,
           "aiTier": "normal",
+          "cpuId": "cpu_water_fish",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 25,
           "world": 3,
+          "position": 5,
           "recommendedLevel": 25,
           "cpuLevel": 25,
           "aiTier": "normal",
+          "cpuId": "cpu_octopus",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 26,
           "world": 3,
+          "position": 6,
           "recommendedLevel": 26,
           "cpuLevel": 26,
           "aiTier": "normal",
+          "cpuId": "cpu_jellyfish",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 27,
           "world": 3,
+          "position": 7,
           "recommendedLevel": 27,
           "cpuLevel": 27,
           "aiTier": "normal",
+          "cpuId": "cpu_water_fish",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 28,
           "world": 3,
+          "position": 8,
           "recommendedLevel": 28,
           "cpuLevel": 28,
           "aiTier": "normal",
+          "cpuId": "cpu_octopus",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 29,
           "world": 3,
+          "position": 9,
           "recommendedLevel": 29,
           "cpuLevel": 29,
           "aiTier": "normal",
+          "cpuId": "cpu_jellyfish",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 30,
           "world": 3,
+          "position": 10,
           "recommendedLevel": 30,
           "cpuLevel": 30,
           "aiTier": "normal",
+          "cpuId": "cpu_swordfish",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 31,
           "world": 4,
+          "position": 1,
           "recommendedLevel": 31,
           "cpuLevel": 31,
           "aiTier": "normal",
+          "cpuId": "cpu_rock_golem",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 32,
           "world": 4,
+          "position": 2,
           "recommendedLevel": 32,
           "cpuLevel": 32,
           "aiTier": "normal",
+          "cpuId": "cpu_flower",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 33,
           "world": 4,
+          "position": 3,
           "recommendedLevel": 33,
           "cpuLevel": 33,
           "aiTier": "normal",
+          "cpuId": "cpu_fire_spiky",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 34,
           "world": 4,
+          "position": 4,
           "recommendedLevel": 34,
           "cpuLevel": 34,
           "aiTier": "normal",
+          "cpuId": "cpu_rock_golem",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 35,
           "world": 4,
+          "position": 5,
           "recommendedLevel": 35,
           "cpuLevel": 35,
           "aiTier": "normal",
+          "cpuId": "cpu_flower",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 36,
           "world": 4,
+          "position": 6,
           "recommendedLevel": 36,
           "cpuLevel": 36,
           "aiTier": "normal",
+          "cpuId": "cpu_fire_spiky",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 37,
           "world": 4,
+          "position": 7,
           "recommendedLevel": 37,
           "cpuLevel": 37,
           "aiTier": "normal",
+          "cpuId": "cpu_rock_golem",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 38,
           "world": 4,
+          "position": 8,
           "recommendedLevel": 38,
           "cpuLevel": 38,
           "aiTier": "normal",
+          "cpuId": "cpu_flower",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 39,
           "world": 4,
+          "position": 9,
           "recommendedLevel": 39,
           "cpuLevel": 39,
           "aiTier": "normal",
+          "cpuId": "cpu_fire_spiky",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 40,
           "world": 4,
+          "position": 10,
           "recommendedLevel": 40,
           "cpuLevel": 40,
           "aiTier": "normal",
+          "cpuId": "cpu_dino",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 41,
           "world": 5,
+          "position": 1,
           "recommendedLevel": 41,
           "cpuLevel": 41,
           "aiTier": "normal",
+          "cpuId": "cpu_penguin",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 42,
           "world": 5,
+          "position": 2,
           "recommendedLevel": 42,
           "cpuLevel": 42,
           "aiTier": "normal",
+          "cpuId": "cpu_snowman",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 43,
           "world": 5,
+          "position": 3,
           "recommendedLevel": 43,
           "cpuLevel": 43,
           "aiTier": "normal",
+          "cpuId": "cpu_water_snake",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 44,
           "world": 5,
+          "position": 4,
           "recommendedLevel": 44,
           "cpuLevel": 44,
           "aiTier": "normal",
+          "cpuId": "cpu_penguin",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 45,
           "world": 5,
+          "position": 5,
           "recommendedLevel": 45,
           "cpuLevel": 45,
           "aiTier": "normal",
+          "cpuId": "cpu_snowman",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 46,
           "world": 5,
+          "position": 6,
           "recommendedLevel": 46,
           "cpuLevel": 46,
           "aiTier": "normal",
+          "cpuId": "cpu_water_snake",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 47,
           "world": 5,
+          "position": 7,
           "recommendedLevel": 47,
           "cpuLevel": 47,
           "aiTier": "normal",
+          "cpuId": "cpu_penguin",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 48,
           "world": 5,
+          "position": 8,
           "recommendedLevel": 48,
           "cpuLevel": 48,
           "aiTier": "normal",
+          "cpuId": "cpu_snowman",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 49,
           "world": 5,
+          "position": 9,
           "recommendedLevel": 49,
           "cpuLevel": 49,
           "aiTier": "normal",
+          "cpuId": "cpu_water_snake",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 50,
           "world": 5,
+          "position": 10,
           "recommendedLevel": 50,
           "cpuLevel": 50,
           "aiTier": "normal",
+          "cpuId": "cpu_shadow_ghost",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 51,
           "world": 6,
+          "position": 1,
           "recommendedLevel": 51,
           "cpuLevel": 51,
           "aiTier": "normal",
+          "cpuId": "cpu_car",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 52,
           "world": 6,
+          "position": 2,
           "recommendedLevel": 52,
           "cpuLevel": 52,
           "aiTier": "normal",
+          "cpuId": "cpu_train",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 53,
           "world": 6,
+          "position": 3,
           "recommendedLevel": 53,
           "cpuLevel": 53,
           "aiTier": "normal",
+          "cpuId": "cpu_rainbow_robot",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 54,
           "world": 6,
+          "position": 4,
           "recommendedLevel": 54,
           "cpuLevel": 54,
           "aiTier": "normal",
+          "cpuId": "cpu_car",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 55,
           "world": 6,
+          "position": 5,
           "recommendedLevel": 55,
           "cpuLevel": 55,
           "aiTier": "normal",
+          "cpuId": "cpu_train",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 56,
           "world": 6,
+          "position": 6,
           "recommendedLevel": 56,
           "cpuLevel": 56,
           "aiTier": "normal",
+          "cpuId": "cpu_rainbow_robot",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 57,
           "world": 6,
+          "position": 7,
           "recommendedLevel": 57,
           "cpuLevel": 57,
           "aiTier": "normal",
+          "cpuId": "cpu_car",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 58,
           "world": 6,
+          "position": 8,
           "recommendedLevel": 58,
           "cpuLevel": 58,
           "aiTier": "normal",
+          "cpuId": "cpu_train",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 59,
           "world": 6,
+          "position": 9,
           "recommendedLevel": 59,
           "cpuLevel": 59,
           "aiTier": "normal",
+          "cpuId": "cpu_rainbow_robot",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 60,
           "world": 6,
+          "position": 10,
           "recommendedLevel": 60,
           "cpuLevel": 60,
           "aiTier": "normal",
+          "cpuId": "cpu_ufo",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 61,
           "world": 7,
+          "position": 1,
           "recommendedLevel": 61,
           "cpuLevel": 61,
           "aiTier": "strong",
+          "cpuId": "cpu_crab",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 62,
           "world": 7,
+          "position": 2,
           "recommendedLevel": 62,
           "cpuLevel": 62,
           "aiTier": "strong",
+          "cpuId": "cpu_cactus",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 63,
           "world": 7,
+          "position": 3,
           "recommendedLevel": 63,
           "cpuLevel": 63,
           "aiTier": "strong",
+          "cpuId": "cpu_thunder_star",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 64,
           "world": 7,
+          "position": 4,
           "recommendedLevel": 64,
           "cpuLevel": 64,
           "aiTier": "strong",
+          "cpuId": "cpu_crab",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 65,
           "world": 7,
+          "position": 5,
           "recommendedLevel": 65,
           "cpuLevel": 65,
           "aiTier": "strong",
+          "cpuId": "cpu_cactus",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 66,
           "world": 7,
+          "position": 6,
           "recommendedLevel": 66,
           "cpuLevel": 66,
           "aiTier": "strong",
+          "cpuId": "cpu_thunder_star",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 67,
           "world": 7,
+          "position": 7,
           "recommendedLevel": 67,
           "cpuLevel": 67,
           "aiTier": "strong",
+          "cpuId": "cpu_crab",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 68,
           "world": 7,
+          "position": 8,
           "recommendedLevel": 68,
           "cpuLevel": 68,
           "aiTier": "strong",
+          "cpuId": "cpu_cactus",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 69,
           "world": 7,
+          "position": 9,
           "recommendedLevel": 69,
           "cpuLevel": 69,
           "aiTier": "strong",
+          "cpuId": "cpu_thunder_star",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 70,
           "world": 7,
+          "position": 10,
           "recommendedLevel": 70,
           "cpuLevel": 70,
           "aiTier": "strong",
+          "cpuId": "cpu_shadow_bat",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 71,
           "world": 8,
+          "position": 1,
           "recommendedLevel": 71,
           "cpuLevel": 71,
           "aiTier": "strong",
+          "cpuId": "cpu_knight",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 72,
           "world": 8,
+          "position": 2,
           "recommendedLevel": 72,
           "cpuLevel": 72,
           "aiTier": "strong",
+          "cpuId": "cpu_rainbow_cat",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 73,
           "world": 8,
+          "position": 3,
           "recommendedLevel": 73,
           "cpuLevel": 73,
           "aiTier": "strong",
+          "cpuId": "cpu_rocket",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 74,
           "world": 8,
+          "position": 4,
           "recommendedLevel": 74,
           "cpuLevel": 74,
           "aiTier": "strong",
+          "cpuId": "cpu_knight",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 75,
           "world": 8,
+          "position": 5,
           "recommendedLevel": 75,
           "cpuLevel": 75,
           "aiTier": "strong",
+          "cpuId": "cpu_rainbow_cat",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 76,
           "world": 8,
+          "position": 6,
           "recommendedLevel": 76,
           "cpuLevel": 76,
           "aiTier": "strong",
+          "cpuId": "cpu_rocket",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 77,
           "world": 8,
+          "position": 7,
           "recommendedLevel": 77,
           "cpuLevel": 77,
           "aiTier": "strong",
+          "cpuId": "cpu_knight",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 78,
           "world": 8,
+          "position": 8,
           "recommendedLevel": 78,
           "cpuLevel": 78,
           "aiTier": "strong",
+          "cpuId": "cpu_rainbow_cat",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 79,
           "world": 8,
+          "position": 9,
           "recommendedLevel": 79,
           "cpuLevel": 79,
           "aiTier": "strong",
+          "cpuId": "cpu_rocket",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 80,
           "world": 8,
+          "position": 10,
           "recommendedLevel": 80,
           "cpuLevel": 80,
           "aiTier": "strong",
+          "cpuId": "cpu_castle",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 81,
           "world": 9,
+          "position": 1,
           "recommendedLevel": 81,
           "cpuLevel": 81,
           "aiTier": "strong",
+          "cpuId": "cpu_cloud",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 82,
           "world": 9,
+          "position": 2,
           "recommendedLevel": 82,
           "cpuLevel": 82,
           "aiTier": "strong",
+          "cpuId": "cpu_rainbow_bird",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 83,
           "world": 9,
+          "position": 3,
           "recommendedLevel": 83,
           "cpuLevel": 83,
           "aiTier": "strong",
+          "cpuId": "cpu_kite",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 84,
           "world": 9,
+          "position": 4,
           "recommendedLevel": 84,
           "cpuLevel": 84,
           "aiTier": "strong",
+          "cpuId": "cpu_cloud",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 85,
           "world": 9,
+          "position": 5,
           "recommendedLevel": 85,
           "cpuLevel": 85,
           "aiTier": "strong",
+          "cpuId": "cpu_rainbow_bird",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 86,
           "world": 9,
+          "position": 6,
           "recommendedLevel": 86,
           "cpuLevel": 86,
           "aiTier": "strong",
+          "cpuId": "cpu_kite",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 87,
           "world": 9,
+          "position": 7,
           "recommendedLevel": 87,
           "cpuLevel": 87,
           "aiTier": "strong",
+          "cpuId": "cpu_cloud",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 88,
           "world": 9,
+          "position": 8,
           "recommendedLevel": 88,
           "cpuLevel": 88,
           "aiTier": "strong",
+          "cpuId": "cpu_rainbow_bird",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 89,
           "world": 9,
+          "position": 9,
           "recommendedLevel": 89,
           "cpuLevel": 89,
           "aiTier": "strong",
+          "cpuId": "cpu_kite",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 90,
           "world": 9,
+          "position": 10,
           "recommendedLevel": 90,
           "cpuLevel": 90,
           "aiTier": "strong",
+          "cpuId": "cpu_dragon",
           "boss": true,
           "cpuPowerPct": 98
         },
         {
           "stage": 91,
           "world": 10,
+          "position": 1,
           "recommendedLevel": 91,
           "cpuLevel": 91,
           "aiTier": "strong",
+          "cpuId": "cpu_stickman",
           "boss": false,
           "cpuPowerPct": 88
         },
         {
           "stage": 92,
           "world": 10,
+          "position": 2,
           "recommendedLevel": 92,
           "cpuLevel": 92,
           "aiTier": "strong",
+          "cpuId": "cpu_knight",
           "boss": false,
           "cpuPowerPct": 89
         },
         {
           "stage": 93,
           "world": 10,
+          "position": 3,
           "recommendedLevel": 93,
           "cpuLevel": 93,
           "aiTier": "strong",
+          "cpuId": "cpu_dragon",
           "boss": false,
           "cpuPowerPct": 90
         },
         {
           "stage": 94,
           "world": 10,
+          "position": 4,
           "recommendedLevel": 94,
           "cpuLevel": 94,
           "aiTier": "strong",
+          "cpuId": "cpu_stickman",
           "boss": false,
           "cpuPowerPct": 91
         },
         {
           "stage": 95,
           "world": 10,
+          "position": 5,
           "recommendedLevel": 95,
           "cpuLevel": 95,
           "aiTier": "strong",
+          "cpuId": "cpu_knight",
           "boss": false,
           "cpuPowerPct": 92
         },
         {
           "stage": 96,
           "world": 10,
+          "position": 6,
           "recommendedLevel": 96,
           "cpuLevel": 96,
           "aiTier": "strong",
+          "cpuId": "cpu_dragon",
           "boss": false,
           "cpuPowerPct": 93
         },
         {
           "stage": 97,
           "world": 10,
+          "position": 7,
           "recommendedLevel": 97,
           "cpuLevel": 97,
           "aiTier": "strong",
+          "cpuId": "cpu_stickman",
           "boss": false,
           "cpuPowerPct": 94
         },
         {
           "stage": 98,
           "world": 10,
+          "position": 8,
           "recommendedLevel": 98,
           "cpuLevel": 98,
           "aiTier": "strong",
+          "cpuId": "cpu_knight",
           "boss": false,
           "cpuPowerPct": 95
         },
         {
           "stage": 99,
           "world": 10,
+          "position": 9,
           "recommendedLevel": 99,
           "cpuLevel": 99,
           "aiTier": "strong",
+          "cpuId": "cpu_dragon",
           "boss": false,
           "cpuPowerPct": 96
         },
         {
           "stage": 100,
           "world": 10,
+          "position": 10,
           "recommendedLevel": 100,
           "cpuLevel": 100,
           "aiTier": "strong",
+          "cpuId": "cpu_scribble_king",
           "boss": true,
           "cpuPowerPct": 98
         }
@@ -1724,7 +1991,36 @@
       ],
       "badgeRule": "shown badge = best ever (never goes down)",
       "matchBand": "100 + 50*(waitSeconds/5), max 400",
-      "ghostAfterSeconds": 20
+      "ghostAfterSeconds": 20,
+      "statsAt": "statsAt(syncLevel) with preForm for a bloomer below its rebirth level; slots unlocked at the actual level"
+    },
+    "family": {
+      "xp": 0,
+      "battleLevel": "max(own, other) if sameLevel else own, + boost, clamped 1..maxLevel; bloomers below Lv50 keep the pre-rebirth form"
+    },
+    "adBoost": {
+      "platforms": [
+        "android"
+      ],
+      "perDay": 3,
+      "singlePlayerOnly": true
     }
+  },
+  "rig": {
+    "version": 1,
+    "maxBytes": 4096,
+    "maxLimbs": 12,
+    "maxSide": 4096,
+    "limbKinds": [
+      "head",
+      "arm",
+      "leg",
+      "tail",
+      "extra"
+    ],
+    "sources": [
+      "auto",
+      "edited"
+    ]
   }
 }

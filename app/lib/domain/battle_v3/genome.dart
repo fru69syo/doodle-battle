@@ -12,13 +12,16 @@ import 'rng.dart';
 import 'spec.dart';
 
 /// uint32 seed from an image hash (first 8 hex digits; non-hex → FNV-1a).
+/// Exactly 8 hex digits are required (no sign, no whitespace) so every
+/// port parses the same prefixes.
 int imageSeed(String imageHash) {
-  if (imageHash.length >= 8) {
-    final v = int.tryParse(imageHash.substring(0, 8), radix: 16);
-    if (v != null) return v & mask32;
+  if (_hex8.hasMatch(imageHash)) {
+    return int.parse(imageHash.substring(0, 8), radix: 16) & mask32;
   }
   return fnv1a32(imageHash);
 }
+
+final RegExp _hex8 = RegExp(r'^[0-9a-fA-F]{8}');
 
 /// Kid-likeness 0..100 from energy / skill in tenths.
 int kidLikeness(V3Spec s, int energy10, int skill10) {

@@ -643,40 +643,6 @@ class Battle {
     }
   }
 
-  /// A copy of this battle for look-ahead (つよい AI): same state, no event
-  /// log, and its battle RNG re-seeded with [rngSeed] so the copy can not
-  /// see this battle's future rolls.
-  Battle fork(int rngSeed) {
-    final c = Battle(
-      spec,
-      fighters[0].setup,
-      fighters[1].setup,
-      seed: seed,
-      autoPick: autoPick,
-      recordEvents: false,
-    );
-    c.restore(snapshot());
-    c.rng = Mulberry32(rngSeed);
-    return c;
-  }
-
-  /// Commits [side] (ready, [slot] usable) to [slot] immediately, outside
-  /// the tick order (look-ahead only): pays SP, starts the cast or resolves.
-  void forceSelect(int side, int slot) {
-    final f = fighters[side];
-    final m = f.moves[slot];
-    f.queued = null;
-    f.sp -= m.spCost * 100;
-    f.castSlot = slot;
-    f.actions++;
-    if (m.castTicks > 0) {
-      f.phase = Phase.casting;
-      f.castLeft = m.castTicks;
-    } else {
-      _resolve(side);
-    }
-  }
-
   /// Serialisable state (server persistence / reconnect). Restore with
   /// [restore] on a battle built from the same setups and seed.
   Map<String, Object?> snapshot() => {
