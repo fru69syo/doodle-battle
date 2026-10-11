@@ -54,6 +54,27 @@ void main() {
       expect(mine.first.auto, isTrue);
     });
 
+    test('さきどり: a move tapped early fires the moment the gauge is full', () {
+      final b = spikeBattle();
+      b.tick(0.5);
+      expect(b.playerCanChoose, isFalse);
+      expect(b.choose(3), isTrue);
+      final started = <ActionStarted>[];
+      var t = 0.5;
+      while (started.isEmpty && t < 10) {
+        started.addAll(
+          b.tick(0.05).whereType<ActionStarted>().where((a) => a.side == 0),
+        );
+        t += 0.05;
+        // The menu never opens: no time is lost choosing.
+        expect(b.playerCanChoose, isFalse);
+      }
+      // Full after ≈2.8 s; the CPU's action may hold the queue ≤1.3 s.
+      expect(t, lessThan(4.5));
+      expect(started.single.move.name, b.fighters[0].moves[3].name);
+      expect(started.single.auto, isFalse);
+    });
+
     test('player choice is used; deterministic with a seed', () {
       List<int> run() {
         final b = spikeBattle(seed: 9);

@@ -51,7 +51,8 @@ void main() {
     expect(find.textContaining('えらんでね'), findsOneWidget);
     await tester.tap(find.text('ぐるぐるキック'));
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.textContaining('まってね'), findsOneWidget);
+    // The menu closes (the move is queued or already playing).
+    expect(find.textContaining('えらんでね'), findsNothing);
     // Unmount, then let flutter_scene's time-sliced environment prefilter
     // (which waits on 2 s raster-sync timers) run out.
     await tester.pumpWidget(const SizedBox());

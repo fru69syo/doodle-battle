@@ -109,6 +109,14 @@ class AtbBattle {
 
   bool get playerCanChoose => playerChoiceLeft != null;
 
+  /// さきどり (GAME_DESIGN_V2 §6.3): a move tapped while the gauge is still
+  /// filling; it fires on the tick the gauge becomes full.
+  int? preselected;
+
+  /// The player may tap a move now (menu open, or pre-selecting).
+  bool get playerCanTap =>
+      !over && !alwaysAuto && fighters[0].alive && !_queued(0);
+
   /// Advances the simulation; returns the events of this step.
   List<AtbEvent> tick(double dt) {
     if (over) return const [];
@@ -128,6 +136,11 @@ class AtbBattle {
       if (f.gauge >= 1) {
         _waiting[side] = 0;
         events.add(GaugeFull(side));
+        final pre = side == 0 && !alwaysAuto ? preselected : null;
+        if (pre != null) {
+          preselected = null;
+          _commit(0, pre);
+        }
       }
     }
     // Decisions that are due.
@@ -160,10 +173,15 @@ class AtbBattle {
     return events;
   }
 
-  /// Player picks move [index] (ignored unless the menu is open).
+  /// Player taps move [index]: used now when the gauge is full, otherwise
+  /// remembered as さきどり (tapping again replaces it).
   bool choose(int index) {
-    if (!playerCanChoose) return false;
-    _commit(0, index);
+    if (playerCanChoose) {
+      _commit(0, index);
+      return true;
+    }
+    if (!playerCanTap) return false;
+    preselected = index;
     return true;
   }
 

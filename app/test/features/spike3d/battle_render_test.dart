@@ -44,13 +44,17 @@ void main() {
     var rendered = 0;
     final sw = Stopwatch();
     var renderUs = 0;
+    var stepUs = 0, steps = 0;
     while (t < 24.0 + dt / 2) {
+      final step = Stopwatch()..start();
       for (final e in battle.tick(dt)) {
         director.handle(e);
       }
       director.update(dt);
       stage.apply(director, dt, director.takeCues());
       stage.scene.update(dt);
+      stepUs += step.elapsedMicroseconds;
+      steps++;
       t += dt;
       if (shots.any((s) => (s - t).abs() < dt / 2)) {
         final recorder = ui.PictureRecorder();
@@ -88,7 +92,9 @@ void main() {
     // ignore: avoid_print
     print(
       'rendered $rendered frames, mean ${renderUs ~/ rendered ~/ 1000} ms '
-      '(SwiftShader CPU rasteriser, not representative of a phone)',
+      '(SwiftShader CPU rasteriser, not representative of a phone); '
+      'sim+director+apply+scene.update '
+      '${(stepUs / steps).toStringAsFixed(0)} µs/frame (desktop JIT)',
     );
     // Silence unused warning for AtbEvent import in some analyzers.
     expect(GaugeFull(0).side, 0);

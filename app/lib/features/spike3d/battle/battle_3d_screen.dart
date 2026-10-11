@@ -305,7 +305,11 @@ class _Battle3DScreenState extends State<Battle3DScreen> {
                 child: Text(
                   left != null
                       ? 'わざを えらんでね（あと ${left.ceil()}）'
-                      : 'ゲージが たまるまで まってね',
+                      : _battle.preselected != null
+                      ? 'たまったら すぐ だすよ（さきどり）'
+                      : _battle.playerCanTap
+                      ? 'つぎの わざを えらんでおけるよ'
+                      : 'わざを だしているよ',
                 ),
               ),
               const Text('おまかせ'),
@@ -325,8 +329,11 @@ class _Battle3DScreenState extends State<Battle3DScreen> {
             children: [
               for (final (i, m) in moves.indexed)
                 FilledButton(
-                  onPressed: left != null
+                  onPressed: _battle.playerCanTap
                       ? () => setState(() => _battle.choose(i))
+                      : null,
+                  style: _battle.preselected == i
+                      ? FilledButton.styleFrom(backgroundColor: Colors.orange)
                       : null,
                   child: Text(
                     m.name,
