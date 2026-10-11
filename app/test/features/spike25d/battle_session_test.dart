@@ -62,7 +62,7 @@ void main() {
     final s = session(auto: false);
     s.tap(0);
     while (s.engine.events
-        .where((e) => e.type == 'choose' && e.data['side'] == 0)
+        .where((e) => e.type == 'select' && e.data['side'] == 0)
         .isEmpty) {
       s.advance(0.05);
     }
@@ -70,7 +70,7 @@ void main() {
       (e) => e.type == 'ready' && e.data['side'] == 0,
     );
     final choose = s.engine.events.firstWhere(
-      (e) => e.type == 'choose' && e.data['side'] == 0,
+      (e) => e.type == 'select' && e.data['side'] == 0,
     );
     expect(choose.tick, ready.tick);
     expect(s.pending, isNull);
@@ -79,7 +79,10 @@ void main() {
   test('time-out: no tap → おまかせ after 5 s of a full gauge', () {
     final s = session(auto: false);
     while (s.engine.events
-        .where((e) => e.type == 'autoPick' && e.data['side'] == 0)
+        .where(
+          (e) =>
+              e.type == 'select' && e.data['side'] == 0 && e.data['auto'] == 1,
+        )
         .isEmpty) {
       s.advance(0.1);
       expect(s.engine.tick, lessThan(600));
@@ -88,7 +91,7 @@ void main() {
       (e) => e.type == 'ready' && e.data['side'] == 0,
     );
     final auto = s.engine.events.firstWhere(
-      (e) => e.type == 'autoPick' && e.data['side'] == 0,
+      (e) => e.type == 'select' && e.data['side'] == 0 && e.data['auto'] == 1,
     );
     expect(auto.tick - ready.tick, s.engine.spec.decisionTicks - 1);
   });

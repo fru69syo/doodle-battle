@@ -1,9 +1,7 @@
 import 'dart:typed_data';
 
-import '../../../domain/battle/rng.dart';
-import '../../../domain/battle_v2/battle_v2.dart';
-import '../../../domain/battle_v2/sim_v2.dart'
-    show randomBloomer, randomKid, setupAt;
+import '../../../domain/battle_v3/battle_v3.dart';
+import '../../../domain/battle_v3/sim.dart' show randomBloomer, randomKid;
 import '../anim/clips.dart';
 import '../rig/rig.dart';
 import '../rig/rigged_character.dart';
@@ -36,7 +34,7 @@ class Side25 {
 RiggedCharacter buildSideCharacter(Side25 s) {
   // Hidden late bloomer: simplified look until the Lv50 rebuild, then the
   // full rig like everyone else (SPEC §12.2, GAME_DESIGN_V2 §4.4).
-  final simple = s.bloomer && s.level < const V2Spec().rebirthLevel;
+  final simple = s.bloomer && s.level < const V3Spec().rebirthLevel;
   return buildRiggedCharacterFromPng(
     s.png,
     rig: s.rig,
@@ -67,14 +65,14 @@ class BattleSession25 {
                  : (sides[i].level >= 50 ? 1.4 : 1.0),
          ],
        ) {
-    const spec = V2Spec();
-    final setups = <FighterSetupV2>[];
+    const spec = V3Spec();
+    final setups = <FighterSetup>[];
     for (final s in sides) {
       final r = Mulberry32(s.genomeSeed);
       final g = s.bloomer ? randomBloomer(spec, r) : randomKid(spec, r);
       final base = setupAt(spec, g, s.level);
       setups.add(
-        FighterSetupV2(
+        FighterSetup(
           stats: base.stats,
           attr: base.attr,
           moves: base.moves,
@@ -82,13 +80,7 @@ class BattleSession25 {
         ),
       );
     }
-    engine = newBattle(
-      spec,
-      setups[0],
-      setups[1],
-      seed: seed,
-      recordEvents: true,
-    );
+    engine = Battle(spec, setups[0], setups[1], seed: seed);
     for (var i = 0; i < 2; i++) {
       director.fighters[i].shownHp = engine.fighters[i].maxHp.toDouble();
     }
@@ -96,7 +88,7 @@ class BattleSession25 {
 
   final List<Side25> sides;
   final Director25 director;
-  late final AtbBattle engine;
+  late final Battle engine;
 
   /// おまかせ for the player (small children).
   bool alwaysAuto;
@@ -110,7 +102,7 @@ class BattleSession25 {
   final _cpu = aiController();
   final _auto = aiController();
 
-  int? _player(AtbBattle b, int side) {
+  int? _player(Battle b, int side) {
     if (alwaysAuto) return _auto(b, side);
     final p = pending;
     if (p == null) return null;
@@ -119,7 +111,7 @@ class BattleSession25 {
 
   bool get over => director.winner != null;
 
-  FighterV2 fighter(int side) => engine.fighters[side];
+  Fighter fighter(int side) => engine.fighters[side];
 
   /// Seconds left to choose (only while the player's gauge is full).
   double? get choiceLeft {
@@ -145,12 +137,12 @@ class BattleSession25 {
     _acc += dt;
     while (_acc >= 0.1 && !engine.finished) {
       _acc -= 0.1;
-      engine.step(_player, _cpu);
+      engine.step(a: _player, b: _cpu);
     }
     final ev = engine.events;
     for (; _seen < ev.length; _seen++) {
       final e = ev[_seen];
-      if (e.type == 'choose' && e.data['side'] == 0) pending = null;
+      if (e.type == 'select' && e.data['side'] == 0) pending = null;
       director.handle(e, engine);
     }
     director.syncStatus(engine);

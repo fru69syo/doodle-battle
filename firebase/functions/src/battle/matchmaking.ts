@@ -5,7 +5,7 @@ import type { UserProfile } from "../lib/auth";
 import { clock } from "../lib/clock";
 import { ErrorCode, fail } from "../lib/errors";
 import { COL, db } from "../lib/firebase";
-import type { MatchDoc, QueueDoc, SideInfo, SnapshotDoc } from "../model";
+import { isV2Snapshot, type MatchDoc, type QueueDoc, type SideInfo, type SnapshotDoc } from "../model";
 import { createMatchInTx } from "./matchService";
 import { RATING } from "./results";
 
@@ -61,6 +61,8 @@ export async function requireOwnActiveSnapshot(uid: string, snapshotId: string):
   const snap = s.data() as SnapshotDoc;
   if (snap.ownerUid !== uid) fail(ErrorCode.NOT_OWNER, "not your character");
   if (snap.status !== "active") fail(ErrorCode.SNAPSHOT_NOT_ACTIVE, `character is ${snap.status}`);
+  // v2 characters (engine v3) battle on the realtime server, not here.
+  if (isV2Snapshot(snap)) fail(ErrorCode.SNAPSHOT_NOT_ACTIVE, "v2 character");
   return snap;
 }
 
@@ -178,7 +180,10 @@ export async function pickGhost(uid: string, level: number): Promise<DocumentSna
   ];
   for (const q of queries) {
     const res = await q.get();
-    const hit = res.docs.find((d) => (d.data() as SnapshotDoc).ownerUid !== uid);
+    const hit = res.docs.find((d) => {
+      const doc = d.data() as SnapshotDoc;
+      return doc.ownerUid !== uid && !isV2Snapshot(doc);
+    });
     if (hit) return hit;
   }
   return null;

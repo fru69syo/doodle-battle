@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import '../../../domain/battle_v2/atb_engine.dart';
-import '../../../domain/battle_v2/moves_v2.dart';
+import '../../../domain/battle_v3/engine.dart';
+import '../../../domain/battle_v3/moves.dart';
 import '../anim/clips.dart';
 
 /// Ground-plane camera of the 2.5D stage: a pinhole camera above the
@@ -117,8 +117,8 @@ class Fx {
 class _Action {
   _Action(this.side, this.move, this.events, {required this.fast});
   final int side;
-  final MoveV2 move;
-  final List<BattleEventV2> events;
+  final Move move;
+  final List<BattleEvent> events;
   final bool fast;
   double t = 0;
   int hitsShown = 0;
@@ -179,22 +179,22 @@ class Director25 {
   static const zNear = [0.15, 1.2], zFar = [1.4, 2.8];
 
   /// Feeds one engine event (in tick order).
-  void handle(BattleEventV2 e, AtbBattle battle) {
+  void handle(BattleEvent e, Battle battle) {
     final d = e.data;
     switch (e.type) {
-      case 'choose':
+      case 'select':
         final side = d['side']! as int;
         if ((d['cast']! as int) > 0) fighters[side].charging = true;
-      case 'move':
+      case 'moveStart':
         final side = d['side']! as int;
         final slot = d['slot']! as int;
         fighters[side].charging = false;
         final idx = battle.events.indexOf(e);
-        final results = <BattleEventV2>[];
+        final results = <BattleEvent>[];
         for (var i = idx + 1; i < battle.events.length; i++) {
           final r = battle.events[i];
-          if (r.tick != e.tick || r.type == 'move') break;
-          if (r.type == 'damage' && r.data['cause'] == 'poison') continue;
+          if (r.tick != e.tick || r.type == 'moveStart') break;
+          if (r.type == 'dot') continue;
           results.add(r);
         }
         _queue.add(
@@ -205,7 +205,7 @@ class Director25 {
             fast: _queue.isNotEmpty || _current != null,
           ),
         );
-      case 'damage' when d['cause'] == 'poison':
+      case 'dot':
         final t = d['target']! as int;
         final f = fighters[t];
         f.shownHp = (d['hp']! as int).toDouble();
@@ -228,7 +228,7 @@ class Director25 {
   }
 
   /// Per-frame status mirror from the engine (icons, shield bubble).
-  void syncStatus(AtbBattle b) {
+  void syncStatus(Battle b) {
     for (var i = 0; i < 2; i++) {
       final f = b.fighters[i];
       fighters[i].poisoned = f.poisonTicks > 0;
@@ -451,18 +451,20 @@ class Director25 {
     }
     // Impacts: one per hit, 0.12 s apart.
     final hits = a.events
-        .where((e) => e.type == 'damage' || e.type == 'miss')
+        .where((e) => e.type == 'hit' || e.type == 'miss')
         .toList();
     while (a.hitsShown < math.max(1, hits.length) &&
         a.t >= a.impactAt + 0.12 * a.hitsShown) {
       final e = hits.isEmpty ? null : hits[a.hitsShown];
       a.hitsShown++;
       if (e == null) break;
-      if (e.type == 'damage') {
+      if (e.type == 'hit') {
         final t = e.data['target']! as int;
         final tf = fighters[t];
         tf.shownHp = (e.data['hp']! as int).toDouble();
-        final crit = a.events.any((x) => x.type == 'crit');
+        final crit = a.events.any(
+          (x) => x.type == 'hit' && x.data['crit'] == 1,
+        );
         fx.add(
           Fx(
             'number',

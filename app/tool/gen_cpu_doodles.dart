@@ -1,6 +1,12 @@
-// Generates the bundled CPU opponent doodles (SPEC §4.3) into assets/cpu/.
+// Generates the bundled CPU opponent doodles (SPEC §4.3, GAME_DESIGN_V2 §7)
+// into assets/cpu/.
 //
 //   cd app && dart run tool/gen_cpu_doodles.dart
+//
+// manifest.json keeps the 12 v1 doodles (v1 engine); manifest_v2.json lists
+// all 37 (the 12 + 25 from tool/src/cpu_doodles_v2.dart) with the quantised
+// features, energy/skill tenths and the derived v2 attribute and Lv1 stats
+// (engine v3). The v1 PNGs are unchanged (same seeds).
 //
 // Every doodle is painted deterministically in a kid-crayon style, then run
 // through the real on-device analyzer. The analyzer's cut-out PNG becomes the
@@ -13,9 +19,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:doodle_battle/domain/battle_v3/battle_v3.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:doodle_battle/domain/element_type.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 
+import 'src/cpu_doodles_v2.dart';
 import 'src/doodle_painter.dart';
 
 class _Doodle {
@@ -399,10 +408,60 @@ final _doodles = <_Doodle>[
   }),
 ];
 
+Map<String, Object?> _v2Entry(
+  String id,
+  String name,
+  String shape,
+  DrawingAnalysisReport report,
+) {
+  const spec = V3Spec();
+  final r = report.result;
+  final f = FeatureVector.quantize(r.features);
+  final e10 = CharacterV2.tenths(r.energy);
+  final s10 = CharacterV2.tenths(r.skill);
+  final g = Genome.derive(
+    spec,
+    features: f,
+    energy10: e10,
+    skill10: s10,
+    imageHash: r.imageHash,
+  );
+  return {
+    'id': id,
+    'name': name,
+    'asset': 'assets/cpu/$id.png',
+    'shape': shape,
+    'attribute': g.attr.name,
+    'legacyElement': r.element.name,
+    'features': f.toJson(),
+    'energy10': e10,
+    'skill10': s10,
+    'imageHash': r.imageHash,
+    'statsLv1': g.statsAt(1),
+    'maxHpLv1': maxHpOf(spec, g.statsAt(1)),
+  };
+}
+
+const _legacyShapes = {
+  'cpu_fire_blob': 'blob',
+  'cpu_fire_spiky': 'blob',
+  'cpu_water_snake': 'blob',
+  'cpu_water_fish': 'blob',
+  'cpu_leaf_frog': 'limbs',
+  'cpu_leaf_caterpillar': 'limbs',
+  'cpu_thunder_bird': 'limbs',
+  'cpu_thunder_star': 'blob',
+  'cpu_shadow_ghost': 'blob',
+  'cpu_shadow_bat': 'limbs',
+  'cpu_rainbow_cat': 'blob',
+  'cpu_rainbow_robot': 'limbs',
+};
+
 Future<void> main(List<String> args) async {
   final outDir = Directory(args.isNotEmpty ? args.first : 'assets/cpu');
   outDir.createSync(recursive: true);
   final entries = <Map<String, Object?>>[];
+  final v2 = <Map<String, Object?>>[];
   var mismatches = 0;
   for (final (index, d) in _doodles.indexed) {
     final canvas = DoodleCanvas(_w, _h, seed: 1000 + index);
@@ -433,6 +492,26 @@ Future<void> main(List<String> args) async {
       'baseStats': r.baseStats.toJson(),
       'imageHash': r.imageHash,
     });
+    v2.add(_v2Entry(d.id, d.name, _legacyShapes[d.id] ?? 'blob', report));
+  }
+  for (final (k, (id, name, shape, paint)) in kDoodlesV2.indexed) {
+    final index = _doodles.length + k;
+    final canvas = DoodleCanvas(_w, _h, seed: 1000 + index);
+    paint(canvas, math.Random(2000 + index));
+    final report = analyseDoodle(canvas);
+    final r = report.result;
+    File('${outDir.path}/$id.png').writeAsBytesSync(r.cutoutPng);
+    if (report.rejectReason != null || r.skill > 75) {
+      mismatches++;
+      print('!! $id: rejected (${report.rejectReason}) or too polished');
+    }
+    final e = _v2Entry(id, name, shape, report);
+    v2.add(e);
+    print(
+      '${id.padRight(22)} ${(e['attribute']! as String).padRight(6)} '
+      'E=${r.energy.toStringAsFixed(1).padLeft(5)} '
+      'S=${r.skill.toStringAsFixed(1).padLeft(5)} ${e['statsLv1']}',
+    );
   }
   final manifest = {
     'version': 1,
@@ -445,6 +524,16 @@ Future<void> main(List<String> args) async {
   File('${outDir.path}/manifest.json').writeAsStringSync(
     '${const JsonEncoder.withIndent('  ').convert(manifest)}\n',
   );
+  File('${outDir.path}/manifest_v2.json').writeAsStringSync(
+    '${const JsonEncoder.withIndent('  ').convert({'version': 2, 'generatedBy': 'tool/gen_cpu_doodles.dart', 'note': 'Engine v3 CPU roster: quantised features + energy/skill tenths '
+        '→ Genome (same as players). attribute / statsLv1 / maxHpLv1 are '
+        'derived (checked by a test). shape: limbs | blob | vehicle.', 'characters': v2})}\n',
+  );
+  final counts = <String, int>{};
+  for (final e in v2) {
+    counts[e['attribute']! as String] = (counts[e['attribute']] ?? 0) + 1;
+  }
+  print('v2 attributes: $counts');
   if (mismatches > 0) {
     stderr.writeln('$mismatches doodle(s) did not get their intended element');
     exitCode = 1;
