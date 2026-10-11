@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
 
 /// Shared helpers for the headless 2.5D renders (docs/v2_25d/).
+/// Software Skia in `flutter test` exercises the same
+/// `drawVertices` + `ImageShader` path as GLES2 phones, so no GPU is needed.
 Future<void> loadAppFonts() async {
   for (final f in ['Regular', 'Bold']) {
     final bytes = File('assets/fonts/ZenMaruGothic-$f.ttf').readAsBytesSync();
@@ -11,12 +13,12 @@ Future<void> loadAppFonts() async {
   }
 }
 
-/// Output directory for PNGs: SPIKE25D_RENDER_DIR, else docs/v2_25d when
-/// SPIKE25D_WRITE_DOCS=1, else null (render but do not write).
+/// Output directory for PNGs: PUPPET_RENDER_DIR, else docs/v2_25d when
+/// PUPPET_WRITE_DOCS=1, else null (render but do not write).
 String? renderDir() {
   final env = Platform.environment;
-  if (env['SPIKE25D_RENDER_DIR'] case final d?) return d;
-  if (env['SPIKE25D_WRITE_DOCS'] == '1') return '../docs/v2_25d';
+  if (env['PUPPET_RENDER_DIR'] case final d?) return d;
+  if (env['PUPPET_WRITE_DOCS'] == '1') return '../docs/v2_25d';
   return null;
 }
 

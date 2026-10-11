@@ -1,19 +1,25 @@
 import 'dart:ui' as ui;
 
-import 'package:doodle_battle/features/spike25d/anim/clips.dart';
-import 'package:doodle_battle/features/spike25d/rig/rig.dart';
-import 'package:doodle_battle/features/spike25d/rig/rigged_character.dart';
-import 'package:doodle_battle/features/spike25d/render/character_sprite.dart';
-import 'package:doodle_battle/features/spike25d/samples25d.dart';
+import 'dart:typed_data';
+
+import 'package:doodle_battle/features/puppet/anim/clips.dart';
+import 'package:doodle_battle/features/puppet/mesh/puppet_mesh.dart';
+import 'package:doodle_battle/features/puppet/render/aura.dart';
+import 'package:doodle_battle/features/puppet/render/puppet_sprite.dart';
+import 'package:doodle_battle/features/puppet/rig/character_rig.dart';
+import 'package:doodle_battle/features/puppet/rig/limb_hints.dart';
+import 'package:doodle_battle/features/puppet/samples.dart';
 import 'package:flutter/painting.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'render_util.dart';
+import 'stroke_figures.dart';
 
 /// Contact sheet: every sample drawing, its auto-rig, and the procedural
 /// clips rendered with Canvas.drawVertices (software Skia in the test, the
 /// same path as GLES2 phones). Writes docs/v2_25d/rig_clips.png with
-/// SPIKE25D_WRITE_DOCS=1.
+/// PUPPET_WRITE_DOCS=1.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -22,16 +28,28 @@ void main() {
     final clips = <(String, Anim, double)>[
       ('じっと', Anim.idle, 0.35),
       ('あるく', Anim.walk, 0.12),
-      ('こうげき', Anim.swing, 0.3),
+      ('ぴょん', Anim.hop, 0.2),
+      ('パンチ', Anim.swing, 0.3),
+      ('キック', Anim.kick, 0.3),
+      ('たいあたり', Anim.tackle, 0.3),
       ('ジャンプ', Anim.jump, 0.27),
       ('ためる', Anim.cast, 0.15),
+      ('うつ', Anim.shoot, 0.25),
       ('うける', Anim.hit, 0.05),
       ('たおれる', Anim.faint, 1.0),
+      ('かち', Anim.victory, 0.27),
+      ('ぷにっ', Anim.squash, 0.1),
+      ('ぷるぷる', Anim.wobble, 0.2),
     ];
-    const cell = 150.0;
-    final rows = [
-      ...Sample25d.values.map((s) => (s.name, sample25dPng(s), false)),
-      ('simple', sample25dPng(Sample25d.hero), true),
+    const cell = 120.0;
+    // In-app drawing with hands on the hips (stroke rig).
+    final fig = strokeFigure(1, pose: ArmPose.hips);
+    final figPng = _png(fig.rgba, fig.mask.w, fig.mask.h);
+    final rows = <(String, Uint8List, bool, List<HintStroke>?, bool)>[
+      ...Sample.values.map((s) => (s.name, samplePng(s), false, null, false)),
+      ('strokes', figPng, false, fig.strokes, false),
+      ('simple', samplePng(Sample.hero), true, null, false),
+      ('でんせつ', samplePng(Sample.hero), false, null, true),
     ];
     final w = (cell * (clips.length + 1)).toInt();
     final h = (cell * rows.length + 30).toInt();
@@ -46,11 +64,12 @@ void main() {
       label(c, cl.$1, Offset(cell * (i + 1) + 40, 4));
     }
     for (final (r, row) in rows.indexed) {
-      final data = buildRiggedCharacterFromPng(
+      final data = buildPuppetMeshFromPng(
         row.$2,
+        strokes: row.$4,
         options: BuildOptions(simplified: row.$3),
       );
-      final sprite = await CharacterSprite.create(data);
+      final sprite = await PuppetSprite.create(data);
       final y0 = 30 + r * cell;
       final scale = (cell * 0.72) / sprite.height.clamp(1, 1e9);
       final s2 = (cell * 0.8) / sprite.width;
@@ -69,6 +88,14 @@ void main() {
           ),
           Paint()..color = const Color(0x33000000),
         );
+        if (row.$5) {
+          paintLegendAura(
+            c,
+            feet.translate(0, -sprite.height * sc * 0.5),
+            sprite.height * sc * 0.62,
+            cl.$3 + i,
+          );
+        }
         sprite.draw(c, cl.$2, cl.$3, feet: feet, scale: sc, screenDir: 1);
       }
       sprite.dispose();
@@ -87,9 +114,9 @@ void _drawRig(
   CharacterRig rig,
   Offset feet,
   double s,
-  RiggedCharacter d,
+  PuppetMesh d,
 ) {
-  Offset m(V2 p) => Offset(
+  Offset m(P2 p) => Offset(
     feet.dx + (p.x - rig.root.x) * s,
     feet.dy + (p.y - rig.groundY) * s,
   );
@@ -99,6 +126,8 @@ void _drawRig(
     LimbKind.leg: const Color(0xFF2E9E44),
     LimbKind.tail: const Color(0xFF00A0A0),
     LimbKind.extra: const Color(0xFF8E7A00),
+    LimbKind.wing: const Color(0xFF6C7BFF),
+    LimbKind.item: const Color(0xFF6D6D6D),
   };
   final bone = Paint()
     ..strokeWidth = 3
@@ -118,3 +147,25 @@ void _drawRig(
     size: 11,
   );
 }
+
+/// Black-ink RGBA → PNG (the stroke figure as a cut-out).
+Uint8List _png(Uint8List rgba, int w, int h) {
+  final out = Uint8List.fromList(rgba);
+  for (var i = 0; i < w * h; i++) {
+    if (out[i * 4 + 3] != 0) {
+      out[i * 4] = 40;
+      out[i * 4 + 1] = 40;
+      out[i * 4 + 2] = 60;
+    }
+  }
+  return encodeRgbaPng(out, w, h);
+}
+
+Uint8List encodeRgbaPng(Uint8List rgba, int w, int h) => img.encodePng(
+  img.Image.fromBytes(
+    width: w,
+    height: h,
+    bytes: rgba.buffer,
+    numChannels: 4,
+  ),
+);

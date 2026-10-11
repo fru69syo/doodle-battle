@@ -153,6 +153,11 @@ PuppetMesh buildPuppetMesh(
   lap('texture');
   final texMask = BinMask.fromRgba(tex, tw, th, threshold: 1);
   final cells = options.simplified ? 14 : options.gridCells;
+  // In-app drawings: pixels of a limb's own stroke belong to that limb
+  // only (an arm drawn against the body moves without dragging the body).
+  final owners = strokes == null || options.simplified
+      ? null
+      : _strokeOwners(shifted, strokes, b.toDouble(), texMask);
   final mesh = _gridMesh(texMask, cells);
   lap('mesh');
   final bones = bonesOf(shifted);
@@ -163,6 +168,7 @@ PuppetMesh buildPuppetMesh(
     bones,
     options.weightRes,
     options.weightPower,
+    owners,
   );
   lap('weights');
   return PuppetMesh(
@@ -330,7 +336,7 @@ class _Mesh {
 /// Cells that touch only locally-unconnected parts (an arm passing close
 /// to a leg) do **not** share corner vertices, so limbs separate cleanly
 /// when they move. The exact outline comes from the texture's alpha.
-_Mesh _gridMesh(BinMask m, int gridCells) {
+_Mesh _gridMesh(BinMask m, int gridCells, [Uint8List? owner]) {
   final w = m.w, h = m.h;
   final c = math.max(2, (math.max(w, h) / gridCells).ceil());
   final gx = (w / c).ceil(), gy = (h / c).ceil();
@@ -346,10 +352,30 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
   }
   // A cell is "full" when every pixel is set (and it lies inside the
   // image): full cells around a vertex are always connected.
+  // Owner signature per cell: the single owner of its pixels, or -1.
+  final cellOwner = Int32List(gx * gy);
+  if (owner != null) {
+    cellOwner.fillRange(0, gx * gy, -2);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (m.data[y * w + x] == 0) continue;
+        final cid = (y ~/ c) * gx + x ~/ c;
+        final o = owner[y * w + x];
+        final cur = cellOwner[cid];
+        cellOwner[cid] = cur == -2 ? o : (cur == o ? cur : -1);
+      }
+    }
+  }
   bool full(int cid) {
     final cx = cid % gx, cy = cid ~/ gx;
     final cw = math.min(c, w - cx * c), chh = math.min(c, h - cy * c);
     return cw == c && chh == c && cellCount[cid] == c * c;
+  }
+
+  bool sameOwner(List<int> cids) {
+    if (owner == null) return true;
+    final o = cellOwner[cids.first];
+    return o >= 0 && cids.every((c2) => cellOwner[c2] == o);
   }
 
   // corner[cell*4 + k] = vertex index, k: 0 TL, 1 TR, 2 BR, 3 BL.
@@ -376,7 +402,7 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
         cornerK.add(k);
       }
       if (cellIds.isEmpty) continue;
-      if (cellIds.every(full)) {
+      if (cellIds.every(full) && sameOwner(cellIds)) {
         final v = rest.length ~/ 2;
         rest
           ..add((vx * c).toDouble())
@@ -403,6 +429,7 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
           final px = x0 + bx, py = y0 + by;
           if (px < 0 || py < 0 || px >= w || py >= h) continue;
           if (m.data[py * w + px] == 0 || lab[by * bw + bx] != 0) continue;
+          final own = owner == null ? 0 : owner[py * w + px];
           next++;
           lab[by * bw + bx] = next;
           stack.add(by * bw + bx);
@@ -417,6 +444,7 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
                 if (m.data[ay * w + ax] == 0 || lab[ny * bw + nx] != 0) {
                   continue;
                 }
+                if (owner != null && owner[ay * w + ax] != own) continue;
                 lab[ny * bw + nx] = next;
                 stack.add(ny * bw + nx);
               }
@@ -506,8 +534,9 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
   Int32List rep,
   List<Bone> bones,
   int res,
-  double power,
-) {
+  double power, [
+  (Uint8List, Map<int, Set<int>>)? owners,
+]) {
   final n = rest.length ~/ 2;
   final bi = Uint8List(n * 4);
   final bw = Float32List(n * 4);
@@ -546,7 +575,20 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
     final ci =
         (py / s).floor().clamp(0, ch - 1) * cw +
         (px / s).floor().clamp(0, cw - 1);
+    final own = owners == null || p < 0 ? 0 : owners.$1[p];
     for (var k = 0; k < skinned.length; k++) {
+      if (owners != null) {
+        final b = skinned[k];
+        // A limb's own stroke: only its bones and the body; any other
+        // pixel: never an owned limb's bones.
+        final allowed = own > 0
+            ? (b == 1 || owners.$2[own]!.contains(b))
+            : !owners.$2.values.any((set) => set.contains(b));
+        if (!allowed) {
+          d[k] = double.infinity;
+          continue;
+        }
+      }
       var dist = fields[k][ci];
       if (!dist.isFinite) {
         // Detached part: Euclidean distance to the bone (×2 penalty).
@@ -559,8 +601,13 @@ _Mesh _gridMesh(BinMask m, int gridCells) {
     final top = math.min(4, skinned.length);
     final ws = List<double>.filled(top, 0);
     for (var k = 0; k < top; k++) {
-      ws[k] = 1 / math.pow(1 + d[order[k]], power);
+      final dk = d[order[k]];
+      ws[k] = dk.isFinite ? 1 / math.pow(1 + dk, power) : 0;
       sum += ws[k];
+    }
+    if (sum == 0) {
+      ws[0] = 1;
+      sum = 1;
     }
     for (var k = 0; k < top; k++) {
       bi[v * 4 + k] = skinned[order[k]];
@@ -687,4 +734,66 @@ class _Heap {
     _v[a] = _v[b];
     _v[b] = tv;
   }
+}
+
+/// Owner map (texture pixels → 1 + limb index, 0 = shared) from the drawing
+/// tool's strokes: a limb of the rig whose ends match a stroke's ends owns
+/// that stroke's pixels. Also returns the bones of each owning limb.
+(Uint8List, Map<int, Set<int>>)? _strokeOwners(
+  CharacterRig rig,
+  List<HintStroke> strokes,
+  double border,
+  BinMask tex,
+) {
+  final w = tex.w, h = tex.h;
+  final tol = 0.12 * math.max(rig.width, rig.height);
+  final owner = Uint8List(w * h);
+  final bones = bonesOf(rig);
+  final sets = <int, Set<int>>{};
+  final used = <int>{};
+  for (final (i, l) in rig.limbs.indexed) {
+    // Arms only: they are what gets drawn against the body (legs and
+    // tails stick out and the silhouette already separates them).
+    if (l.kind != LimbKind.arm) continue;
+    var best = -1;
+    var bd = double.infinity;
+    for (final (si, st) in strokes.indexed) {
+      if (used.contains(si) || st.points.length < 2) continue;
+      final a = st.points.first + P2(border, border);
+      final b = st.points.last + P2(border, border);
+      final d1 = a.dist(l.base) + b.dist(l.tip);
+      final d2 = b.dist(l.base) + a.dist(l.tip);
+      final dd = math.min(d1, d2);
+      final tipOk = math.min(a.dist(l.tip), b.dist(l.tip)) < tol;
+      if (tipOk && dd < 2.5 * tol && dd < bd) {
+        bd = dd;
+        best = si;
+      }
+    }
+    if (best < 0) continue;
+    used.add(best);
+    final st = strokes[best];
+    final r = math.max(1, (st.width / 2 + 1).round());
+    final mark = BinMask(w, h);
+    for (var k = 1; k < st.points.length; k++) {
+      final a = st.points[k - 1], b = st.points[k];
+      mark.line(
+        (a.x + border).round(),
+        (a.y + border).round(),
+        (b.x + border).round(),
+        (b.y + border).round(),
+        r,
+      );
+    }
+    final o = i + 1;
+    if (o > 255) break;
+    for (var p = 0; p < w * h; p++) {
+      if (mark.data[p] != 0 && tex.data[p] != 0 && owner[p] == 0) owner[p] = o;
+    }
+    sets[o] = {
+      for (final (bi, bn) in bones.indexed)
+        if (bn.limb == i) bi,
+    };
+  }
+  return sets.isEmpty ? null : (owner, sets);
 }
