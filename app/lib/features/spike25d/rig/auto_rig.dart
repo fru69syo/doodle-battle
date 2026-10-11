@@ -331,7 +331,10 @@ CharacterRig _assign(
   }
 
   final arms = <_Leaf>[];
-  for (final left in [true, false]) {
+  // Four-legged animals in profile have no arms (the leaf on the far side
+  // of the head becomes the tail below).
+  final quadruped = landscape && legs.length >= 3;
+  for (final left in quadruped ? const <bool>[] : [true, false]) {
     final a = bestOn(left);
     if (a != null) {
       arms.add(a);

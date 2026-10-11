@@ -181,7 +181,7 @@ void main() {
         genomeSeed: 9,
       ),
       taps: {0.2: 1},
-      shots: {3.9: 'battle_blob_vs_simple', -1.6: 'battle_ko'},
+      shots: {3.9: 'battle_blob_vs_simple', -0.7: 'battle_ko'},
       until: 120,
     );
   });

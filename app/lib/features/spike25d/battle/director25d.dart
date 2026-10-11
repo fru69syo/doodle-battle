@@ -638,10 +638,11 @@ class Director25 {
       tz = 0.35 * _focus;
     }
     if (winner != null) {
-      final w = fighters[winner!];
-      tx = w.x;
-      tz = w.z * 0.5;
-      zoom = 1.35;
+      // Lean towards the winner but keep the fainted loser in the shot.
+      final w = fighters[winner!], l = fighters[1 - winner!];
+      tx = 0.65 * w.x + 0.35 * l.x;
+      tz = 0.3;
+      zoom = 1.2;
     }
     // Keep both fighters (their width) inside the screen: zoom out until
     // they fit, then clamp the pan.
@@ -650,7 +651,9 @@ class Director25 {
       var ok = true;
       for (final f in fighters) {
         final (sx, _, k) = probe.project(f.x, f.z, viewW, viewH);
-        final half = (halfWidth[f.side] + 0.1) * k;
+        // A fainted fighter lies along the ground (≈ its height).
+        final half =
+            (f.mode == FighterMode.down ? 1.35 : halfWidth[f.side] + 0.1) * k;
         if (sx - half < viewW * 0.03 || sx + half > viewW * 0.97) ok = false;
       }
       if (ok) break;

@@ -193,6 +193,7 @@ class JointEditorScreenState extends State<JointEditorScreen>
                           _rebuild();
                         },
                         child: CustomPaint(
+                          key: const ValueKey('rig-canvas'),
                           size: box.biggest,
                           painter: _EditorPainter(this, s, o),
                         ),
@@ -247,14 +248,14 @@ class JointEditorScreenState extends State<JointEditorScreen>
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => apply(_auto!.copy()),
-                    child: const Text('もとに もどす'),
+                    child: const Text('もどす'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton.tonal(
                     onPressed: () => setState(() => preview = !preview),
-                    child: Text(preview ? 'とめる' : 'うごかしてみる'),
+                    child: Text(preview ? 'とめる' : 'うごかす'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -317,7 +318,8 @@ class _EditorPainter extends CustomPainter {
         text: TextSpan(
           text: label,
           style: const TextStyle(
-            fontSize: 12,
+            fontFamily: 'ZenMaruGothic',
+            fontSize: 13,
             fontWeight: FontWeight.w900,
             color: Colors.white,
           ),
