@@ -141,7 +141,7 @@ class CharacterSprite {
     final flash = pose.flash;
     if (flash > 0 || tintAmount > 0) {
       final c = flash > 0
-          ? const Color(0xFFFFFFFF).withValues(alpha: 0.6 * flash)
+          ? const Color(0xFFFFFFFF).withValues(alpha: 0.45 * flash)
           : tint!.withValues(alpha: tintAmount);
       _paint.colorFilter = ColorFilter.mode(c, BlendMode.srcATop);
       canvas.drawVertices(v, BlendMode.srcOver, _paint);

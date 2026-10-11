@@ -397,7 +397,8 @@ class Director25 {
     f.dir = o.x >= f.x ? 1 : -1;
     if (f.mode == FighterMode.dash) {
       // Run to the target, stopping at contact distance.
-      final tx = o.x - f.dir * (halfWidth[0] + halfWidth[1] + 0.12);
+      // Close enough that a swung arm reaches the other drawing.
+      final tx = o.x - f.dir * (0.55 * (halfWidth[0] + halfWidth[1]) + 0.15);
       final tz = o.z + (a.side == 0 ? -0.12 : 0.12);
       final k = math.min(1.0, dt * 9);
       f.x += (tx - f.x) * k;

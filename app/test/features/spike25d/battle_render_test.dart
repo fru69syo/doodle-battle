@@ -128,7 +128,7 @@ void main() {
       taps: {0.2: 0, 4.2: 2, 8.5: 1},
       shots: {
         for (var i = 0; i < 40; i++)
-          2.0 + i * 0.2: 'strip_${i.toString().padLeft(2, '0')}',
+          3.6 + i * 0.05: 'strip_${i.toString().padLeft(2, '0')}',
       },
       outDir: strip,
     );
@@ -154,7 +154,7 @@ void main() {
       shots: {
         1.0: 'battle_start',
         3.2: 'battle_choose',
-        3.85: 'battle_hit',
+        4.3: 'battle_hit',
         6.0: 'battle_6s',
         9.5: 'battle_9s',
       },
