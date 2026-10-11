@@ -81,7 +81,7 @@ export class FirestoreStore implements Store {
       .where("status", "==", "active")
       .where("ghostRating", ">=", args.rating - GHOST_WINDOW)
       .where("ghostRating", "<=", args.rating + GHOST_WINDOW)
-      .limit(30)
+      .limit(10) // each document read is billed; 10 candidates are plenty
       .get();
     let pool = usable(near.docs);
     // 2) Otherwise any active character, at a random position (randomKey in [0,1)).
