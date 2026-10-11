@@ -1,0 +1,7 @@
+# Optional: after the first `terraform apply`, rename to backend.tf and run
+#   terraform init -migrate-state -backend-config="bucket=<output state_bucket>"
+terraform {
+  backend "gcs" {
+    prefix = "bootstrap"
+  }
+}
