@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. Values come from bootstrap outputs.
+project_id         = "doodle-battle-prod"
+project_number     = "123456789012"
+billing_account_id = "000000-000000-000000"
+alert_email        = "owner@example.com"
+wif_pool_name      = "projects/123456789012/locations/global/workloadIdentityPools/github"
+
+# Fill in after Play Console app signing is set up (App Check / Play Integrity):
+# android_sha256_hashes = ["AB:CD:..."]
+# ios_team_id           = "ABCDE12345"

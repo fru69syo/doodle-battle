@@ -75,7 +75,21 @@ service cloud.firestore {
       }
     }
 
-    // reports, moderationQueue, moderationLog, rateLimits and anything else:
+    // v2 realtime battles (server/realtime): players read their own match summary.
+    // Rating numbers are never stored here (badges only, GAME_DESIGN_V2 §8).
+    match /rtMatches/{matchId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.playerUids;
+      allow write: if false;
+    }
+
+    // Cost mode switch (docs/LEARN_GCP.md §6): every signed-in app may read it to skip
+    // cloud calls that would be refused anyway; only the kill switch / owner writes it.
+    match /config/costMode {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // reports, moderationQueue, moderationLog, rateLimits, replays, ops and anything else:
     // server only.
     match /{document=**} {
       allow read, write: if false;

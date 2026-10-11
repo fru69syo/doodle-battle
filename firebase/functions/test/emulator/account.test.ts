@@ -62,9 +62,16 @@ describe("deleteMyData", () => {
     await reportCharacterHandler(req("bob", { snapshotId: sa, reasonCode: "bad_name" }));
     // a ghost match where alice's character appears
     await db().collection(COL.matches).add({ playerUids: ["zed"], snapshotIds: ["z", sa], createdAtMs: 1 });
+    // v2 realtime: a match alice played, one where her character was a ghost, and their replays
+    await db().collection(COL.rtMatches).doc("rt1").set({ playerUids: ["alice", "bob"], snapshotIds: [sa, sb] });
+    await db().collection(COL.rtMatches).doc("rt2").set({ playerUids: ["zed"], snapshotIds: ["z", sa] });
+    await db().collection(COL.replays).doc("rt1").set({ seed: 1 });
+    await db().collection(COL.replays).doc("rt2").set({ seed: 2 });
 
     const res = await deleteMyDataHandler(req("alice", { confirm: "DELETE" }));
-    expect(res).toEqual({ ok: true, deleted: { snapshots: 1, matches: 2, reports: 2 } });
+    expect(res).toEqual({ ok: true, deleted: { snapshots: 1, matches: 4, reports: 2 } });
+    expect((await db().collection(COL.rtMatches).get()).size).toBe(0);
+    expect((await db().collection(COL.replays).get()).size).toBe(0);
 
     expect((await db().collection(COL.users).doc("alice").get()).exists).toBe(false);
     expect((await db().collection(COL.snapshots).doc(sa).get()).exists).toBe(false);

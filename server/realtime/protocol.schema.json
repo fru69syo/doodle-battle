@@ -1,0 +1,687 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/fru69syo/doodle-battle/server/realtime/protocol.schema.json",
+  "title": "おえかきファイターズ realtime protocol v1",
+  "description": "WebSocket JSON messages (one per text frame). Client->server: Hello (first), then ClientMessage. Server->client: ServerMessage. Human-readable: docs/REALTIME_PROTOCOL.md. Kept in sync with src/protocol.ts by test/unit/protocolSchema.test.ts.",
+  "$defs": {
+    "Hello": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "hello"
+        },
+        "proto": {
+          "type": "number",
+          "const": 1
+        },
+        "idToken": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "appCheckToken": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "lastSeq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        }
+      },
+      "required": [
+        "t",
+        "proto",
+        "idToken"
+      ],
+      "additionalProperties": false
+    },
+    "Queue": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "queue"
+        },
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      },
+      "required": [
+        "t",
+        "snapshotId"
+      ],
+      "additionalProperties": false
+    },
+    "Cancel": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "cancel"
+        }
+      },
+      "required": [
+        "t"
+      ],
+      "additionalProperties": false
+    },
+    "Select": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "select"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        }
+      },
+      "required": [
+        "t",
+        "seq",
+        "slot"
+      ],
+      "additionalProperties": false
+    },
+    "Ping": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "ping"
+        }
+      },
+      "required": [
+        "t"
+      ],
+      "additionalProperties": false
+    },
+    "ClientMessage": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Queue"
+        },
+        {
+          "$ref": "#/$defs/Cancel"
+        },
+        {
+          "$ref": "#/$defs/Select"
+        },
+        {
+          "$ref": "#/$defs/Ping"
+        }
+      ]
+    },
+    "MovePublic": {
+      "type": "object",
+      "properties": {
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "name": {
+          "type": "string"
+        },
+        "templateId": {
+          "type": "string"
+        },
+        "attr": {
+          "type": "string"
+        },
+        "spCost": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "slot",
+        "name",
+        "templateId",
+        "attr",
+        "spCost"
+      ],
+      "additionalProperties": false
+    },
+    "FighterInfo": {
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "characterName": {
+          "type": "string"
+        },
+        "imagePath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rig": {
+          "description": "Puppet rig adjusted by the owner (opaque, passed through)"
+        },
+        "attr": {
+          "type": "string"
+        },
+        "moves": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MovePublic"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "maxHp": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "type": "integer",
+          "const": 50
+        },
+        "badge": {
+          "$ref": "#/$defs/Badge"
+        },
+        "isGhost": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "displayName",
+        "characterName",
+        "imagePath",
+        "attr",
+        "moves",
+        "maxHp",
+        "level",
+        "badge",
+        "isGhost"
+      ],
+      "additionalProperties": false
+    },
+    "Badge": {
+      "type": "string",
+      "enum": [
+        "egg",
+        "chick",
+        "rabbit",
+        "fox",
+        "bear",
+        "lion",
+        "dragon",
+        "legend"
+      ],
+      "description": "Badge id (best rating ever, never goes down). Japanese names: たまご ひよこ うさぎ きつね くま ライオン ドラゴン でんせつ"
+    },
+    "SideView": {
+      "type": "object",
+      "properties": {
+        "hp": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxHp": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sp": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "gauge": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "casting": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "hp",
+        "maxHp",
+        "sp",
+        "gauge",
+        "ready",
+        "casting"
+      ],
+      "additionalProperties": false
+    },
+    "BattleEvent": {
+      "type": "object",
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "type": "string",
+          "description": "ready, act, cast, hit, heal, ko, end, autoPick, forfeit (+ any added by Engine v3; clients ignore unknown types)"
+        },
+        "side": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "tick",
+        "type"
+      ]
+    },
+    "Welcome": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "welcome"
+        },
+        "proto": {
+          "type": "integer",
+          "const": 1
+        },
+        "serverTimeMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inMatch": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "t",
+        "proto",
+        "serverTimeMs",
+        "inMatch"
+      ],
+      "additionalProperties": false
+    },
+    "Queued": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "queued"
+        },
+        "snapshotId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "t",
+        "snapshotId"
+      ],
+      "additionalProperties": false
+    },
+    "Cancelled": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "cancelled"
+        }
+      },
+      "required": [
+        "t"
+      ],
+      "additionalProperties": false
+    },
+    "Match": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "match"
+        },
+        "matchId": {
+          "type": "string"
+        },
+        "you": {
+          "type": "string",
+          "enum": [
+            "a",
+            "b"
+          ]
+        },
+        "tickHz": {
+          "type": "integer",
+          "const": 10
+        },
+        "decisionTicks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "a": {
+          "$ref": "#/$defs/FighterInfo"
+        },
+        "b": {
+          "$ref": "#/$defs/FighterInfo"
+        },
+        "resumed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "t",
+        "matchId",
+        "you",
+        "tickHz",
+        "decisionTicks",
+        "a",
+        "b",
+        "resumed"
+      ],
+      "additionalProperties": false
+    },
+    "Ev": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "ev"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BattleEvent"
+          }
+        }
+      },
+      "required": [
+        "t",
+        "seq",
+        "tick",
+        "events"
+      ],
+      "additionalProperties": false
+    },
+    "Snap": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "snap"
+        },
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "a": {
+          "$ref": "#/$defs/SideView"
+        },
+        "b": {
+          "$ref": "#/$defs/SideView"
+        },
+        "hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "t",
+        "tick",
+        "a",
+        "b",
+        "hash"
+      ],
+      "additionalProperties": false
+    },
+    "Sel": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "sel"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "queued": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "unusable",
+            "stale"
+          ]
+        }
+      },
+      "required": [
+        "t",
+        "seq",
+        "slot",
+        "accepted",
+        "queued"
+      ],
+      "additionalProperties": false
+    },
+    "End": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "end"
+        },
+        "matchId": {
+          "type": "string"
+        },
+        "winner": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "a",
+                "b"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "ko",
+            "timeout",
+            "forfeit",
+            "aborted"
+          ]
+        },
+        "you": {
+          "type": "object",
+          "properties": {
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "win",
+                "lose",
+                "none"
+              ]
+            },
+            "xp": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "badge": {
+              "$ref": "#/$defs/Badge"
+            },
+            "badgeUp": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "outcome",
+            "xp",
+            "badge",
+            "badgeUp"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "t",
+        "matchId",
+        "winner",
+        "reason",
+        "you"
+      ],
+      "additionalProperties": false
+    },
+    "Pong": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "pong"
+        },
+        "serverTimeMs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "t",
+        "serverTimeMs"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "error"
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "BAD_MESSAGE",
+            "UNAUTHENTICATED",
+            "APP_CHECK_FAILED",
+            "CONSENT_REQUIRED",
+            "PROTOCOL_VERSION",
+            "RATE_LIMITED",
+            "NOT_FOUND",
+            "NOT_OWNER",
+            "LEVEL_TOO_LOW",
+            "ALREADY_IN_MATCH",
+            "NOT_IN_MATCH",
+            "SERVER_BUSY",
+            "DRAINING",
+            "INTERNAL"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "For logs only; never show to children"
+        }
+      },
+      "required": [
+        "t",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "Bye": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "bye"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "replaced",
+            "shutdown",
+            "idle",
+            "lifetime",
+            "protocol"
+          ]
+        },
+        "reconnect": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "t",
+        "reason",
+        "reconnect"
+      ],
+      "additionalProperties": false
+    },
+    "ServerMessage": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Welcome"
+        },
+        {
+          "$ref": "#/$defs/Queued"
+        },
+        {
+          "$ref": "#/$defs/Cancelled"
+        },
+        {
+          "$ref": "#/$defs/Match"
+        },
+        {
+          "$ref": "#/$defs/Ev"
+        },
+        {
+          "$ref": "#/$defs/Snap"
+        },
+        {
+          "$ref": "#/$defs/Sel"
+        },
+        {
+          "$ref": "#/$defs/End"
+        },
+        {
+          "$ref": "#/$defs/Pong"
+        },
+        {
+          "$ref": "#/$defs/Error"
+        },
+        {
+          "$ref": "#/$defs/Bye"
+        }
+      ]
+    }
+  }
+}

@@ -27,6 +27,14 @@
       ]
     },
     {
+      "collectionGroup": "snapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "ghostRating", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "matches",
       "queryScope": "COLLECTION",
       "fields": [
@@ -44,6 +52,12 @@
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "replays",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
     {
       "collectionGroup": "matches",
       "fieldPath": "state",

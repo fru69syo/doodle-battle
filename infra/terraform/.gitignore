@@ -1,0 +1,17 @@
+# Terraform working files. Never commit state, plans or local variable files:
+# state can contain sensitive values, and *.tfvars may contain your billing account id.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc

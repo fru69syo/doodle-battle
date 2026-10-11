@@ -34,6 +34,11 @@ beforeEach(async () => {
     await setDoc(doc(db, "reports/x"), { reporterUid: "alice" });
     await setDoc(doc(db, "moderationQueue/s-bob"), { state: "pending" });
     await setDoc(doc(db, "rateLimits/alice"), { buckets: {} });
+    await setDoc(doc(db, "rtMatches/r1"), { playerUids: ["alice", "bob"], mode: "pvp" });
+    await setDoc(doc(db, "replays/r1"), { seed: 1 });
+    await setDoc(doc(db, "config/costMode"), { mode: "saving", flags: { cloudJudge: false } });
+    await setDoc(doc(db, "config/other"), { secret: true });
+    await setDoc(doc(db, "ops/costStatus"), { spentPct: 81 });
   });
 });
 
@@ -124,8 +129,22 @@ describe("server-owned collections", () => {
     await assertFails(setDoc(doc(fs("alice"), "matches/m1/turns/2"), { turn: 2 }));
   });
 
+  it("rtMatches: players read their realtime match summary; replays stay server-only", async () => {
+    await assertSucceeds(getDoc(doc(fs("alice"), "rtMatches/r1")));
+    await assertFails(getDoc(doc(fs("carol"), "rtMatches/r1")));
+    await assertFails(setDoc(doc(fs("alice"), "rtMatches/r1"), { playerUids: ["alice"] }));
+    await assertFails(getDoc(doc(fs("alice"), "replays/r1")));
+  });
+
+  it("config/costMode: readable by any signed-in app, writable by nobody", async () => {
+    await assertSucceeds(getDoc(doc(fs("alice"), "config/costMode")));
+    await assertFails(getDoc(doc(fs(null), "config/costMode")));
+    await assertFails(setDoc(doc(fs("alice"), "config/costMode"), { mode: "normal" }));
+    await assertFails(getDoc(doc(fs("alice"), "config/other")));
+  });
+
   it("reports, moderation queue, rate limits and unknown collections are server-only", async () => {
-    for (const path of ["reports/x", "moderationQueue/s-bob", "rateLimits/alice", "anything/else"]) {
+    for (const path of ["reports/x", "moderationQueue/s-bob", "rateLimits/alice", "ops/costStatus", "anything/else"]) {
       await assertFails(getDoc(doc(fs("alice"), path)));
       await assertFails(setDoc(doc(fs("alice"), path), { a: 1 }));
     }

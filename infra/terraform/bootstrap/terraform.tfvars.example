@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+project_id         = "doodle-battle-prod"
+env                = "prod"
+billing_account_id = "000000-000000-000000"
+github_repository  = "fru69syo/doodle-battle"

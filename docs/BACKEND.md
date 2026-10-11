@@ -29,6 +29,18 @@ document describes how the backend implements SPEC §3.3, §5 and the server sid
                                                                           └── onUserConsentChanged (Firestore trigger)
 ```
 
+**v2.0 additions (GCP team, `docs/LEARN_GCP.md`)**: online rated battles move to a Cloud Run
+WebSocket server (`server/realtime/`, protocol in `docs/REALTIME_PROTOCOL.md`); the v1 callable
+battle (`joinQueue`/`submitAction`/`pollMatch`) stays for v1.x clients. A budget → Pub/Sub →
+`onBudgetAlert` kill switch maintains `config/costMode` (§16). All infrastructure except rules,
+indexes and functions is Terraform (`infra/terraform/`).
+
+```
+ app ──wss /v2 (ID token + App Check in hello)──► Cloud Run "battle" (asia-northeast1, 0–1 instance)
+                                                    └─ Admin SDK ─► users.rated, snapshots.ghostRating, rtMatches, replays
+ Cloud Billing budget ─► Pub/Sub budget-alerts ─► onBudgetAlert ─► config/costMode ◄─ functions, battle server, app read
+```
+
 Code layout (`firebase/`):
 
 | Path | What |
@@ -40,6 +52,7 @@ Code layout (`firebase/`):
 | `functions/src/ai/*` | Claude service (official `@anthropic-ai/sdk`), prompts, output schemas. |
 | `functions/src/ngwords/*` | Normaliser + NG filter (data in `shared/ng_words/`). |
 | `functions/src/battle/*` | Engine adapter + stub, ghost AI, match service, matchmaking, results. |
+| `functions/src/cost/*` | Cost mode reader (`costMode.ts`), AI cost gate + usage meter (`aiUsage.ts`), kill switch `onBudgetAlert` (`budgetAlert.ts`). §16. |
 | `functions/src/stats/statLimits.ts` | SPEC §3.2/§4.2 budget, growth and anti-tamper validation. |
 | `functions/src/names/*` | Display names (words in `shared/names/`), preset character names, name validation. |
 | `functions/scripts/sync-shared.mjs` | Copies `shared/ng_words`, `shared/battle_spec`, `shared/battle_engine_ts/src` into `functions/src/vendor/` (git-ignored) before build/lint/test, because Cloud Functions only uploads `functions/`. |
@@ -88,6 +101,16 @@ can be faked in tests.
 | `moderationLog/{auto}` | functions | – | `{uid, kind, reason, atMs}` for rejected registrations (no image, no text). |
 | `aiSuggestionReports/{auto}` | functions | – | `{uid, kind, text, reasonCode, state, atMs}`: reports of AI-suggested names / move names (`reportAiSuggestion`). |
 | `rateLimits/{uid}` | functions | – | Fixed-window counters. |
+| `rtMatches/{matchId}` | battle server | players (`playerUids`) | v2 realtime match summary: `mode, playerUids, snapshotIds, sides{a,b}: {snapshotId, isGhost, outcome, xp}, winner, reason: ko|timeout|forfeit|aborted, ticks, engineId, startedAtMs, endedAtMs`. No rating numbers. |
+| `replays/{matchId}` | battle server | – | `seed, engineId, sides, inputs[{tick, side, slot, src}], finalHash, winner, reason, ratingDeltas, expireAt` — deleted by a Firestore **TTL** policy 30 days after the match (`firestore.indexes.json`). |
+| `config/costMode` | kill switch / owner | any signed-in user | `{mode: normal|saving|minimal, flags{cloudJudge, cloudMoveGen, pvp, ghostAfterSec}, updatedAtMs, source, pinned}` (§16). |
+| `ops/costStatus`, `ops/aiUsage_YYYYMM` | functions | – | Last budget message and decision; monthly AI call counts and yen estimate (§16). |
+
+v2 fields added by the battle server: `users/{uid}.rated = {rating, games, best, dayKey, dayMatches}`
+(Elo per GAME_DESIGN_V2 §8, separate from the v1 `rating`), `snapshots/{id}.ghostRating` (owner's
+rating after their last rated match with it; used to pick ghosts near a child's rating). The v2
+`registerCharacter` (Engine team) must keep `ownerUid, status, level, name, imagePath,
+ownerDisplayName, randomKey` on snapshots; everything else is passed to the engine as-is.
 
 `SideInfo` (what a player sees about the opponent): `uid (null for ghosts), isGhost, snapshotId,
 displayName, characterName, element, level, isShobo, evolution, stats, imagePath, moveNames,
@@ -252,8 +275,9 @@ CONSENT_REQUIRED, INVALID_ARGUMENT, RATE_LIMITED`.
 { "confirm": "DELETE" }  → { "ok": true, "deleted": { "snapshots": 1, "matches": 2, "reports": 2 } }
 ```
 Deletes the profile, all snapshots + images, every match the user played or appeared in as a
-ghost (with turn logs), reports by and about the user, queue/rate-limit/moderation-log records,
-and finally the Firebase Auth user. The app must call it behind the parent gate, then sign out and
+ghost (with turn logs), v2 `rtMatches` + `replays` the user played or appeared in (`matches`
+counts both), reports by and about the user, queue/rate-limit/moderation-log records, and
+finally the Firebase Auth user. The app must call it behind the parent gate, then sign out and
 wipe local data. Errors: `CONFIRMATION_REQUIRED, UNAUTHENTICATED, INTERNAL` (auth deletion failed
 after data deletion; safe to retry).
 
@@ -262,6 +286,7 @@ after data deletion; safe to retry).
 - `sweepMatches` (Cloud Scheduler, every minute, Asia/Tokyo): removes queue entries whose
   heartbeat stopped (45 s), starts ghost matches for waits ≥ 60 s, resolves expired turns.
 - `onUserConsentChanged` (Firestore `users/{uid}` update): consent withdrawal handling (§3).
+- `onBudgetAlert` (Pub/Sub topic `budget-alerts`, runs as `cost-guard@`): the kill switch (§16).
 
 ## 6. Codes
 
@@ -395,7 +420,8 @@ adult/traced drawing claiming a child's "のびのび" budget).
 
 Deny by default. Clients can create/update only their own `users/{uid}` consent fields
 (validated types, `request.time` timestamps), read their own profile/queue/snapshots, and read
-matches + turn logs they play in. Pending actions, reports, moderation data and rate limits are
+matches + turn logs they play in, v2 `rtMatches` they play in, and `config/costMode` (any
+signed-in user). Pending actions, reports, moderation data, rate limits, `replays` and `ops` are
 unreadable. Storage: no client writes; snapshot images readable only while the snapshot is
 `active` (cross-service `firestore.get`) or by the owner. Tested with
 `@firebase/rules-unit-testing` (`test/emulator/rules.*.test.ts`).
@@ -411,13 +437,18 @@ npm test            # unit tests, then emulator tests (Auth/Firestore/Storage em
 npm run test:unit   # pure tests only (no Java needed)
 ```
 
-- Unit (`test/unit`, 200 tests): normaliser + NG vectors, names, stat limits, PNG checks, shared engine adapter + golden vectors,
+- Unit (`test/unit`, 209 tests): normaliser + NG vectors, names, stat limits, PNG checks, shared engine adapter + golden vectors,
   ghost AI, results, Claude service request shape / error mapping with a mocked SDK client.
-- Emulator (`test/emulator`, 51 tests): every callable handler against real emulators with a
+- Emulator (`test/emulator`, 69 tests): every callable handler against real emulators with a
   mocked AI service (`setAiServiceForTesting`) and an injectable clock (ghost wait, turn
   timeouts), the sweep, consent trigger, deletion, and Firestore/Storage rules. Tests use the
   `demo-doodle-battle` project id, so they can never touch a real project.
+- Cost mode (§16): unit tests for the kill-switch decision and flags; emulator tests for
+  `onBudgetAlert` (mode changes, AI estimate, owner pin), the judge gate + usage meter, moderation
+  staying on, v1 matchmaking per mode, rules for `config/costMode` and `rtMatches`.
 - No test calls the Claude API.
+- Realtime server: `cd server/realtime && npm test` (unit + two WebSocket clients playing full
+  matches, offline) and `npm run test:firestore` (Firestore emulator). See its README.
 - Note: if your shell sets `HTTPS_PROXY`, unset it for `npm test` (the Storage emulator's
   cross-service rule lookups to the Firestore emulator are otherwise sent to the proxy and the
   storage-rules tests fail): `env -u HTTPS_PROXY -u https_proxy npm test`.
@@ -426,6 +457,10 @@ npm run test:unit   # pure tests only (no Java needed)
   git-ignored), and use the App Check debug provider in the app.
 
 ## 13. Cost estimate (per 1,000 DAU)
+
+> v2.0: the full monthly estimate including the Cloud Run battle server and the ¥5,000 budget is
+> in `docs/LEARN_GCP.md` §12 (≈ ¥1,600–3,200 GCP + ≈ ¥1,500 AI at 1k DAU). The v1 table below
+> is kept for the callable battle.
 
 Assumptions per daily user: 2 `judgeDrawing`, 0.2 registrations, 3 online matches (≈12 turns,
 half PvP), ~30 s average queue wait. Prices are list prices at the time of writing and must be
@@ -445,6 +480,14 @@ Main levers: cache judge results by image hash on device, fewer heartbeats (list
 instead), `minInstances` only if cold starts hurt (costs money).
 
 ## 14. Deploy (what a human must do)
+
+> **v2.0: steps 1–5 are now Terraform** (`infra/terraform`, `docs/LEARN_GCP.md` §4): project
+> APIs, Firebase link, Firestore (asia-northeast1), anonymous Auth, the default Storage bucket,
+> Android/iOS apps + App Check, the `ANTHROPIC_API_KEY` secret container, the budget and the
+> kill-switch topic. Humans still: create the project and link billing, run `bootstrap/` once, set
+> the secret value, set `CLAUDE_MODEL`, and deploy functions/rules with the Firebase CLI —
+> `functions-deploy.yml` authenticates with **Workload Identity Federation** (no JSON key). The
+> manual steps below remain valid for a project managed without Terraform.
 
 1. **Create the Firebase project** (replace `doodle-battle-dev` in `firebase/.firebaserc`) and
    switch to the **Blaze plan** (required for Cloud Functions v2, Secret Manager, Scheduler).
@@ -487,3 +530,57 @@ instead), `minInstances` only if cold starts hurt (costs money).
 - `judgeDrawing` refusal → `appropriate: false` with neutral skill 50.
 - The NG dictionary is a starting point; it needs review by a native speaker / trust-and-safety and
   regular updates (bump `version`, keep both vector files green).
+
+## 16. Cost mode (v2.0, SPEC §12.6–12.7)
+
+`config/costMode` tells every part of the system how much paid cloud work to do this month. It
+is written only by `onBudgetAlert` (or by the owner in the console with `pinned: true`). Values
+and thresholds live in `shared/cost_mode/cost_mode.json` (copied into functions and the battle
+server by `sync-shared`). Full explanation for the owner: `docs/LEARN_GCP.md` §6.
+
+| mode | when (GCP spend + AI estimate vs. budget) | `cloudJudge` | `cloudMoveGen` | `pvp` | `ghostAfterSec` |
+|---|---|---|---|---|---|
+| `normal` | < 80 % | true | true | true | 20 |
+| `saving` | ≥ 80 % (or forecast ≥ 120 %) | false | false | true | 8 |
+| `minimal` | ≥ 100 % | false | false | false | 3 |
+
+Server-side enforcement (done):
+- `getAiService()` wraps the AI service (`src/cost/aiUsage.ts`): `judgeDrawing` (and future
+  `generateMove(s)`) throw `AiUnavailableError` when the flag is off, so `judgeDrawing` returns
+  `AI_UNAVAILABLE` and the app silently keeps its on-device result (it already does this for any
+  failure). Every AI call adds an estimate to `ops/aiUsage_YYYYMM` because the AI provider is
+  billed outside GCP. **Moderation (`moderateCharacter`) is never gated.**
+- v1 `joinQueue` / `sweepMatches`: ghost after `min(60 s, ghostAfterSec)` outside normal mode; no
+  PvP pairing when `pvp` is false. The realtime server does the same with the v2 timings.
+- Readers cache the document for 60 s and fall back to `normal` if it cannot be read.
+
+**For the client team** (no UI change, ever — the child must not notice):
+- Read `config/costMode` once per app start and at most every 10 minutes (one Firestore `get`;
+  rules allow any signed-in user). Use `flags`, ignore `mode` for logic.
+- `flags.cloudJudge == false` → skip the `judgeDrawing` call and use the on-device judgement
+  directly (saves latency; the server would refuse anyway). Same for move generation with
+  `cloudMoveGen`.
+- `flags.pvp` / `ghostAfterSec` → nothing to do: the server decides. Keep showing
+  「あいてを さがしているよ」 until `match` arrives.
+- If the document is missing or unreadable, behave as `normal`.
+- Never show the mode, a "saving" message or a budget to children or parents in the app.
+
+## 17. Realtime battle server (v2.0)
+
+`server/realtime/` (TypeScript, Node 22, `ws`) on Cloud Run, asia-northeast1, min 0 / max 1
+instance (in-memory matchmaking), session affinity, request-based billing, 15 min request timeout.
+Protocol and client rules: `docs/REALTIME_PROTOCOL.md`. Summary:
+- Auth: Firebase ID token + App Check token in the first message (`hello`), then
+  `users/{uid}.consent.online`; one live connection per uid.
+- Matchmaking: Elo band ±100 (+50 / 5 s, max ±400), same pair once per 60 min, ghost after
+  `ghostAfterSec` (ghost = active snapshot near the rating, not own, not one of the last 10;
+  mirror of the own character if none exists). Rated play at Lv50 (`ratedFighter(source, 50)`).
+- Battle: server-authoritative 10 Hz ATB through `src/engine.ts` (Engine v3 adapter; dev stand-in
+  until it lands), server-owned さきどり, 50+3-tick おまかせ timeout, ghost AI, 10 s / 30 s
+  disconnect rules.
+- Results in one Firestore transaction: `users/{uid}.rated` (Elo K 48→24, ghosts half, floor 600,
+  XP for 20 matches/JST day), `snapshots/{id}.ghostRating`, `rtMatches/{id}`, `replays/{id}`
+  (seed + input log, TTL 30 days). Badges come from the best rating and never go down.
+- Operations: `/healthz`, structured JSON logs (`event` = `match_start`, `match_end`, `stats`,
+  `auth_rejected`), SIGTERM drain (running matches end as `aborted` without rating changes).
+

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "doc": "Firestore document config/costMode. Written only by the kill-switch function onBudgetAlert (or by the owner in the console). See docs/LEARN_GCP.md §6 and docs/BACKEND.md §16.",
+  "default": "normal",
+  "modes": {
+    "normal": { "cloudJudge": true, "cloudMoveGen": true, "pvp": true, "ghostAfterSec": 20 },
+    "saving": { "cloudJudge": false, "cloudMoveGen": false, "pvp": true, "ghostAfterSec": 8 },
+    "minimal": { "cloudJudge": false, "cloudMoveGen": false, "pvp": false, "ghostAfterSec": 3 }
+  },
+  "thresholds": {
+    "savingAtPct": 80,
+    "minimalAtPct": 100,
+    "forecastSavingAtPct": 120
+  },
+  "aiEstimateYenPerCall": {
+    "judgeDrawing": 0.15,
+    "moderateCharacter": 0.2
+  },
+  "notes": [
+    "Moderation (registerCharacter) is never switched off: it is a safety feature and fails closed.",
+    "ghostAfterSec = seconds in the matchmaking queue before a ghost opponent is used (GAME_DESIGN_V2 §8: 20 s).",
+    "aiEstimateYenPerCall is a deliberately pessimistic estimate of the AI provider cost (billed outside GCP), added to the GCP spend by the kill switch."
+  ]
+}

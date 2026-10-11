@@ -69,6 +69,8 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
 
 ### 1.5 Firebase プロジェクト（1〜2 時間）
 `docs/BACKEND.md` §14 も参照してください。
+
+> **v2.0 から**: 下の 1〜3（プロジェクトの作成・Blaze・予算・Firestore・Storage・匿名認証）と App Check の登録は、**Terraform** で行います。手順は `docs/LEARN_GCP.md` §4（プロジェクトを作って請求先をつなぐ → `infra/terraform/bootstrap` → `envs/<env>`）。予算は月 5,000 円で 50・80・100% に通知し、80% を超えると自動で節約モードになります（LEARN_GCP §6）。ここでは、Terraform では作れないクライアント設定（4〜8）を行います。
 1. Firebase コンソールでプロジェクトを作成します。作成画面の **Google アナリティクスは「オフ」**にします（SPEC §7: Analytics は使わない）。
 2. **Blaze プラン**に切り替え、Google Cloud の**予算アラート**（例: 月 5,000 円で 50%・90%・100% に通知）を設定します。
 3. Firestore（ネイティブモード、**asia-northeast1**）、Storage（asia-northeast1）、Authentication の**匿名**を有効にします。
@@ -100,21 +102,21 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
      --project <projectId> --config ../firebase.json
    ```
 4. **モデル**: Functions のパラメータ `CLAUDE_MODEL` に、その時点で最新の**安価な Haiku 系**モデルの ID を設定します（画像入力・構造化出力・`effort` に対応していること）。ID は Anthropic のドキュメントの「Models overview」で確認してください。**このリポジトリにはモデル ID を書きません**。
-   - GitHub Actions でデプロイする場合: 環境 `firebase-production` の**変数**（Variables）`CLAUDE_MODEL`。
+   - GitHub Actions でデプロイする場合: 環境 `firebase-prod`（dev は `firebase-dev`）の**変数**（Variables）`CLAUDE_MODEL`。
    - 手元からデプロイする場合: `firebase/functions/.env.<projectId>` に `CLAUDE_MODEL=...`（git には入れない）。
 
-### 1.7 Functions デプロイ用のサービスアカウント（30 分）
-1. Firebase の Cloud プロジェクトにサービスアカウント（例: `ci-deployer`）を作り、次のロールを付けます:
-   Cloud Functions 管理者、Firebase ルール管理者、Cloud Datastore インデックス管理者、Cloud Scheduler 管理者、Secret Manager 閲覧者、Artifact Registry 管理者、Cloud Build 編集者、Eventarc 管理者、サービス アカウント ユーザー（ランタイムのサービスアカウントに対して）。
-   デプロイが権限エラーで止まったら、エラーに出たロールを足してください。
-2. JSON 鍵を作り、GitHub の環境 `firebase-production` の secret `FIREBASE_SERVICE_ACCOUNT_JSON` に入れます。
+### 1.7 Functions デプロイの認証（Workload Identity 連携、20 分）
+v2.0 から **JSON 鍵は使いません**。GitHub Actions は Workload Identity 連携で、そのつど 1 時間だけ有効な権限をもらいます（`docs/LEARN_GCP.md` §5.2）。
+1. デプロイ用のサービスアカウント `gha-firebase-deploy@<project>` と必要なロールは **Terraform が作ります**（`infra/terraform/modules/service_accounts`）。`terraform output firebase_deployer_sa` で名前を確認します。
+2. GitHub の環境 `firebase-dev` / `firebase-prod` に**変数**（Variables）を入れます: `GCP_PROJECT_ID`、`GCP_WIF_PROVIDER`（bootstrap の output）、`GCP_FIREBASE_DEPLOY_SA`、`CLAUDE_MODEL`。`firebase-prod` には Required reviewers を付けます。以前の secret `FIREBASE_SERVICE_ACCOUNT_JSON` と、その JSON 鍵は**削除**してください（IAM → サービスアカウント → 鍵）。
 3. **最初のデプロイは手元から対話モードで**行います（Storage のルールが Firestore を参照するための権限付与、シークレットへのアクセス付与など、確認のプロンプトに答える必要があるため）:
    ```bash
    cd firebase/functions && npm ci
    npx firebase deploy --config ../firebase.json --project <projectId> --only functions,firestore,storage
    ```
-   2 回目からは GitHub → Actions → **Deploy Firebase (manual)** → Run workflow（プロジェクト ID を 2 回入力）。
-4. 運用: `moderationQueue` と `moderation.suspectSkill` の確認担当を決めます（BACKEND §14.8）。
+   2 回目からは GitHub → Actions → **Deploy Firebase (manual)** → Run workflow（env を選び、プロジェクト ID を 2 回入力）。キルスイッチ `onBudgetAlert` もここでデプロイされます。
+4. 対戦サーバー（Cloud Run）は **Deploy realtime server (manual)**、構成の変更は **Terraform apply (manual)** で行います（`docs/LEARN_GCP.md` §4.6・§4.9）。
+5. 運用: `moderationQueue` と `moderation.suspectSkill` の確認担当を決めます（BACKEND §14.8）。
 
 ### 1.8 AdMob（広告を出す場合。1〜3 日）
 1. AdMob アカウントを作り、支払い・税務情報を登録します。
@@ -128,7 +130,7 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
 
 ### 1.9 GitHub の設定（30 分）
 1. リポジトリ `fru69syo/doodle-battle`（private）を作り、push します。
-2. Settings → Environments で 2 つ作ります（どちらも **Required reviewers にオーナーを設定**）:
+2. Settings → Environments で作ります（`play-release` と **prod の環境（`firebase-prod`・`realtime-prod`・`infra-prod`）は Required reviewers にオーナーを設定**）:
 
 | 環境 | 種類 | 名前 | 中身 |
 |---|---|---|---|
@@ -143,8 +145,10 @@ base64 -w0 upload-keystore.jks > upload-keystore.jks.b64                     # G
 | | secret | `ADMOB_REWARDED_UNIT_ID` | リワード広告ユニット ID `ca-app-pub-XXXXXXXXXXXXXXXX/NNNNNNNNNN`。**必須** |
 | | variable（任意） | `POLICY_BASE_URL` | ポリシーのページの場所を既定（`https://fru69syo.github.io/doodle-battle/`）から変えるときだけ。`https://…/` の形 |
 | リポジトリ | variable | `DEVELOPER_NAME`・`SUPPORT_EMAIL`・`ADMOB_PUBLISHER_ID`・`PAGES_ENABLED` | ポリシーのサイト（`pages.yml`、§1.10）。この 3 つの値はページに入れて公開される |
-| `firebase-production` | secret | `FIREBASE_SERVICE_ACCOUNT_JSON` | §1.7 の JSON の中身 |
+| `firebase-dev` / `firebase-prod` | variable | `GCP_PROJECT_ID`・`GCP_WIF_PROVIDER`・`GCP_FIREBASE_DEPLOY_SA` | §1.7（鍵は不要） |
 | | variable | `CLAUDE_MODEL` | 最新の Haiku 系モデルの ID（§1.6） |
+| `realtime-dev` / `realtime-prod` | variable | `GCP_PROJECT_ID`・`GCP_WIF_PROVIDER`・`GCP_DEPLOY_SA` | 対戦サーバーのデプロイ（`docs/LEARN_GCP.md` §4.5） |
+| `infra-<env>-plan` / `infra-<env>` | variable | `GCP_PROJECT_ID`・`GCP_PROJECT_NUMBER`・`GCP_WIF_PROVIDER`・`GCP_WIF_POOL`・`TF_STATE_BUCKET`・`BILLING_ACCOUNT_ID`・`ALERT_EMAIL`・`GCP_TF_PLAN_SA`／`GCP_TF_APPLY_SA` | Terraform（同 §4.5） |
 
    - `play-release` の「Deployment branches and tags」を **タグ `v*` だけ**に制限します。手動で実行するときは「Use workflow from」で**タグを選んで**ください（ブランチから実行すると環境の制限で止まります）。
 3. Settings → Branches → `main` に保護ルール: PR 必須、ステータスチェック必須（CI の各ジョブ。パスフィルタでスキップされたジョブは成功扱い）、force push 禁止。
@@ -241,7 +245,11 @@ scripts/check_16kb.sh app/build/app/outputs/bundle/release/app-release.aab
 |---|---|---|
 | `ci.yml` | PR、`main` への push、手動 | 変更があった部分だけ実行: Flutter（format・analyze・test とカバレッジの基準）、TS バトルエンジンのテスト、Functions（lint・build・unit・emulator）、Android の debug APK とリリース用マニフェストの検査、ストア文の文字数、actionlint。`main` への push では release AAB も作って 16 KB を確認 |
 | `release.yml` | タグ `v*` の push、手動 | 署名付き AAB → 検査（署名・権限・targetSdk・16 KB）→ Artifact（AAB と mapping、90 日）→ fastlane で**内部テスト**にアップロード |
-| `functions-deploy.yml` | **手動だけ** | lint と unit テスト → Functions・ルールのデプロイ（push では絶対に動きません） |
+| `functions-deploy.yml` | **手動だけ** | lint と unit テスト → Functions・ルール・インデックスのデプロイ（push では絶対に動きません）。認証は Workload Identity 連携 |
+| `realtime-ci.yml` | `server/realtime/**` などの PR・`main` | 対戦サーバーの lint・単体／結合テスト・Firestore エミュレータのテスト・イメージのビルド |
+| `infra-ci.yml` | `infra/**` の PR・`main` | `terraform fmt`・`validate`・`tflint`（認証なし） |
+| `realtime-deploy.yml` | **手動だけ** | テスト → イメージ → Cloud Run → `/healthz` の確認 → 失敗したら前の版に戻す（`docs/LEARN_GCP.md` §5.5） |
+| `infra-apply.yml` | **手動だけ** | Terraform の plan（読み取り専用）→ 承認 → apply（同 §4.6） |
 | `pages.yml` | `site/` の変更（PR・`main`）、手動 | `build_site.py --check`。`PAGES_ENABLED=true` なら `main` で GitHub Pages に公開（§1.10） |
 
 - docs だけの変更では、重いジョブ（Flutter・Android・Functions）は動きません。
@@ -335,6 +343,7 @@ Play では、一度出した版より**小さい versionCode に戻すことは
 | `Missing secrets in environment play-release: ADMOB_APP_ID …` | AdMob の secret が無い（§1.8・§1.9） |
 | `check_release: AdMob APPLICATION_ID is Google's *test* app id` で失敗 | `ADMOB_APP_ID` が Gradle に渡っていない（release.yml の env、手元なら環境変数） |
 | 起動直後に「The Crashlytics build ID is missing」で落ちる | `res/values/crashlytics.xml`（`RequireBuildId=false`）が消えた／縮小で消された（docs/COMPLIANCE.md §4） |
+| GitHub Actions で `Permission 'iam.serviceAccounts.getAccessToken' denied` | Workload Identity 連携の設定違い: 環境の名前（`firebase-prod` など）、変数 `GCP_WIF_PROVIDER`、`id-token: write`（`docs/LEARN_GCP.md` §11） |
 | Functions のデプロイで `CLAUDE_MODEL` を聞かれて止まる | 環境変数 `CLAUDE_MODEL`（GitHub）か `.env.<projectId>` が無い（§1.6） |
 | App Check で本番のアプリが弾かれる | Firebase にアプリ署名鍵の SHA-256 が登録されていない、または Play Integrity の Cloud プロジェクトのリンクがない（§1.5） |
 

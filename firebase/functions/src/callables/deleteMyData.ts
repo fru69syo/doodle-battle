@@ -36,6 +36,19 @@ async function deleteMatches(q: FirebaseFirestore.Query, seen: Set<string>): Pro
   }
 }
 
+/** v2 realtime matches (server/realtime) and their replays (same id). */
+async function deleteRtMatches(q: FirebaseFirestore.Query, seen: Set<string>): Promise<void> {
+  for (;;) {
+    const page = await q.limit(100).get();
+    const fresh = page.docs.filter((d) => !seen.has(d.id));
+    if (fresh.length === 0) return;
+    for (const d of fresh) {
+      seen.add(d.id);
+      await Promise.all([d.ref.delete(), db().collection(COL.replays).doc(d.id).delete()]);
+    }
+  }
+}
+
 /**
  * deleteMyData: parent-initiated deletion of everything the server holds for
  * this account (Families policy / Data safety): snapshots + images, matches
@@ -53,9 +66,11 @@ export async function deleteMyDataHandler(req: CallableRequest<unknown>): Promis
   const snaps = await fs.collection(COL.snapshots).where("ownerUid", "==", uid).get();
   const matchIds = new Set<string>();
   await deleteMatches(fs.collection(COL.matches).where("playerUids", "array-contains", uid), matchIds);
+  await deleteRtMatches(fs.collection(COL.rtMatches).where("playerUids", "array-contains", uid), matchIds);
   let reports = 0;
   for (const s of snaps.docs) {
     await deleteMatches(fs.collection(COL.matches).where("snapshotIds", "array-contains", s.id), matchIds);
+    await deleteRtMatches(fs.collection(COL.rtMatches).where("snapshotIds", "array-contains", s.id), matchIds);
     reports += await deleteQuery(fs.collection(COL.reports).where("snapshotId", "==", s.id));
     await fs.collection(COL.moderationQueue).doc(s.id).delete();
     await bucket().deleteFiles({ prefix: `snapshotImages/${s.id}/` });
