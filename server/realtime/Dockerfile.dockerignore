@@ -1,0 +1,10 @@
+# The build context is the repository root; send only what the Dockerfile copies.
+*
+!shared/cost_mode/
+!server/realtime/package.json
+!server/realtime/package-lock.json
+!server/realtime/tsconfig.json
+!server/realtime/tsconfig.build.json
+!server/realtime/scripts/
+!server/realtime/src/
+server/realtime/src/vendor/

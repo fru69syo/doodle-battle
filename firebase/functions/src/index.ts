@@ -14,3 +14,4 @@ export { reportAiSuggestion } from "./callables/reportAiSuggestion";
 export { deleteMyData } from "./callables/deleteMyData";
 export { sweepMatches } from "./scheduled/sweep";
 export { onUserConsentChanged } from "./triggers/consent";
+export { onBudgetAlert } from "./cost/budgetAlert";

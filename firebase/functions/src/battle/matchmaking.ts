@@ -1,10 +1,11 @@
 import type { DocumentSnapshot, Query } from "firebase-admin/firestore";
 import { LIMITS } from "../config";
+import { effectiveGhostAfterMs, getCostMode } from "../cost/costMode";
 import type { UserProfile } from "../lib/auth";
 import { clock } from "../lib/clock";
 import { ErrorCode, fail } from "../lib/errors";
 import { COL, db } from "../lib/firebase";
-import type { MatchDoc, QueueDoc, SideInfo, SnapshotDoc } from "../model";
+import { isV2Snapshot, type MatchDoc, type QueueDoc, type SideInfo, type SnapshotDoc } from "../model";
 import { createMatchInTx } from "./matchService";
 import { RATING } from "./results";
 
@@ -60,6 +61,8 @@ export async function requireOwnActiveSnapshot(uid: string, snapshotId: string):
   const snap = s.data() as SnapshotDoc;
   if (snap.ownerUid !== uid) fail(ErrorCode.NOT_OWNER, "not your character");
   if (snap.status !== "active") fail(ErrorCode.SNAPSHOT_NOT_ACTIVE, `character is ${snap.status}`);
+  // v2 characters (engine v3) battle on the realtime server, not here.
+  if (isV2Snapshot(snap)) fail(ErrorCode.SNAPSHOT_NOT_ACTIVE, "v2 character");
   return snap;
 }
 
@@ -79,6 +82,10 @@ export async function joinQueue(
   const myName = profile.displayName?.text ?? mine.ownerDisplayName;
   const myRating = profile.rating ?? RATING.initial;
 
+  // Cost mode (src/cost/costMode.ts): saving/minimal shorten the ghost wait, minimal skips PvP.
+  const costMode = await getCostMode();
+  const ghostAfterMs = effectiveGhostAfterMs(LIMITS.ghostAfterMs, costMode);
+
   const result = await db().runTransaction(async (tx): Promise<QueueResult & { joinedAtMs?: number }> => {
     const now = clock.now();
     const qRef = db().collection(COL.queue).doc(uid);
@@ -92,9 +99,9 @@ export async function joinQueue(
         .orderBy("joinedAtMs")
         .limit(10),
     );
-    const cand = candidates.docs
-      .map((d) => d.data() as QueueDoc)
-      .find((c) => c.uid !== uid && now - c.lastSeenMs < LIMITS.queueStaleMs);
+    const cand = costMode.flags.pvp
+      ? candidates.docs.map((d) => d.data() as QueueDoc).find((c) => c.uid !== uid && now - c.lastSeenMs < LIMITS.queueStaleMs)
+      : undefined;
     if (cand) {
       const [cSnap, cUser] = await Promise.all([
         tx.get(db().collection(COL.snapshots).doc(cand.snapshotId)),
@@ -137,8 +144,8 @@ export async function joinQueue(
     return { status: "waiting", waitedMs: now - joinedAtMs, joinedAtMs };
   });
 
-  if (result.status === "waiting" && result.waitedMs >= LIMITS.ghostAfterMs) {
-    const ghost = await startGhostMatch(uid);
+  if (result.status === "waiting" && result.waitedMs >= ghostAfterMs) {
+    const ghost = await startGhostMatch(uid, ghostAfterMs);
     if (ghost) return ghost;
   }
   if (result.status === "waiting") return { status: "waiting", waitedMs: result.waitedMs };
@@ -173,7 +180,10 @@ export async function pickGhost(uid: string, level: number): Promise<DocumentSna
   ];
   for (const q of queries) {
     const res = await q.get();
-    const hit = res.docs.find((d) => (d.data() as SnapshotDoc).ownerUid !== uid);
+    const hit = res.docs.find((d) => {
+      const doc = d.data() as SnapshotDoc;
+      return doc.ownerUid !== uid && !isV2Snapshot(doc);
+    });
     if (hit) return hit;
   }
   return null;
@@ -183,7 +193,7 @@ export async function pickGhost(uid: string, level: number): Promise<DocumentSna
  * Starts a match against a ghost (another player's registered snapshot,
  * driven by the server AI) for a player who has waited ≥ 60 s.
  */
-export async function startGhostMatch(uid: string): Promise<QueueResult | null> {
+export async function startGhostMatch(uid: string, ghostAfterMs: number = LIMITS.ghostAfterMs): Promise<QueueResult | null> {
   const qRef = db().collection(COL.queue).doc(uid);
   const q0 = (await qRef.get()).data() as QueueDoc | undefined;
   if (q0?.status !== "waiting") return null;
@@ -193,7 +203,7 @@ export async function startGhostMatch(uid: string): Promise<QueueResult | null> 
     const now = clock.now();
     const qSnap = await tx.get(qRef);
     const q = qSnap.data() as QueueDoc | undefined;
-    if (q?.status !== "waiting" || now - q.joinedAtMs < LIMITS.ghostAfterMs) return null;
+    if (q?.status !== "waiting" || now - q.joinedAtMs < ghostAfterMs) return null;
     const [mineSnap, ghostSnap, userSnap] = await Promise.all([
       tx.get(db().collection(COL.snapshots).doc(q.snapshotId)),
       tx.get(ghost.ref),

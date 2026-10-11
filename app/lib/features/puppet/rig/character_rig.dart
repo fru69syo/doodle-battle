@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import '../../../domain/rig_blob.dart';
+
 /// A 2D point in drawing pixels (the cut-out PNG's coordinate system, y
 /// down). Kept separate from `dart:ui` so rigging runs in isolates and in
 /// pure-Dart tests.
@@ -110,14 +112,19 @@ class RigLimb {
   /// Id of the drawn part (docs/LOOP.md) this limb animates, if any.
   String? part;
 
+  /// Stored form (`domain/rig_blob.dart` v1): kinds head / arm / leg /
+  /// tail / extra; [attach] is an extra key the blob rules allow. Drawn
+  /// part limbs are never stored (they are rebuilt from the parts).
   Map<String, Object?> toJson() => {
-    'k': kind.code,
-    'b': base.toJson(),
-    if (kind != LimbKind.head) 'm': mid.toJson(),
-    't': tip.toJson(),
-    if (edited) 'e': 1,
-    'p': ?attach,
-    'd': ?part,
+    'kind': switch (kind) {
+      LimbKind.wing || LimbKind.item => 'extra',
+      _ => kind.name,
+    },
+    'base': base.toJson(),
+    'mid': mid.toJson(),
+    'tip': tip.toJson(),
+    if (edited) 'edited': true,
+    'attach': ?attach,
   };
 
   static RigLimb fromJson(Map<String, Object?> j) {
@@ -126,7 +133,7 @@ class RigLimb {
     final base = P2.fromJson(j['b'] ?? j['base']);
     final tip = P2.fromJson(j['t'] ?? j['tip']);
     final m = j['m'] ?? j['mid'];
-    final attach = j['p'];
+    final attach = j['attach'] ?? j['p'];
     final part = j['d'];
     if (attach != null && attach is! int) throw const FormatException('p');
     if (part != null && (part is! String || part.length > 40)) {
@@ -175,8 +182,9 @@ class CharacterRig {
     this.source = RigSource.auto,
   });
 
-  /// JSON schema version. v1 was the spike's format (still readable).
-  static const version = 2;
+  /// JSON schema version: the rig blob of Character v2
+  /// (`domain/rig_blob.dart` `kRigVersion`, also checked by the server).
+  static const version = kRigVersion;
   static const maxJsonBytes = 2048;
   static const maxLimbs = 12;
 
@@ -267,28 +275,54 @@ class CharacterRig {
     );
   }
 
+  /// The blob stored in `CharacterV2.rig` and sent to the server
+  /// (`validateRigJson` accepts it). Drawn-part limbs are left out.
   Map<String, Object?> toJson() => {
     'v': version,
-    'size': [P2._r(width), P2._r(height)],
+    'width': P2._r(width),
+    'height': P2._r(height),
     'root': root.toJson(),
     'chest': chest.toJson(),
     if (ground != null) 'ground': P2._r(ground!),
-    'limbs': [for (final l in limbs) l.toJson()],
-    'src': source.name,
+    'limbs': [
+      for (final l in limbs)
+        if (l.part == null) l.toJson(),
+    ],
+    'source': source == RigSource.edited ? 'edited' : 'auto',
   };
 
-  /// Compact JSON string (what is stored and sent).
+  /// JSON string of [toJson] (what is stored and sent).
   String encode() => jsonEncode(toJson());
+
+  /// Everything that changes the mesh (including drawn-part limbs and the
+  /// stroke source), for caches.
+  String get cacheKey => jsonEncode({
+    ...toJson(),
+    'src': source.name,
+    'parts': [
+      for (final (i, l) in limbs.indexed)
+        if (l.part != null)
+          [i, l.kind.name, l.part, l.attach, l.base.toJson(), l.tip.toJson()],
+    ],
+  });
 
   /// Parses and validates; throws [FormatException] on anything unexpected
   /// (unknown version, out-of-range points, too many limbs, attach cycles,
   /// too large). Use [tryDecode] to fall back to auto-rigging.
   static CharacterRig fromJson(Map<String, Object?> j) {
     final v = j['v'];
-    if (v != 1 && v != version) throw FormatException('rig version $v');
+    if (v != 1 && v != 2) throw FormatException('rig version $v');
     final size = j['size'];
-    if (size is! List || size.length != 2) throw const FormatException('size');
-    final w = (size[0] as num).toDouble(), h = (size[1] as num).toDouble();
+    final double w, h;
+    if (j['width'] is num && j['height'] is num) {
+      w = (j['width']! as num).toDouble();
+      h = (j['height']! as num).toDouble();
+    } else if (size is List && size.length == 2) {
+      w = (size[0] as num).toDouble();
+      h = (size[1] as num).toDouble();
+    } else {
+      throw const FormatException('size');
+    }
     if (!(w >= 1 && h >= 1 && w <= 4096 && h <= 4096)) {
       throw const FormatException('size range');
     }
@@ -320,6 +354,14 @@ class CharacterRig {
     if (problem != null) throw FormatException(problem);
     return rig;
   }
+
+  /// The `CharacterV2.rig` blob (validated by `validateRigJson`), or null
+  /// when this rig breaks the blob rules.
+  Map<String, Object?>? toBlob() => validateRigJson(toJson());
+
+  /// From a `CharacterV2.rig` blob; null (→ auto-rig) when absent/invalid.
+  static CharacterRig? fromBlob(Map<String, Object?>? blob) =>
+      blob == null ? null : tryDecode(jsonEncode(blob));
 
   /// Null when [json] is missing, too large or invalid.
   static CharacterRig? tryDecode(String? json) {
@@ -359,8 +401,12 @@ class CharacterRig {
         }
       }
     }
-    if (utf8.encode(encode()).length > maxJsonBytes) return 'too large';
-    return null;
+    final json = toJson();
+    if (utf8.encode(jsonEncode(json)).length > maxJsonBytes) {
+      return 'too large';
+    }
+    // The same rules as CharacterV2 / the server (domain/rig_blob.dart).
+    return rigProblem(json);
   }
 }
 

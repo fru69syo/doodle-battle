@@ -139,6 +139,11 @@ class StagePoisonTick extends StageEvent {
   final int target, amount, hpAfter;
 }
 
+/// The damage ramp starts (ヒートアップ): a short banner.
+class StageHeatUp extends StageEvent {
+  const StageHeatUp();
+}
+
 /// The battle is decided (shown after the last action has played).
 class StageEnd extends StageEvent {
   const StageEnd(this.winner);

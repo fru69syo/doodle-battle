@@ -6,6 +6,8 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/drawing_loop_storage.dart';
 import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/puppet_look_rule.dart';
 import '../draw_canvas/canvas_analysis.dart';
 import '../drawing_loop/display_image.dart';
 import '../drawing_loop/parts/composite.dart';
@@ -15,6 +17,7 @@ import 'puppet_parts.dart';
 import 'puppet_store.dart';
 import 'render/puppet_view.dart';
 import 'rig/character_rig.dart';
+import 'rig/limb_hints.dart';
 
 /// The puppet of a stored character, ready for [PuppetView] / the battle
 /// stage: its picture with the drawn parts (docs/LOOP.md) as extra rigged
@@ -99,6 +102,29 @@ Future<PuppetSpec?> characterPuppetSpec(
       k: k,
     ),
     look: look,
+    quality: quality,
+  );
+}
+
+/// The puppet of a v2 character (`CharacterV2`): its stored rig blob
+/// (`CharacterV2.rig`, invalid → auto-rig with the drawing-tool strokes)
+/// and the look its level and hidden state imply. Drawn parts are added by
+/// [characterPuppetSpec] (v1 records) or `rigWithParts`.
+PuppetSpec characterV2PuppetSpec(
+  CharacterV2 c,
+  Uint8List cutoutPng, {
+  List<HintStroke>? strokes,
+  PuppetQuality quality = PuppetQuality.high,
+}) {
+  final rig = CharacterRig.fromBlob(c.rig);
+  return PuppetSpec(
+    png: cutoutPng,
+    rig: rig,
+    strokes: rig == null ? strokes : null,
+    look: PuppetLook(
+      simple: drawsSimpleLook(c),
+      legend: c.level >= PuppetLook.legendLevel,
+    ),
     quality: quality,
   );
 }

@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:doodle_battle/features/battle_stage/adapters/battle_v2_feed.dart';
+import 'package:doodle_battle/features/battle_stage/adapters/battle_v3_feed.dart';
 import 'package:doodle_battle/features/battle_stage/battle_stage.dart';
 import 'package:doodle_battle/features/battle_stage/debug/demo_battle.dart';
 import 'package:doodle_battle/features/battle_stage/stage_background.dart';
@@ -32,7 +32,7 @@ void main() {
     ];
     final buildMs = sw0.elapsedMilliseconds / 2;
     final sprites = [for (final m in meshes) await PuppetSprite.create(m)];
-    final feed = BattleV2Feed(demoEngine(sides), alwaysAuto: true);
+    final feed = BattleV3Feed(demoEngine(sides), alwaysAuto: true);
     final c = BattleStageController(feed: feed)
       ..attach(meshes, [for (final s in sides) s.look]);
     final painter = StagePainter(

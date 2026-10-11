@@ -2,13 +2,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../../../domain/battle/rng.dart';
-import '../../../domain/battle_v2/battle_v2.dart';
-import '../../../domain/battle_v2/sim_v2.dart'
-    show randomBloomer, randomKid, setupAt;
+import '../../../domain/battle_v3/battle_v3.dart';
+import '../../../domain/battle_v3/sim.dart' show randomBloomer, randomKid;
 import '../../puppet/puppet_builder.dart';
 import '../../puppet/puppet_look.dart';
-import '../adapters/battle_v2_feed.dart';
+import '../adapters/battle_v3_feed.dart';
 import '../battle_stage.dart';
 import '../stage_overlay.dart';
 
@@ -38,15 +36,15 @@ class DemoSide {
 }
 
 /// The prototype v3 engine set up for two demo sides.
-AtbBattle demoEngine(List<DemoSide> sides, {int seed = 7}) {
-  const spec = V2Spec();
-  final setups = <FighterSetupV2>[];
+Battle demoEngine(List<DemoSide> sides, {int seed = 7}) {
+  const spec = V3Spec();
+  final setups = <FighterSetup>[];
   for (final s in sides) {
     final r = Mulberry32(s.genomeSeed);
     final g = s.lateBloomer ? randomBloomer(spec, r) : randomKid(spec, r);
     final base = setupAt(spec, g, s.level);
     setups.add(
-      FighterSetupV2(
+      FighterSetup(
         stats: base.stats,
         attr: base.attr,
         moves: base.moves,
@@ -54,10 +52,10 @@ AtbBattle demoEngine(List<DemoSide> sides, {int seed = 7}) {
       ),
     );
   }
-  return newBattle(spec, setups[0], setups[1], seed: seed, recordEvents: true);
+  return Battle(spec, setups[0], setups[1], seed: seed);
 }
 
-MoveButtonData moveButtonOf(MoveV2 m, int slot) => MoveButtonData(
+MoveButtonData moveButtonOf(Move m, int slot) => MoveButtonData(
   name: m.name.isEmpty ? m.template : m.name,
   tint: slot == 3
       ? MoveTint.special
@@ -96,7 +94,7 @@ class DemoBattleScreen extends StatefulWidget {
 }
 
 class DemoBattleScreenState extends State<DemoBattleScreen> {
-  late final BattleV2Feed feed = BattleV2Feed(
+  late final BattleV3Feed feed = BattleV3Feed(
     demoEngine([widget.player, widget.cpu], seed: widget.seed),
   );
   late final controller = BattleStageController(
@@ -174,7 +172,7 @@ class DemoBattleScreenState extends State<DemoBattleScreen> {
       omakase: feed.alwaysAuto,
       onOmakase: (v) => setState(() {
         feed.alwaysAuto = v;
-        feed.pending = null;
+        feed.cancelTap();
       }),
       onTap: (i) => setState(() => feed.tap(i)),
       usable: feed.usable,

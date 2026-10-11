@@ -42,7 +42,8 @@ describe("judgeDrawing", () => {
     expect(env.ai.judgeDrawing).toHaveBeenCalledTimes(1);
     expect(await storageFiles()).toEqual([]);
     const cols = (await db().listCollections()).map((c) => c.id).sort();
-    expect(cols).toEqual([COL.rateLimits, COL.users]);
+    // ops = the monthly AI usage meter (counts only, src/cost/aiUsage.ts)
+    expect(cols).toEqual(["ops", COL.rateLimits, COL.users]);
   });
 
   it("sanitises AI output (prompt-injected text, NG words, wrong scripts, ranges)", async () => {

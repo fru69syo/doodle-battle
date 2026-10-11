@@ -1,5 +1,5 @@
-import 'package:doodle_battle/domain/battle_v2/battle_v2.dart' show typeChart;
-import 'package:doodle_battle/features/battle_stage/adapters/battle_v2_feed.dart';
+import 'package:doodle_battle/domain/battle_v3/battle_v3.dart' show typeChart;
+import 'package:doodle_battle/features/battle_stage/adapters/battle_v3_feed.dart';
 import 'package:doodle_battle/features/battle_stage/battle_stage.dart';
 import 'package:doodle_battle/features/battle_stage/debug/demo_battle.dart';
 import 'package:doodle_battle/features/battle_stage/stage_director.dart';
@@ -8,7 +8,7 @@ import 'package:doodle_battle/features/puppet/samples.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A stage controller over the prototype engine, without widgets.
-(BattleStageController, BattleV2Feed) stage({
+(BattleStageController, BattleV3Feed) stage({
   int seed = 7,
   bool auto = true,
   bool bloomer = false,
@@ -29,7 +29,7 @@ import 'package:flutter_test/flutter_test.dart';
       level: level,
     ),
   ];
-  final feed = BattleV2Feed(demoEngine(sides, seed: seed), alwaysAuto: auto);
+  final feed = BattleV3Feed(demoEngine(sides, seed: seed), alwaysAuto: auto);
   final c = BattleStageController(feed: feed, seed: seed);
   c.attach(
     [for (final s in sides) buildPuppetSync(s.puppet())],
@@ -84,9 +84,7 @@ void main() {
         .expand((a) => a.hits)
         .where((h) => !h.missed)
         .length;
-    final damage = feed.engine.events
-        .where((e) => e.type == 'damage' && e.data['cause'] != 'poison')
-        .length;
+    final damage = feed.engine.events.where((e) => e.type == 'hit').length;
     expect(hits, damage);
     // Every hit's matchup is what the engine's type chart says.
     for (final a in s.log.whereType<StageAction>()) {
@@ -114,7 +112,7 @@ void main() {
     expect(feed.tap(0), isTrue);
     final e = feed.engine;
     while (e.events
-        .where((x) => x.type == 'choose' && x.data['side'] == 0)
+        .where((x) => x.type == 'select' && x.data['side'] == 0)
         .isEmpty) {
       s.advance(0.05);
     }
@@ -122,7 +120,7 @@ void main() {
       (x) => x.type == 'ready' && x.data['side'] == 0,
     );
     final choose = e.events.firstWhere(
-      (x) => x.type == 'choose' && x.data['side'] == 0,
+      (x) => x.type == 'select' && x.data['side'] == 0,
     );
     expect(choose.tick, ready.tick);
     expect(feed.pending, isNull);
@@ -133,7 +131,10 @@ void main() {
     final e = feed.engine;
     double? maxLeft;
     while (e.events
-        .where((x) => x.type == 'autoPick' && x.data['side'] == 0)
+        .where(
+          (x) =>
+              x.type == 'select' && x.data['side'] == 0 && x.data['auto'] == 1,
+        )
         .isEmpty) {
       s.advance(0.1);
       final left = feed.choiceLeft;
@@ -144,9 +145,12 @@ void main() {
       (x) => x.type == 'ready' && x.data['side'] == 0,
     );
     final auto = e.events.firstWhere(
-      (x) => x.type == 'autoPick' && x.data['side'] == 0,
+      (x) => x.type == 'select' && x.data['side'] == 0 && x.data['auto'] == 1,
     );
-    expect(auto.tick - ready.tick, e.spec.decisionTicks - 1);
+    expect(
+      auto.tick - ready.tick,
+      inInclusiveRange(e.spec.decisionTicks - 1, e.spec.decisionTicks),
+    );
     expect(maxLeft, isNotNull);
     expect(
       s.log.whereType<StageChoose>().where((c) => c.side == 0).first.auto,

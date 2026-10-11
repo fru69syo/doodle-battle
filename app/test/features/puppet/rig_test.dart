@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:doodle_battle/domain/rig_blob.dart';
 import 'package:doodle_battle/features/puppet/anim/clips.dart';
 import 'package:doodle_battle/features/puppet/anim/skinner.dart';
 import 'package:doodle_battle/features/puppet/editor/rig_edits.dart';
@@ -91,6 +92,31 @@ void main() {
       expect(jsonEncode(back.toJson()), j);
       expect(j.length, lessThan(CharacterRig.maxJsonBytes));
       expect(back.validate(), isNull);
+    });
+
+    test('stored form is the CharacterV2 rig blob (rig_blob.dart)', () {
+      final blob = hero.rig.toBlob();
+      expect(blob, isNotNull);
+      expect(validateRigJson(blob), isNotNull);
+      expect(rigProblem(blob), isNull);
+      final back = CharacterRig.fromBlob(blob)!;
+      expect(back.encode(), hero.rig.encode());
+      // Drawn-part limbs are not stored; strokes rigs are stored as auto.
+      final withPart = hero.rig.copy(source: RigSource.strokes)
+        ..limbs.add(
+          RigLimb(
+            LimbKind.wing,
+            const P2(1, 1),
+            const P2(2, 2),
+            const P2(3, 3),
+            part: 'w1',
+          ),
+        );
+      expect(withPart.toBlob()!['limbs'], hasLength(hero.rig.limbs.length));
+      expect(withPart.toBlob()!['source'], 'auto');
+      expect(withPart.cacheKey, isNot(hero.rig.cacheKey));
+      expect(CharacterRig.fromBlob(null), isNull);
+      expect(CharacterRig.fromBlob({'v': 9}), isNull);
     });
 
     test('v1 (spike) JSON still loads', () {

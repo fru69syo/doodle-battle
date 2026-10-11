@@ -53,6 +53,24 @@ export interface DrawingJudgement {
   concerns: ImageConcern[];
   /** AI-generated / digital vs. hand-drawn on paper. */
   origin: ImageOrigin;
+  /**
+   * v2 only (when `JudgeOptions.moves` is set): four raw move proposals
+   * (index = slot). Untrusted: validated by the engine v3 validator.
+   */
+  moves?: unknown[];
+}
+
+/** What the AI needs to propose moves (GAME_DESIGN_V2 §5.5). */
+export interface MovePromptContext {
+  /** The character's attribute: gu / choki / pa. */
+  attribute: string;
+  /** Budget points per slot (already × the move factor). */
+  slotBudgets: number[];
+}
+
+export interface JudgeOptions {
+  /** Ask for four move proposals in the same call (V2_INFRA §2.3). */
+  moves?: MovePromptContext;
 }
 
 /** Moderation verdict for registerCharacter. */
@@ -67,7 +85,7 @@ export interface ModerationVerdict {
 }
 
 export interface AiService {
-  judgeDrawing(png: Buffer): Promise<DrawingJudgement>;
+  judgeDrawing(png: Buffer, opts?: JudgeOptions): Promise<DrawingJudgement>;
   moderateCharacter(png: Buffer, candidateNames: readonly string[]): Promise<ModerationVerdict>;
 }
 

@@ -171,6 +171,18 @@ class StageDirector {
       case StageEnd(:final winner):
         // Shown once the last action has played out.
         _pendingWinner = winner;
+      case StageHeatUp():
+        final a = fighters[0], b = fighters[1];
+        fx.add(
+          Fx(
+            'up',
+            (a.x + b.x) / 2,
+            (a.z + b.z) / 2,
+            y: 1.9,
+            text: 'ヒートアップ！',
+            duration: 1.4,
+          ),
+        );
       case StageReady():
         break;
     }

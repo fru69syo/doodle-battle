@@ -1,11 +1,13 @@
 {
   "specVersion": 3,
-  "generatedBy": "app/tool/v2_sim.dart golden (Dart reference prototype)",
+  "generatedBy": "app/tool/v3_sim.dart golden (Dart engine v3)",
   "conventions": {
     "eventLine": "\"<tick> <type> <k=v,...>\" with keys sorted (ASCII)",
     "eventsFnv1a": "fnv1a32 of the event lines joined with '\\n'",
-    "controller": "AI controller: when ready, returns null until readyTicks >= thinkTicks, then chooseMove(normal) with the side AI stream; timeout auto-pick = chooseMove(normal) on the same stream",
-    "setupAt": "stats = statsAt(level); moves = offline generator (stream 12, or 14 after a bloomer rebirth) with moveFactorPct(level), filtered by slotUnlockLevels"
+    "controllers": "null = no controller (queued inputs + 5 s timeout only); {tier, think}: when ready, null until readyTicks >= think, then chooseMove(tier) on the side AI stream; the timeout auto-pick is chooseMove(normal) on the same stream",
+    "inputs": "[tick, side, slot]: queueInput(side, slot) just before stepping that tick (invalid inputs are ignored when used)",
+    "setupAt": "stats = statsAt(level) * powerPct / 100; moves = offline generator (stream 12, or 14 after a bloomer rebirth) with moveFactorPct(level), filtered by slotUnlockLevels",
+    "ngCheck": "contains any of [ばか, しね]"
   },
   "deriveSeed": [
     {
@@ -1902,12 +1904,955 @@
           "50": 107
         }
       }
+    },
+    {
+      "input": {
+        "features": {
+          "roundness": 778,
+          "silhouetteCoverage": 155,
+          "inkCoverage": 332,
+          "solidity": 617,
+          "spikiness": 63,
+          "redShare": 385,
+          "lineThickness": 115,
+          "darkness": 681,
+          "colorUnits": 12,
+          "balancedHueCount": 1,
+          "detailDensity": 326,
+          "convexityDefects": 4,
+          "elongation": 109,
+          "symmetry": 590
+        },
+        "energy10": 700,
+        "skill10": 300,
+        "imageHash": "bffc0017dddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "origin": "digital"
+      },
+      "expected": {
+        "kid": 70,
+        "isBloomer": true,
+        "attribute": "gu",
+        "jitterPct": 103,
+        "budget": 207,
+        "affinities": [
+          755,
+          454,
+          431,
+          468,
+          739,
+          817,
+          849,
+          287,
+          165,
+          431
+        ],
+        "base": [
+          25,
+          19,
+          19,
+          19,
+          24,
+          26,
+          27,
+          16,
+          13,
+          19
+        ],
+        "growthMille": [
+          43,
+          43,
+          37,
+          43,
+          37,
+          47,
+          47,
+          34,
+          34,
+          35
+        ],
+        "rebirthBase": [
+          53,
+          39,
+          38,
+          41,
+          49,
+          48,
+          56,
+          33,
+          26,
+          35
+        ],
+        "statsAt": {
+          "1": [
+            25,
+            19,
+            19,
+            19,
+            24,
+            26,
+            27,
+            16,
+            13,
+            19
+          ],
+          "10": [
+            34,
+            26,
+            25,
+            26,
+            31,
+            36,
+            38,
+            20,
+            16,
+            24
+          ],
+          "49": [
+            76,
+            58,
+            52,
+            58,
+            66,
+            84,
+            87,
+            42,
+            34,
+            50
+          ],
+          "50": [
+            164,
+            121,
+            106,
+            127,
+            137,
+            158,
+            184,
+            87,
+            69,
+            95
+          ],
+          "75": [
+            228,
+            168,
+            146,
+            176,
+            188,
+            221,
+            258,
+            119,
+            94,
+            129
+          ],
+          "100": [
+            292,
+            215,
+            185,
+            226,
+            239,
+            284,
+            332,
+            150,
+            118,
+            163
+          ]
+        },
+        "maxHpAt": {
+          "1": 216,
+          "50": 1370,
+          "100": 2430
+        },
+        "moveFactorPct": {
+          "1": 70,
+          "49": 70,
+          "50": 107
+        }
+      }
+    },
+    {
+      "input": {
+        "features": {
+          "roundness": 870,
+          "silhouetteCoverage": 62,
+          "inkCoverage": 202,
+          "solidity": 971,
+          "spikiness": 208,
+          "redShare": 745,
+          "lineThickness": 16,
+          "darkness": 766,
+          "colorUnits": 7,
+          "balancedHueCount": 5,
+          "detailDensity": 157,
+          "convexityDefects": 1,
+          "elongation": 215,
+          "symmetry": 481
+        },
+        "energy10": 700,
+        "skill10": 300,
+        "imageHash": "a3fca2f9dddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "origin": "printed"
+      },
+      "expected": {
+        "kid": 70,
+        "isBloomer": true,
+        "attribute": "choki",
+        "jitterPct": 97,
+        "budget": 195,
+        "affinities": [
+          663,
+          709,
+          469,
+          636,
+          509,
+          549,
+          567,
+          568,
+          845,
+          641
+        ],
+        "base": [
+          20,
+          21,
+          17,
+          20,
+          18,
+          18,
+          19,
+          19,
+          23,
+          20
+        ],
+        "growthMille": [
+          36,
+          47,
+          39,
+          43,
+          37,
+          39,
+          42,
+          34,
+          40,
+          43
+        ],
+        "rebirthBase": [
+          42,
+          42,
+          37,
+          44,
+          36,
+          38,
+          35,
+          36,
+          47,
+          37
+        ],
+        "statsAt": {
+          "1": [
+            20,
+            21,
+            17,
+            20,
+            18,
+            18,
+            19,
+            19,
+            23,
+            20
+          ],
+          "10": [
+            26,
+            29,
+            22,
+            27,
+            23,
+            24,
+            26,
+            24,
+            31,
+            27
+          ],
+          "49": [
+            54,
+            68,
+            48,
+            61,
+            49,
+            51,
+            57,
+            50,
+            67,
+            61
+          ],
+          "50": [
+            116,
+            138,
+            107,
+            136,
+            101,
+            110,
+            107,
+            95,
+            139,
+            114
+          ],
+          "75": [
+            158,
+            193,
+            148,
+            189,
+            138,
+            152,
+            148,
+            130,
+            191,
+            159
+          ],
+          "100": [
+            200,
+            249,
+            188,
+            242,
+            175,
+            193,
+            189,
+            164,
+            244,
+            204
+          ]
+        },
+        "maxHpAt": {
+          "1": 197,
+          "50": 1201,
+          "100": 2108
+        },
+        "moveFactorPct": {
+          "1": 70,
+          "49": 70,
+          "50": 107
+        }
+      }
+    },
+    {
+      "input": {
+        "features": {
+          "roundness": 239,
+          "silhouetteCoverage": 160,
+          "inkCoverage": 269,
+          "solidity": 518,
+          "spikiness": 272,
+          "redShare": 69,
+          "lineThickness": 52,
+          "darkness": 514,
+          "colorUnits": 12,
+          "balancedHueCount": 1,
+          "detailDensity": 397,
+          "convexityDefects": 3,
+          "elongation": 320,
+          "symmetry": 642
+        },
+        "energy10": 700,
+        "skill10": 300,
+        "imageHash": "a44ccae0dddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "origin": "screen"
+      },
+      "expected": {
+        "kid": 70,
+        "isBloomer": true,
+        "attribute": "choki",
+        "jitterPct": 100,
+        "budget": 201,
+        "affinities": [
+          392,
+          339,
+          422,
+          312,
+          190,
+          849,
+          562,
+          518,
+          675,
+          240
+        ],
+        "base": [
+          19,
+          18,
+          19,
+          17,
+          14,
+          29,
+          23,
+          22,
+          25,
+          15
+        ],
+        "growthMille": [
+          36,
+          35,
+          42,
+          33,
+          33,
+          45,
+          44,
+          45,
+          47,
+          40
+        ],
+        "rebirthBase": [
+          35,
+          35,
+          42,
+          35,
+          27,
+          52,
+          45,
+          44,
+          55,
+          36
+        ],
+        "statsAt": {
+          "1": [
+            19,
+            18,
+            19,
+            17,
+            14,
+            29,
+            23,
+            22,
+            25,
+            15
+          ],
+          "10": [
+            25,
+            23,
+            26,
+            22,
+            18,
+            40,
+            32,
+            30,
+            35,
+            20
+          ],
+          "49": [
+            51,
+            48,
+            57,
+            43,
+            36,
+            91,
+            71,
+            69,
+            81,
+            43
+          ],
+          "50": [
+            96,
+            95,
+            128,
+            91,
+            70,
+            166,
+            142,
+            141,
+            181,
+            106
+          ],
+          "75": [
+            132,
+            129,
+            177,
+            123,
+            95,
+            232,
+            197,
+            196,
+            254,
+            146
+          ],
+          "100": [
+            167,
+            163,
+            227,
+            156,
+            120,
+            297,
+            252,
+            251,
+            326,
+            187
+          ]
+        },
+        "maxHpAt": {
+          "1": 191,
+          "50": 1078,
+          "100": 1886
+        },
+        "moveFactorPct": {
+          "1": 70,
+          "49": 70,
+          "50": 107
+        }
+      }
+    },
+    {
+      "input": {
+        "features": {
+          "roundness": 408,
+          "silhouetteCoverage": 304,
+          "inkCoverage": 96,
+          "solidity": 525,
+          "spikiness": 300,
+          "redShare": 535,
+          "lineThickness": 28,
+          "darkness": 408,
+          "colorUnits": 4,
+          "balancedHueCount": 4,
+          "detailDensity": 382,
+          "convexityDefects": 0,
+          "elongation": 134,
+          "symmetry": 658
+        },
+        "energy10": 1000,
+        "skill10": 0,
+        "imageHash": "not-a-hex-hash",
+        "origin": null
+      },
+      "expected": {
+        "kid": 100,
+        "isBloomer": false,
+        "attribute": "pa",
+        "jitterPct": 100,
+        "budget": 425,
+        "affinities": [
+          538,
+          451,
+          590,
+          431,
+          296,
+          449,
+          275,
+          477,
+          398,
+          817
+        ],
+        "base": [
+          45,
+          41,
+          48,
+          41,
+          35,
+          41,
+          34,
+          43,
+          39,
+          58
+        ],
+        "growthMille": [
+          39,
+          39,
+          40,
+          41,
+          35,
+          36,
+          42,
+          42,
+          39,
+          47
+        ],
+        "rebirthBase": null,
+        "statsAt": {
+          "1": [
+            45,
+            41,
+            48,
+            41,
+            35,
+            41,
+            34,
+            43,
+            39,
+            58
+          ],
+          "10": [
+            60,
+            55,
+            65,
+            56,
+            46,
+            54,
+            46,
+            59,
+            52,
+            82
+          ],
+          "49": [
+            129,
+            117,
+            140,
+            121,
+            93,
+            111,
+            102,
+            129,
+            112,
+            188
+          ],
+          "50": [
+            130,
+            119,
+            142,
+            123,
+            95,
+            113,
+            103,
+            131,
+            113,
+            191
+          ],
+          "75": [
+            174,
+            159,
+            190,
+            165,
+            125,
+            150,
+            139,
+            176,
+            151,
+            259
+          ],
+          "100": [
+            218,
+            199,
+            238,
+            207,
+            156,
+            187,
+            175,
+            221,
+            189,
+            327
+          ]
+        },
+        "maxHpAt": {
+          "1": 429,
+          "50": 1266,
+          "100": 2126
+        },
+        "moveFactorPct": {
+          "1": 105,
+          "49": 105,
+          "50": 110
+        }
+      }
+    },
+    {
+      "input": {
+        "features": {},
+        "energy10": 0,
+        "skill10": 1000,
+        "imageHash": "00000000",
+        "origin": null
+      },
+      "expected": {
+        "kid": 0,
+        "isBloomer": true,
+        "attribute": "gu",
+        "jitterPct": 97,
+        "budget": 169,
+        "affinities": [
+          426,
+          368,
+          329,
+          517,
+          442,
+          450,
+          481,
+          472,
+          472,
+          737
+        ],
+        "base": [
+          16,
+          15,
+          14,
+          18,
+          16,
+          17,
+          17,
+          17,
+          17,
+          22
+        ],
+        "growthMille": [
+          40,
+          37,
+          44,
+          41,
+          35,
+          47,
+          38,
+          37,
+          40,
+          41
+        ],
+        "rebirthBase": [
+          38,
+          33,
+          33,
+          41,
+          44,
+          38,
+          39,
+          40,
+          42,
+          46
+        ],
+        "statsAt": {
+          "1": [
+            16,
+            15,
+            14,
+            18,
+            16,
+            17,
+            17,
+            17,
+            17,
+            22
+          ],
+          "10": [
+            21,
+            19,
+            19,
+            24,
+            21,
+            24,
+            22,
+            22,
+            23,
+            30
+          ],
+          "49": [
+            46,
+            41,
+            43,
+            53,
+            42,
+            55,
+            48,
+            47,
+            49,
+            65
+          ],
+          "50": [
+            112,
+            92,
+            104,
+            123,
+            119,
+            125,
+            111,
+            112,
+            124,
+            138
+          ],
+          "75": [
+            155,
+            127,
+            144,
+            170,
+            162,
+            175,
+            153,
+            153,
+            171,
+            191
+          ],
+          "100": [
+            197,
+            161,
+            185,
+            217,
+            205,
+            225,
+            194,
+            195,
+            218,
+            244
+          ]
+        },
+        "maxHpAt": {
+          "1": 168,
+          "50": 1162,
+          "100": 2045
+        },
+        "moveFactorPct": {
+          "1": 70,
+          "49": 70,
+          "50": 107
+        }
+      }
+    },
+    {
+      "input": {
+        "features": {
+          "roundness": 1000,
+          "silhouetteCoverage": 1000,
+          "inkCoverage": 1000,
+          "solidity": 1000,
+          "spikiness": 1000,
+          "redShare": 1000,
+          "lineThickness": 600,
+          "darkness": 1000,
+          "colorUnits": 30,
+          "balancedHueCount": 12,
+          "detailDensity": 1000,
+          "convexityDefects": 50,
+          "elongation": 1000,
+          "symmetry": 1000
+        },
+        "energy10": 750,
+        "skill10": 750,
+        "imageHash": "ffffffff",
+        "origin": null
+      },
+      "expected": {
+        "kid": 55,
+        "isBloomer": false,
+        "attribute": "gu",
+        "jitterPct": 101,
+        "budget": 395,
+        "affinities": [
+          1140,
+          950,
+          1060,
+          1050,
+          864,
+          864,
+          910,
+          600,
+          387,
+          439
+        ],
+        "base": [
+          47,
+          43,
+          45,
+          45,
+          40,
+          40,
+          42,
+          34,
+          29,
+          30
+        ],
+        "growthMille": [
+          47,
+          42,
+          38,
+          46,
+          37,
+          40,
+          43,
+          37,
+          32,
+          38
+        ],
+        "rebirthBase": null,
+        "statsAt": {
+          "1": [
+            47,
+            43,
+            45,
+            45,
+            40,
+            40,
+            42,
+            34,
+            29,
+            30
+          ],
+          "10": [
+            66,
+            59,
+            60,
+            63,
+            53,
+            54,
+            58,
+            45,
+            37,
+            40
+          ],
+          "49": [
+            153,
+            129,
+            127,
+            144,
+            111,
+            116,
+            128,
+            94,
+            73,
+            84
+          ],
+          "50": [
+            155,
+            131,
+            128,
+            146,
+            112,
+            118,
+            130,
+            95,
+            74,
+            85
+          ],
+          "75": [
+            210,
+            176,
+            171,
+            198,
+            149,
+            158,
+            175,
+            127,
+            97,
+            114
+          ],
+          "100": [
+            265,
+            221,
+            214,
+            249,
+            186,
+            198,
+            220,
+            158,
+            120,
+            142
+          ]
+        },
+        "maxHpAt": {
+          "1": 428,
+          "50": 1344,
+          "100": 2279
+        },
+        "moveFactorPct": {
+          "1": 100,
+          "49": 100,
+          "50": 105
+        }
+      }
     }
   ],
   "offlineMoves": [
     {
       "genomeIndex": 0,
       "moveFactorPct": 102,
+      "stream": 12,
+      "attribute": null,
       "expected": [
         {
           "template": "blast",
@@ -1994,6 +2939,8 @@
     {
       "genomeIndex": 1,
       "moveFactorPct": 101,
+      "stream": 12,
+      "attribute": null,
       "expected": [
         {
           "template": "blast",
@@ -2080,6 +3027,8 @@
     {
       "genomeIndex": 2,
       "moveFactorPct": 101,
+      "stream": 12,
+      "attribute": null,
       "expected": [
         {
           "template": "strike",
@@ -2159,6 +3108,8 @@
     {
       "genomeIndex": 3,
       "moveFactorPct": 70,
+      "stream": 12,
+      "attribute": null,
       "expected": [
         {
           "template": "blast",
@@ -2248,6 +3199,8 @@
     {
       "genomeIndex": 4,
       "moveFactorPct": 101,
+      "stream": 12,
+      "attribute": null,
       "expected": [
         {
           "template": "blast",
@@ -2334,6 +3287,8 @@
     {
       "genomeIndex": 5,
       "moveFactorPct": 70,
+      "stream": 12,
+      "attribute": null,
       "expected": [
         {
           "template": "blast",
@@ -2398,6 +3353,262 @@
           "vfx": "sparks",
           "colour": "white",
           "atkFormula": "INT70_RES30",
+          "power": 200,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 40,
+          "castTicks": 12,
+          "cooldownTicks": 80,
+          "cost": 100
+        }
+      ]
+    },
+    {
+      "genomeIndex": 3,
+      "moveFactorPct": 107,
+      "stream": 14,
+      "attribute": null,
+      "expected": [
+        {
+          "template": "blast",
+          "attribute": "gu",
+          "name": "がっちりビーム",
+          "flavor": "",
+          "vfx": "stars",
+          "colour": "black",
+          "atkFormula": "INT70_RES30",
+          "power": 115,
+          "hits": 1,
+          "accuracy": 90,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0,
+          "cost": 103
+        },
+        {
+          "template": "power_up",
+          "attribute": "none",
+          "name": "ぴかぴかきあい",
+          "flavor": "",
+          "vfx": "bubbles",
+          "colour": "yellow",
+          "stat": "INT",
+          "stages": 2,
+          "durationTicks": 100,
+          "spCost": 15,
+          "castTicks": 0,
+          "cooldownTicks": 120,
+          "cost": 97
+        },
+        {
+          "template": "blast",
+          "attribute": "choki",
+          "name": "ちょきちょきボール",
+          "flavor": "",
+          "vfx": "orb",
+          "colour": "cyan",
+          "atkFormula": "INT70_RES30",
+          "power": 175,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 20,
+          "castTicks": 6,
+          "cooldownTicks": 40,
+          "cost": 128
+        },
+        {
+          "template": "blast",
+          "attribute": "none",
+          "name": "ぴかぴかビーム",
+          "flavor": "",
+          "vfx": "stars",
+          "colour": "white",
+          "atkFormula": "INT70_RES30",
+          "power": 200,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 40,
+          "castTicks": 12,
+          "cooldownTicks": 80,
+          "cost": 100
+        }
+      ]
+    },
+    {
+      "genomeIndex": 5,
+      "moveFactorPct": 107,
+      "stream": 14,
+      "attribute": null,
+      "expected": [
+        {
+          "template": "blast",
+          "attribute": "pa",
+          "name": "ぱあっとスター",
+          "flavor": "",
+          "vfx": "sparks",
+          "colour": "pink",
+          "atkFormula": "INT60_LUK40",
+          "power": 105,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0,
+          "cost": 105
+        },
+        {
+          "template": "barrier",
+          "attribute": "none",
+          "name": "ぴかぴかまもり",
+          "flavor": "",
+          "vfx": "shield",
+          "colour": "yellow",
+          "shieldPct": 60,
+          "durationTicks": 40,
+          "spCost": 10,
+          "castTicks": 0,
+          "cooldownTicks": 60,
+          "cost": 58
+        },
+        {
+          "template": "barrage",
+          "attribute": "none",
+          "name": "わくわくビーム",
+          "flavor": "",
+          "vfx": "wave",
+          "colour": "pink",
+          "atkFormula": "INT60_LUK40",
+          "power": 145,
+          "hits": 2,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 15,
+          "castTicks": 0,
+          "cooldownTicks": 30,
+          "cost": 126
+        },
+        {
+          "template": "blast",
+          "attribute": "none",
+          "name": "ぴかぴかボール",
+          "flavor": "",
+          "vfx": "sparks",
+          "colour": "yellow",
+          "atkFormula": "INT60_LUK40",
+          "power": 200,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 40,
+          "castTicks": 12,
+          "cooldownTicks": 80,
+          "cost": 100
+        }
+      ]
+    },
+    {
+      "genomeIndex": 8,
+      "moveFactorPct": 101,
+      "stream": 12,
+      "attribute": "choki",
+      "expected": [
+        {
+          "template": "blast",
+          "attribute": "choki",
+          "name": "シャキーンスター",
+          "flavor": "",
+          "vfx": "orb",
+          "colour": "cyan",
+          "atkFormula": "INT60_LUK40",
+          "power": 90,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "debuff",
+            "chance": 20,
+            "stat": "RES"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0,
+          "cost": 98
+        },
+        {
+          "template": "blast",
+          "attribute": "none",
+          "name": "ぴかぴかビーム",
+          "flavor": "",
+          "vfx": "orb",
+          "colour": "white",
+          "atkFormula": "INT60_LUK40",
+          "power": 85,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "paralyze",
+            "chance": 30
+          },
+          "spCost": 10,
+          "castTicks": 0,
+          "cooldownTicks": 0,
+          "cost": 97
+        },
+        {
+          "template": "barrage",
+          "attribute": "none",
+          "name": "ぴかぴかスター",
+          "flavor": "",
+          "vfx": "stars",
+          "colour": "white",
+          "atkFormula": "INT60_LUK40",
+          "power": 140,
+          "hits": 2,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 15,
+          "castTicks": 0,
+          "cooldownTicks": 30,
+          "cost": 121
+        },
+        {
+          "template": "blast",
+          "attribute": "none",
+          "name": "わくわくスター",
+          "flavor": "",
+          "vfx": "wave",
+          "colour": "white",
+          "atkFormula": "INT60_LUK40",
           "power": 200,
           "hits": 1,
           "accuracy": 100,
@@ -2791,11 +4002,658 @@
         "cost": 108,
         "warnings": []
       }
+    },
+    {
+      "slot": 0,
+      "own": "pa",
+      "moveFactorPct": 70,
+      "input": {
+        "template": "strike",
+        "attribute": "pa",
+        "name": "ごつごつパンチ",
+        "flavor": "ぐーで ごつん！",
+        "vfx": "punch",
+        "colour": "red",
+        "atkFormula": "STR80_AGI20",
+        "power": 120,
+        "hits": 1,
+        "accuracy": 100,
+        "critBonus": 0,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 0
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "strike",
+          "attribute": "pa",
+          "name": "ごつごつパンチ",
+          "flavor": "ぐーで ごつん！",
+          "vfx": "punch",
+          "colour": "red",
+          "atkFormula": "STR80_AGI20",
+          "power": 70,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0
+        },
+        "cost": 70,
+        "warnings": [
+          "scaled to budget"
+        ]
+      }
+    },
+    {
+      "slot": 2,
+      "own": "gu",
+      "moveFactorPct": 105,
+      "input": {
+        "template": "combo",
+        "attribute": "gu",
+        "name": "ごつごつパンチ",
+        "flavor": "ぐーで ごつん！",
+        "vfx": "punch",
+        "colour": "red",
+        "atkFormula": "STR80_AGI20",
+        "power": 150.9,
+        "hits": 2.7,
+        "accuracy": "90",
+        "critBonus": true,
+        "spCost": 1000000000000.0,
+        "castTicks": -4,
+        "cooldownTicks": 30
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "combo",
+          "attribute": "gu",
+          "name": "ごつごつパンチ",
+          "flavor": "ぐーで ごつん！",
+          "vfx": "punch",
+          "colour": "red",
+          "atkFormula": "STR80_AGI20",
+          "power": 150,
+          "hits": 2,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 50,
+          "castTicks": 0,
+          "cooldownTicks": 30
+        },
+        "cost": 87,
+        "warnings": [
+          "accuracy not a number",
+          "critBonus not a number",
+          "spCost clamped",
+          "castTicks clamped"
+        ]
+      }
+    },
+    {
+      "slot": 2,
+      "own": "gu",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "strike",
+        "attribute": "gu",
+        "name": "ごつごつパンチ",
+        "flavor": "ぐーで ごつん！",
+        "vfx": null,
+        "colour": "red",
+        "atkFormula": 42,
+        "power": 100,
+        "hits": 1,
+        "accuracy": 100,
+        "critBonus": 0,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 0
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "strike",
+          "attribute": "gu",
+          "name": "ごつごつパンチ",
+          "flavor": "ぐーで ごつん！",
+          "vfx": "punch",
+          "colour": "red",
+          "atkFormula": "STR80_AGI20",
+          "power": 100,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0
+        },
+        "cost": 100,
+        "warnings": [
+          "vfx defaulted",
+          "atkFormula defaulted"
+        ]
+      }
+    },
+    {
+      "slot": 1,
+      "own": "gu",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "strike",
+        "attribute": "choki",
+        "name": "ごつごつパンチ",
+        "flavor": "ぐーで ごつん！",
+        "vfx": "punch",
+        "colour": "red",
+        "atkFormula": "STR80_AGI20",
+        "power": 100,
+        "hits": 1,
+        "accuracy": 100,
+        "critBonus": 0,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 0,
+        "secondary": {
+          "type": "debuff",
+          "chance": 99,
+          "stat": "HP"
+        }
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "strike",
+          "attribute": "choki",
+          "name": "ごつごつパンチ",
+          "flavor": "ぐーで ごつん！",
+          "vfx": "punch",
+          "colour": "red",
+          "atkFormula": "STR80_AGI20",
+          "power": 100,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0
+        },
+        "cost": 100,
+        "warnings": [
+          "secondary.chance clamped",
+          "secondary dropped"
+        ]
+      }
+    },
+    {
+      "slot": 1,
+      "own": "gu",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "strike",
+        "attribute": "choki",
+        "name": "ごつごつパンチ",
+        "flavor": "ぐーで ごつん！",
+        "vfx": "punch",
+        "colour": "red",
+        "atkFormula": "STR80_AGI20",
+        "power": 100,
+        "hits": 1,
+        "accuracy": 100,
+        "critBonus": 0,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 0,
+        "secondary": {
+          "type": "debuff",
+          "chance": 5,
+          "stat": "DEF"
+        }
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "strike",
+          "attribute": "choki",
+          "name": "ごつごつパンチ",
+          "flavor": "ぐーで ごつん！",
+          "vfx": "punch",
+          "colour": "red",
+          "atkFormula": "STR80_AGI20",
+          "power": 95,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "debuff",
+            "chance": 10,
+            "stat": "DEF"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0
+        },
+        "cost": 99,
+        "warnings": [
+          "secondary.chance clamped",
+          "scaled to budget"
+        ]
+      }
+    },
+    {
+      "slot": 2,
+      "own": "gu",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "strike",
+        "attribute": "gu",
+        "name": "ばかパンチ",
+        "flavor": "ぐーで ごつん！",
+        "vfx": "punch",
+        "colour": "red",
+        "atkFormula": "STR80_AGI20",
+        "power": 100,
+        "hits": 1,
+        "accuracy": 100,
+        "critBonus": 0,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 0
+      },
+      "expected": {
+        "rejected": true,
+        "reason": "name"
+      }
+    },
+    {
+      "slot": 2,
+      "own": "gu",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "strike",
+        "attribute": "gu",
+        "name": "ごつごつパンチ",
+        "flavor": "しねしね",
+        "vfx": "punch",
+        "colour": "red",
+        "atkFormula": "STR80_AGI20",
+        "power": 100,
+        "hits": 1,
+        "accuracy": 100,
+        "critBonus": 0,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 0
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "strike",
+          "attribute": "gu",
+          "name": "ごつごつパンチ",
+          "flavor": "",
+          "vfx": "punch",
+          "colour": "red",
+          "atkFormula": "STR80_AGI20",
+          "power": 100,
+          "hits": 1,
+          "accuracy": 100,
+          "critBonus": 0,
+          "secondary": {
+            "type": "none"
+          },
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0
+        },
+        "cost": 100,
+        "warnings": [
+          "flavor dropped"
+        ]
+      }
+    },
+    {
+      "slot": 2,
+      "own": "choki",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "weaken",
+        "name": "にらめっこ",
+        "vfx": "glow",
+        "colour": "purple",
+        "stat": "RES",
+        "stages": 2,
+        "durationTicks": 120,
+        "accuracy": 100,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 0
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "weaken",
+          "attribute": "none",
+          "name": "にらめっこ",
+          "flavor": "",
+          "vfx": "glow",
+          "colour": "purple",
+          "stat": "RES",
+          "stages": 2,
+          "durationTicks": 100,
+          "accuracy": 100,
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 120
+        },
+        "cost": 115,
+        "warnings": [
+          "scaled to budget"
+        ]
+      }
+    },
+    {
+      "slot": 2,
+      "own": "choki",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "weaken",
+        "name": "にらめっこ",
+        "stat": "HP"
+      },
+      "expected": {
+        "rejected": true,
+        "reason": "stat"
+      }
+    },
+    {
+      "slot": 1,
+      "own": "choki",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "paralyze",
+        "attribute": "gu",
+        "name": "ビリビリ",
+        "chance": 100,
+        "accuracy": 100
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "paralyze",
+          "attribute": "gu",
+          "name": "ビリビリ",
+          "flavor": "",
+          "vfx": "glow",
+          "colour": "white",
+          "accuracy": 100,
+          "chance": 100,
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 0
+        },
+        "cost": 80,
+        "warnings": [
+          "vfx defaulted",
+          "colour defaulted"
+        ]
+      }
+    },
+    {
+      "slot": 2,
+      "own": "pa",
+      "moveFactorPct": 100,
+      "input": {
+        "template": "heal",
+        "name": "げんき",
+        "healPct": 40,
+        "spCost": 0,
+        "castTicks": 0,
+        "cooldownTicks": 60
+      },
+      "expected": {
+        "rejected": false,
+        "move": {
+          "template": "heal",
+          "attribute": "none",
+          "name": "げんき",
+          "flavor": "",
+          "vfx": "glow",
+          "colour": "white",
+          "healPct": 20,
+          "spCost": 0,
+          "castTicks": 0,
+          "cooldownTicks": 60
+        },
+        "cost": 120,
+        "warnings": [
+          "vfx defaulted",
+          "colour defaulted",
+          "scaled to budget"
+        ]
+      }
+    },
+    {
+      "slot": 0,
+      "own": "choki",
+      "moveFactorPct": 95,
+      "input": {
+        "template": "barrier",
+        "name": "まもり",
+        "shieldPct": 60,
+        "durationTicks": 60
+      },
+      "expected": {
+        "rejected": true,
+        "reason": "slot 1 must be a damage move"
+      }
+    }
+  ],
+  "validatorSets": [
+    {
+      "own": "gu",
+      "moveFactorPct": 100,
+      "input": {
+        "moves": [
+          {
+            "template": "strike",
+            "attribute": "gu",
+            "name": "ごつごつパンチ",
+            "flavor": "ぐーで ごつん！",
+            "vfx": "punch",
+            "colour": "red",
+            "atkFormula": "STR80_AGI20",
+            "power": 100,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "strike",
+            "attribute": "choki",
+            "name": "ごつごつパンチ",
+            "flavor": "ぐーで ごつん！",
+            "vfx": "punch",
+            "colour": "red",
+            "atkFormula": "STR80_AGI20",
+            "power": 100,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "strike",
+            "attribute": "gu",
+            "name": "ばかキック",
+            "flavor": "ぐーで ごつん！",
+            "vfx": "punch",
+            "colour": "red",
+            "atkFormula": "STR80_AGI20",
+            "power": 100,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          "not a move"
+        ]
+      },
+      "expected": [
+        {
+          "rejected": false,
+          "move": {
+            "template": "strike",
+            "attribute": "gu",
+            "name": "ごつごつパンチ",
+            "flavor": "ぐーで ごつん！",
+            "vfx": "punch",
+            "colour": "red",
+            "atkFormula": "STR80_AGI20",
+            "power": 100,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          "cost": 100,
+          "warnings": []
+        },
+        {
+          "rejected": true,
+          "reason": "duplicate name"
+        },
+        {
+          "rejected": true,
+          "reason": "name"
+        },
+        {
+          "rejected": true,
+          "reason": "missing"
+        }
+      ]
+    },
+    {
+      "own": "pa",
+      "moveFactorPct": 70,
+      "input": {
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "ごつごつパンチ",
+            "flavor": "ぐーで ごつん！",
+            "vfx": "punch",
+            "colour": "red",
+            "atkFormula": "INT80_DEX20",
+            "power": 100,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          }
+        ]
+      },
+      "expected": [
+        {
+          "rejected": false,
+          "move": {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ごつごつパンチ",
+            "flavor": "ぐーで ごつん！",
+            "vfx": "punch",
+            "colour": "red",
+            "atkFormula": "INT80_DEX20",
+            "power": 70,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          "cost": 70,
+          "warnings": [
+            "slot 1 attribute forced to own",
+            "scaled to budget"
+          ]
+        },
+        {
+          "rejected": true,
+          "reason": "missing"
+        },
+        {
+          "rejected": true,
+          "reason": "missing"
+        },
+        {
+          "rejected": true,
+          "reason": "missing"
+        }
+      ]
+    },
+    {
+      "own": "choki",
+      "moveFactorPct": 100,
+      "input": "garbage",
+      "expected": [
+        {
+          "rejected": true,
+          "reason": "missing"
+        },
+        {
+          "rejected": true,
+          "reason": "missing"
+        },
+        {
+          "rejected": true,
+          "reason": "missing"
+        },
+        {
+          "rejected": true,
+          "reason": "missing"
+        }
+      ]
     }
   ],
   "battles": [
     {
       "input": {
+        "note": "design pair 0, Lv1",
         "seed": 1000,
         "a": {
           "stats": [
@@ -2907,11 +4765,17 @@
             }
           ]
         },
-        "thinkTicks": [
-          10,
-          10
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
         ],
-        "aiTier": "normal"
+        "inputs": []
       },
       "expected": {
         "winner": 0,
@@ -2925,127 +4789,277 @@
           428,
           349
         ],
-        "eventCount": 113,
-        "eventsFnv1a": 1022711491,
+        "actions": [
+          14,
+          14
+        ],
+        "eventCount": 115,
+        "eventsFnv1a": 762292435,
+        "stateHash": 3200109237,
+        "inputLog": [
+          [
+            46,
+            0,
+            0
+          ],
+          [
+            46,
+            1,
+            0
+          ],
+          [
+            92,
+            0,
+            0
+          ],
+          [
+            92,
+            1,
+            0
+          ],
+          [
+            138,
+            0,
+            0
+          ],
+          [
+            138,
+            1,
+            0
+          ],
+          [
+            184,
+            0,
+            0
+          ],
+          [
+            184,
+            1,
+            1
+          ],
+          [
+            230,
+            0,
+            0
+          ],
+          [
+            230,
+            1,
+            0
+          ],
+          [
+            276,
+            0,
+            0
+          ],
+          [
+            276,
+            1,
+            0
+          ],
+          [
+            322,
+            0,
+            0
+          ],
+          [
+            322,
+            1,
+            0
+          ],
+          [
+            368,
+            0,
+            0
+          ],
+          [
+            368,
+            1,
+            0
+          ],
+          [
+            414,
+            0,
+            0
+          ],
+          [
+            414,
+            1,
+            0
+          ],
+          [
+            460,
+            0,
+            0
+          ],
+          [
+            460,
+            1,
+            0
+          ],
+          [
+            506,
+            0,
+            0
+          ],
+          [
+            506,
+            1,
+            0
+          ],
+          [
+            552,
+            0,
+            0
+          ],
+          [
+            552,
+            1,
+            0
+          ],
+          [
+            598,
+            0,
+            1
+          ],
+          [
+            598,
+            1,
+            0
+          ],
+          [
+            644,
+            0,
+            0
+          ],
+          [
+            644,
+            1,
+            1
+          ]
+        ],
         "events": [
           "36 ready side=0",
           "36 ready side=1",
-          "46 choose cast=0,side=0,slot=0",
-          "46 choose cast=0,side=1,slot=0",
-          "46 move side=1,slot=0,template=blast",
-          "46 damage amount=29,cause=move,hp=399,target=0",
-          "46 move side=0,slot=0,template=blast",
-          "46 damage amount=25,cause=move,hp=324,target=1",
+          "46 select auto=0,cast=0,side=0,slot=0",
+          "46 select auto=0,cast=0,side=1,slot=0",
+          "46 moveStart attr=pa,side=1,slot=0,template=blast",
+          "46 hit amount=29,crit=0,hp=399,n=0,pct=100,side=1,target=0",
+          "46 moveStart attr=pa,side=0,slot=0,template=blast",
+          "46 hit amount=25,crit=0,hp=324,n=0,pct=100,side=0,target=1",
           "82 ready side=0",
           "82 ready side=1",
-          "92 choose cast=0,side=0,slot=0",
-          "92 choose cast=0,side=1,slot=0",
-          "92 move side=0,slot=0,template=blast",
-          "92 damage amount=24,cause=move,hp=300,target=1",
-          "92 move side=1,slot=0,template=blast",
-          "92 miss side=1",
+          "92 select auto=0,cast=0,side=0,slot=0",
+          "92 select auto=0,cast=0,side=1,slot=0",
+          "92 moveStart attr=pa,side=0,slot=0,template=blast",
+          "92 hit amount=24,crit=0,hp=300,n=0,pct=100,side=0,target=1",
+          "92 moveStart attr=pa,side=1,slot=0,template=blast",
+          "92 miss n=0,side=1,target=0",
           "128 ready side=0",
           "128 ready side=1",
-          "138 choose cast=0,side=0,slot=0",
-          "138 choose cast=0,side=1,slot=0",
-          "138 move side=0,slot=0,template=blast",
-          "138 damage amount=26,cause=move,hp=274,target=1",
-          "138 move side=1,slot=0,template=blast",
-          "138 damage amount=29,cause=move,hp=370,target=0",
+          "138 select auto=0,cast=0,side=0,slot=0",
+          "138 select auto=0,cast=0,side=1,slot=0",
+          "138 moveStart attr=pa,side=0,slot=0,template=blast",
+          "138 hit amount=26,crit=0,hp=274,n=0,pct=100,side=0,target=1",
+          "138 moveStart attr=pa,side=1,slot=0,template=blast",
+          "138 hit amount=29,crit=0,hp=370,n=0,pct=100,side=1,target=0",
           "174 ready side=0",
           "174 ready side=1",
-          "184 choose cast=0,side=0,slot=0",
-          "184 choose cast=0,side=1,slot=1",
-          "184 move side=0,slot=0,template=blast",
-          "184 damage amount=26,cause=move,hp=248,target=1",
-          "184 move side=1,slot=1,template=blast",
-          "184 damage amount=24,cause=move,hp=346,target=0",
+          "184 select auto=0,cast=0,side=0,slot=0",
+          "184 select auto=0,cast=0,side=1,slot=1",
+          "184 moveStart attr=pa,side=0,slot=0,template=blast",
+          "184 hit amount=26,crit=0,hp=248,n=0,pct=100,side=0,target=1",
+          "184 moveStart attr=gu,side=1,slot=1,template=blast",
+          "184 effective pct=75,side=1,target=0",
+          "184 hit amount=24,crit=0,hp=346,n=0,pct=75,side=1,target=0",
           "220 ready side=0",
           "220 ready side=1",
-          "230 choose cast=0,side=0,slot=0",
-          "230 choose cast=0,side=1,slot=0",
-          "230 move side=1,slot=0,template=blast",
-          "230 crit side=1",
-          "230 damage amount=47,cause=move,hp=299,target=0",
-          "230 move side=0,slot=0,template=blast",
-          "230 damage amount=26,cause=move,hp=222,target=1",
+          "230 select auto=0,cast=0,side=0,slot=0",
+          "230 select auto=0,cast=0,side=1,slot=0",
+          "230 moveStart attr=pa,side=1,slot=0,template=blast",
+          "230 hit amount=47,crit=1,hp=299,n=0,pct=100,side=1,target=0",
+          "230 moveStart attr=pa,side=0,slot=0,template=blast",
+          "230 hit amount=26,crit=0,hp=222,n=0,pct=100,side=0,target=1",
           "266 ready side=0",
           "266 ready side=1",
-          "276 choose cast=0,side=0,slot=0",
-          "276 choose cast=0,side=1,slot=0",
-          "276 move side=0,slot=0,template=blast",
-          "276 damage amount=25,cause=move,hp=197,target=1",
-          "276 move side=1,slot=0,template=blast",
-          "276 damage amount=29,cause=move,hp=270,target=0",
+          "276 select auto=0,cast=0,side=0,slot=0",
+          "276 select auto=0,cast=0,side=1,slot=0",
+          "276 moveStart attr=pa,side=0,slot=0,template=blast",
+          "276 hit amount=25,crit=0,hp=197,n=0,pct=100,side=0,target=1",
+          "276 moveStart attr=pa,side=1,slot=0,template=blast",
+          "276 hit amount=29,crit=0,hp=270,n=0,pct=100,side=1,target=0",
           "312 ready side=0",
           "312 ready side=1",
-          "322 choose cast=0,side=0,slot=0",
-          "322 choose cast=0,side=1,slot=0",
-          "322 move side=0,slot=0,template=blast",
-          "322 damage amount=25,cause=move,hp=172,target=1",
-          "322 move side=1,slot=0,template=blast",
-          "322 damage amount=31,cause=move,hp=239,target=0",
+          "322 select auto=0,cast=0,side=0,slot=0",
+          "322 select auto=0,cast=0,side=1,slot=0",
+          "322 moveStart attr=pa,side=0,slot=0,template=blast",
+          "322 hit amount=25,crit=0,hp=172,n=0,pct=100,side=0,target=1",
+          "322 moveStart attr=pa,side=1,slot=0,template=blast",
+          "322 hit amount=31,crit=0,hp=239,n=0,pct=100,side=1,target=0",
           "358 ready side=0",
           "358 ready side=1",
-          "368 choose cast=0,side=0,slot=0",
-          "368 choose cast=0,side=1,slot=0",
-          "368 move side=0,slot=0,template=blast",
-          "368 damage amount=25,cause=move,hp=147,target=1",
-          "368 move side=1,slot=0,template=blast",
-          "368 miss side=1",
+          "368 select auto=0,cast=0,side=0,slot=0",
+          "368 select auto=0,cast=0,side=1,slot=0",
+          "368 moveStart attr=pa,side=0,slot=0,template=blast",
+          "368 hit amount=25,crit=0,hp=147,n=0,pct=100,side=0,target=1",
+          "368 moveStart attr=pa,side=1,slot=0,template=blast",
+          "368 miss n=0,side=1,target=0",
           "404 ready side=0",
           "404 ready side=1",
-          "414 choose cast=0,side=0,slot=0",
-          "414 choose cast=0,side=1,slot=0",
-          "414 move side=1,slot=0,template=blast",
-          "414 damage amount=30,cause=move,hp=209,target=0",
-          "414 move side=0,slot=0,template=blast",
-          "414 damage amount=24,cause=move,hp=123,target=1",
+          "414 select auto=0,cast=0,side=0,slot=0",
+          "414 select auto=0,cast=0,side=1,slot=0",
+          "414 moveStart attr=pa,side=1,slot=0,template=blast",
+          "414 hit amount=30,crit=0,hp=209,n=0,pct=100,side=1,target=0",
+          "414 moveStart attr=pa,side=0,slot=0,template=blast",
+          "414 hit amount=24,crit=0,hp=123,n=0,pct=100,side=0,target=1",
           "450 ready side=0",
           "450 ready side=1",
-          "460 choose cast=0,side=0,slot=0",
-          "460 choose cast=0,side=1,slot=0",
-          "460 move side=0,slot=0,template=blast",
-          "460 crit side=0",
-          "460 damage amount=39,cause=move,hp=84,target=1",
-          "460 move side=1,slot=0,template=blast",
-          "460 damage amount=29,cause=move,hp=180,target=0",
+          "460 select auto=0,cast=0,side=0,slot=0",
+          "460 select auto=0,cast=0,side=1,slot=0",
+          "460 moveStart attr=pa,side=0,slot=0,template=blast",
+          "460 hit amount=39,crit=1,hp=84,n=0,pct=100,side=0,target=1",
+          "460 moveStart attr=pa,side=1,slot=0,template=blast",
+          "460 hit amount=29,crit=0,hp=180,n=0,pct=100,side=1,target=0",
           "496 ready side=0",
           "496 ready side=1",
-          "506 choose cast=0,side=0,slot=0",
-          "506 choose cast=0,side=1,slot=0",
-          "506 move side=1,slot=0,template=blast",
-          "506 damage amount=31,cause=move,hp=149,target=0",
-          "506 move side=0,slot=0,template=blast",
-          "506 damage amount=25,cause=move,hp=59,target=1",
+          "506 select auto=0,cast=0,side=0,slot=0",
+          "506 select auto=0,cast=0,side=1,slot=0",
+          "506 moveStart attr=pa,side=1,slot=0,template=blast",
+          "506 hit amount=31,crit=0,hp=149,n=0,pct=100,side=1,target=0",
+          "506 moveStart attr=pa,side=0,slot=0,template=blast",
+          "506 hit amount=25,crit=0,hp=59,n=0,pct=100,side=0,target=1",
           "542 ready side=0",
           "542 ready side=1",
-          "552 choose cast=0,side=0,slot=0",
-          "552 choose cast=0,side=1,slot=0",
-          "552 move side=1,slot=0,template=blast",
-          "552 damage amount=31,cause=move,hp=118,target=0",
-          "552 move side=0,slot=0,template=blast",
-          "552 damage amount=24,cause=move,hp=35,target=1",
+          "552 select auto=0,cast=0,side=0,slot=0",
+          "552 select auto=0,cast=0,side=1,slot=0",
+          "552 moveStart attr=pa,side=1,slot=0,template=blast",
+          "552 hit amount=31,crit=0,hp=118,n=0,pct=100,side=1,target=0",
+          "552 moveStart attr=pa,side=0,slot=0,template=blast",
+          "552 hit amount=24,crit=0,hp=35,n=0,pct=100,side=0,target=1",
           "588 ready side=0",
           "588 ready side=1",
-          "598 choose cast=0,side=0,slot=1",
-          "598 choose cast=0,side=1,slot=0",
-          "598 move side=1,slot=0,template=blast",
-          "598 damage amount=32,cause=move,hp=86,target=0",
-          "598 move side=0,slot=1,template=blast",
-          "598 damage amount=20,cause=move,hp=15,target=1",
+          "598 select auto=0,cast=0,side=0,slot=1",
+          "598 select auto=0,cast=0,side=1,slot=0",
+          "598 moveStart attr=pa,side=1,slot=0,template=blast",
+          "598 hit amount=32,crit=0,hp=86,n=0,pct=100,side=1,target=0",
+          "598 moveStart attr=gu,side=0,slot=1,template=blast",
+          "598 effective pct=75,side=0,target=1",
+          "598 hit amount=20,crit=0,hp=15,n=0,pct=75,side=0,target=1",
+          "601 heatUp ",
           "634 ready side=0",
           "634 ready side=1",
-          "644 choose cast=0,side=0,slot=0",
-          "644 choose cast=0,side=1,slot=1",
-          "644 move side=0,slot=0,template=blast",
-          "644 damage amount=28,cause=move,hp=0,target=1",
+          "644 select auto=0,cast=0,side=0,slot=0",
+          "644 select auto=0,cast=0,side=1,slot=1",
+          "644 moveStart attr=pa,side=0,slot=0,template=blast",
+          "644 hit amount=28,crit=0,hp=0,n=0,pct=100,side=0,target=1",
+          "644 faint side=1",
           "644 end reason=ko,winner=0"
         ]
       }
     },
     {
       "input": {
+        "note": "design pair 1, Lv10",
         "seed": 1001,
         "a": {
           "stats": [
@@ -3191,11 +5205,17 @@
             }
           ]
         },
-        "thinkTicks": [
-          10,
-          10
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
         ],
-        "aiTier": "normal"
+        "inputs": []
       },
       "expected": {
         "winner": 0,
@@ -3209,44 +5229,91 @@
           562,
           269
         ],
-        "eventCount": 30,
-        "eventsFnv1a": 1777009551,
+        "actions": [
+          4,
+          3
+        ],
+        "eventCount": 34,
+        "eventsFnv1a": 2101027629,
+        "stateHash": 1642393146,
+        "inputLog": [
+          [
+            42,
+            0,
+            2
+          ],
+          [
+            52,
+            1,
+            1
+          ],
+          [
+            90,
+            0,
+            2
+          ],
+          [
+            104,
+            1,
+            0
+          ],
+          [
+            138,
+            0,
+            2
+          ],
+          [
+            156,
+            1,
+            1
+          ],
+          [
+            186,
+            0,
+            0
+          ]
+        ],
         "events": [
           "32 ready side=0",
           "42 ready side=1",
-          "42 choose cast=6,side=0,slot=2",
-          "48 move side=0,slot=2,template=strike",
-          "48 damage amount=68,cause=move,hp=201,target=1",
-          "52 choose cast=0,side=1,slot=1",
-          "52 move side=1,slot=1,template=blast",
-          "52 damage amount=5,cause=move,hp=557,target=0",
+          "42 select auto=0,cast=6,side=0,slot=2",
+          "48 moveStart attr=gu,side=0,slot=2,template=strike",
+          "48 hit amount=68,crit=0,hp=201,n=0,pct=100,side=0,target=1",
+          "52 select auto=0,cast=0,side=1,slot=1",
+          "52 moveStart attr=none,side=1,slot=1,template=blast",
+          "52 hit amount=5,crit=0,hp=557,n=0,pct=100,side=1,target=0",
+          "52 statusFail status=poison,target=0",
           "80 ready side=0",
-          "90 choose cast=6,side=0,slot=2",
+          "90 select auto=0,cast=6,side=0,slot=2",
           "94 ready side=1",
-          "96 move side=0,slot=2,template=strike",
-          "96 crit side=0",
-          "96 damage amount=100,cause=move,hp=101,target=1",
-          "104 choose cast=0,side=1,slot=0",
-          "104 move side=1,slot=0,template=blast",
-          "104 damage amount=4,cause=move,hp=553,target=0",
+          "96 moveStart attr=gu,side=0,slot=2,template=strike",
+          "96 hit amount=100,crit=1,hp=101,n=0,pct=100,side=0,target=1",
+          "104 select auto=0,cast=0,side=1,slot=0",
+          "104 moveStart attr=gu,side=1,slot=0,template=blast",
+          "104 effective pct=75,side=1,target=0",
+          "104 hit amount=4,crit=0,hp=553,n=0,pct=75,side=1,target=0",
           "128 ready side=0",
-          "138 choose cast=6,side=0,slot=2",
-          "144 move side=0,slot=2,template=strike",
-          "144 damage amount=67,cause=move,hp=34,target=1",
+          "138 select auto=0,cast=6,side=0,slot=2",
+          "144 moveStart attr=gu,side=0,slot=2,template=strike",
+          "144 hit amount=67,crit=0,hp=34,n=0,pct=100,side=0,target=1",
           "146 ready side=1",
-          "156 choose cast=0,side=1,slot=1",
-          "156 move side=1,slot=1,template=blast",
-          "156 damage amount=5,cause=move,hp=548,target=0",
+          "156 select auto=0,cast=0,side=1,slot=1",
+          "156 moveStart attr=none,side=1,slot=1,template=blast",
+          "156 hit amount=5,crit=0,hp=548,n=0,pct=100,side=1,target=0",
+          "156 statusFail status=poison,target=0",
           "176 ready side=0",
-          "186 choose cast=0,side=0,slot=0",
-          "186 move side=0,slot=0,template=strike",
-          "186 damage amount=59,cause=move,hp=0,target=1",
+          "186 select auto=0,cast=0,side=0,slot=0",
+          "186 moveStart attr=pa,side=0,slot=0,template=strike",
+          "186 effective pct=150,side=0,target=1",
+          "186 hit amount=59,crit=0,hp=0,n=0,pct=150,side=0,target=1",
+          "186 faint side=1",
           "186 end reason=ko,winner=0"
         ]
       }
     },
     {
       "input": {
+        "note": "design pair 2, Lv50",
         "seed": 1002,
         "a": {
           "stats": [
@@ -3363,7 +5430,7 @@
               "flavor": "",
               "vfx": "sparks",
               "colour": "pink",
-              "atkFormula": "INT70_RES30",
+              "atkFormula": "INT60_LUK40",
               "power": 105,
               "hits": 1,
               "accuracy": 100,
@@ -3376,29 +5443,28 @@
               "cooldownTicks": 0
             },
             {
-              "template": "power_up",
+              "template": "barrier",
               "attribute": "none",
-              "name": "ぴかぴかがんばる",
+              "name": "ぴかぴかまもり",
               "flavor": "",
-              "vfx": "leaves",
-              "colour": "pink",
-              "stat": "INT",
-              "stages": 2,
-              "durationTicks": 100,
-              "spCost": 15,
+              "vfx": "shield",
+              "colour": "yellow",
+              "shieldPct": 60,
+              "durationTicks": 40,
+              "spCost": 10,
               "castTicks": 0,
-              "cooldownTicks": 120
+              "cooldownTicks": 60
             },
             {
               "template": "barrage",
               "attribute": "none",
-              "name": "わくわくスター",
+              "name": "わくわくビーム",
               "flavor": "",
-              "vfx": "stars",
-              "colour": "yellow",
-              "atkFormula": "INT70_RES30",
-              "power": 140,
-              "hits": 3,
+              "vfx": "wave",
+              "colour": "pink",
+              "atkFormula": "INT60_LUK40",
+              "power": 145,
+              "hits": 2,
               "accuracy": 100,
               "critBonus": 0,
               "secondary": {
@@ -3411,11 +5477,11 @@
             {
               "template": "blast",
               "attribute": "none",
-              "name": "ぴかぴかウェーブ",
+              "name": "ぴかぴかボール",
               "flavor": "",
-              "vfx": "beam",
+              "vfx": "sparks",
               "colour": "yellow",
-              "atkFormula": "INT70_RES30",
+              "atkFormula": "INT60_LUK40",
               "power": 200,
               "hits": 1,
               "accuracy": 100,
@@ -3429,30 +5495,149 @@
             }
           ]
         },
-        "thinkTicks": [
-          0,
-          10
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 0
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
         ],
-        "aiTier": "normal"
+        "inputs": []
       },
       "expected": {
         "winner": 0,
         "endReason": "ko",
-        "ticks": 382,
+        "ticks": 456,
         "hp": [
-          387,
+          364,
           0
         ],
         "maxHp": [
           1021,
           1178
         ],
-        "eventCount": 85,
-        "eventsFnv1a": 2098076189
+        "actions": [
+          12,
+          9
+        ],
+        "eventCount": 100,
+        "eventsFnv1a": 1449852420,
+        "stateHash": 2152515427,
+        "inputLog": [
+          [
+            37,
+            0,
+            3
+          ],
+          [
+            45,
+            1,
+            1
+          ],
+          [
+            86,
+            0,
+            2
+          ],
+          [
+            90,
+            1,
+            3
+          ],
+          [
+            123,
+            0,
+            1
+          ],
+          [
+            147,
+            1,
+            2
+          ],
+          [
+            160,
+            0,
+            2
+          ],
+          [
+            192,
+            1,
+            1
+          ],
+          [
+            197,
+            0,
+            0
+          ],
+          [
+            234,
+            0,
+            2
+          ],
+          [
+            237,
+            1,
+            2
+          ],
+          [
+            271,
+            0,
+            2
+          ],
+          [
+            282,
+            1,
+            0
+          ],
+          [
+            308,
+            0,
+            0
+          ],
+          [
+            327,
+            1,
+            2
+          ],
+          [
+            345,
+            0,
+            2
+          ],
+          [
+            372,
+            1,
+            1
+          ],
+          [
+            382,
+            0,
+            0
+          ],
+          [
+            417,
+            1,
+            0
+          ],
+          [
+            419,
+            0,
+            2
+          ],
+          [
+            456,
+            0,
+            0
+          ]
+        ]
       }
     },
     {
       "input": {
+        "note": "design pair 3, Lv100",
         "seed": 1003,
         "a": {
           "stats": [
@@ -3569,7 +5754,7 @@
               "flavor": "",
               "vfx": "beam",
               "colour": "green",
-              "atkFormula": "INT60_LUK40",
+              "atkFormula": "INT80_DEX20",
               "power": 115,
               "hits": 1,
               "accuracy": 90,
@@ -3588,7 +5773,7 @@
               "flavor": "",
               "vfx": "beam",
               "colour": "pink",
-              "atkFormula": "INT60_LUK40",
+              "atkFormula": "INT80_DEX20",
               "power": 80,
               "hits": 1,
               "accuracy": 100,
@@ -3608,7 +5793,7 @@
               "flavor": "",
               "vfx": "sparks",
               "colour": "green",
-              "atkFormula": "INT60_LUK40",
+              "atkFormula": "INT80_DEX20",
               "power": 175,
               "hits": 1,
               "accuracy": 100,
@@ -3627,7 +5812,7 @@
               "flavor": "",
               "vfx": "stars",
               "colour": "white",
-              "atkFormula": "INT60_LUK40",
+              "atkFormula": "INT80_DEX20",
               "power": 200,
               "hits": 1,
               "accuracy": 100,
@@ -3641,30 +5826,139 @@
             }
           ]
         },
-        "thinkTicks": [
-          10,
-          60
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 60
+          }
         ],
-        "aiTier": "normal"
+        "inputs": []
       },
       "expected": {
-        "winner": 1,
+        "winner": 0,
         "endReason": "ko",
-        "ticks": 552,
+        "ticks": 604,
         "hp": [
-          0,
-          375
+          16,
+          0
         ],
         "maxHp": [
           2128,
           2131
         ],
-        "eventCount": 76,
-        "eventsFnv1a": 268551725
+        "actions": [
+          13,
+          6
+        ],
+        "eventCount": 99,
+        "eventsFnv1a": 375837971,
+        "stateHash": 2149017379,
+        "inputLog": [
+          [
+            46,
+            0,
+            1
+          ],
+          [
+            86,
+            1,
+            2
+          ],
+          [
+            92,
+            0,
+            1
+          ],
+          [
+            138,
+            0,
+            1
+          ],
+          [
+            178,
+            1,
+            2
+          ],
+          [
+            184,
+            0,
+            1
+          ],
+          [
+            230,
+            0,
+            1
+          ],
+          [
+            270,
+            1,
+            2
+          ],
+          [
+            276,
+            0,
+            1
+          ],
+          [
+            322,
+            0,
+            2
+          ],
+          [
+            362,
+            1,
+            2
+          ],
+          [
+            374,
+            0,
+            1
+          ],
+          [
+            420,
+            0,
+            1
+          ],
+          [
+            454,
+            1,
+            2
+          ],
+          [
+            466,
+            0,
+            1
+          ],
+          [
+            512,
+            0,
+            1
+          ],
+          [
+            546,
+            1,
+            2
+          ],
+          [
+            558,
+            0,
+            1
+          ],
+          [
+            604,
+            0,
+            1
+          ]
+        ]
       }
     },
     {
       "input": {
+        "note": "design pair 4, Lv30",
         "seed": 1004,
         "a": {
           "stats": [
@@ -3810,11 +6104,17 @@
             }
           ]
         },
-        "thinkTicks": [
-          10,
-          10
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
         ],
-        "aiTier": "normal"
+        "inputs": []
       },
       "expected": {
         "winner": 1,
@@ -3828,12 +6128,175 @@
           715,
           879
         ],
-        "eventCount": 143,
-        "eventsFnv1a": 2849896046
+        "actions": [
+          16,
+          15
+        ],
+        "eventCount": 144,
+        "eventsFnv1a": 105779059,
+        "stateHash": 2661488837,
+        "inputLog": [
+          [
+            45,
+            0,
+            2
+          ],
+          [
+            47,
+            1,
+            0
+          ],
+          [
+            90,
+            0,
+            2
+          ],
+          [
+            94,
+            1,
+            0
+          ],
+          [
+            135,
+            0,
+            2
+          ],
+          [
+            141,
+            1,
+            0
+          ],
+          [
+            180,
+            0,
+            2
+          ],
+          [
+            188,
+            1,
+            0
+          ],
+          [
+            225,
+            0,
+            2
+          ],
+          [
+            235,
+            1,
+            0
+          ],
+          [
+            270,
+            0,
+            2
+          ],
+          [
+            282,
+            1,
+            0
+          ],
+          [
+            315,
+            0,
+            2
+          ],
+          [
+            329,
+            1,
+            1
+          ],
+          [
+            360,
+            0,
+            2
+          ],
+          [
+            376,
+            1,
+            0
+          ],
+          [
+            405,
+            0,
+            2
+          ],
+          [
+            423,
+            1,
+            0
+          ],
+          [
+            450,
+            0,
+            2
+          ],
+          [
+            470,
+            1,
+            1
+          ],
+          [
+            495,
+            0,
+            1
+          ],
+          [
+            525,
+            1,
+            0
+          ],
+          [
+            540,
+            0,
+            2
+          ],
+          [
+            584,
+            1,
+            1
+          ],
+          [
+            585,
+            0,
+            2
+          ],
+          [
+            630,
+            0,
+            1
+          ],
+          [
+            631,
+            1,
+            0
+          ],
+          [
+            675,
+            0,
+            2
+          ],
+          [
+            678,
+            1,
+            0
+          ],
+          [
+            720,
+            0,
+            1
+          ],
+          [
+            725,
+            1,
+            0
+          ]
+        ]
       }
     },
     {
       "input": {
+        "note": "design pair 5, Lv75",
         "seed": 1005,
         "a": {
           "stats": [
@@ -4026,11 +6489,17 @@
             }
           ]
         },
-        "thinkTicks": [
-          10,
-          10
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
         ],
-        "aiTier": "normal"
+        "inputs": []
       },
       "expected": {
         "winner": 1,
@@ -4044,8 +6513,3610 @@
           1567,
           1671
         ],
-        "eventCount": 72,
-        "eventsFnv1a": 3815334631
+        "actions": [
+          8,
+          7
+        ],
+        "eventCount": 78,
+        "eventsFnv1a": 1921387832,
+        "stateHash": 1676289314,
+        "inputLog": [
+          [
+            45,
+            0,
+            3
+          ],
+          [
+            48,
+            1,
+            3
+          ],
+          [
+            102,
+            0,
+            1
+          ],
+          [
+            108,
+            1,
+            2
+          ],
+          [
+            147,
+            0,
+            2
+          ],
+          [
+            162,
+            1,
+            2
+          ],
+          [
+            192,
+            0,
+            1
+          ],
+          [
+            216,
+            1,
+            0
+          ],
+          [
+            237,
+            0,
+            1
+          ],
+          [
+            264,
+            1,
+            2
+          ],
+          [
+            282,
+            0,
+            1
+          ],
+          [
+            318,
+            1,
+            2
+          ],
+          [
+            327,
+            0,
+            1
+          ],
+          [
+            372,
+            0,
+            1
+          ],
+          [
+            372,
+            1,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "つよい vs ふつう",
+        "seed": 2001,
+        "a": {
+          "stats": [
+            102,
+            85,
+            43,
+            57,
+            50,
+            81,
+            51,
+            69,
+            82,
+            68
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "ぱあっとビーム",
+              "flavor": "",
+              "vfx": "wave",
+              "colour": "pink",
+              "atkFormula": "INT80_DEX20",
+              "power": 100,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ぐるぐるビーム",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "red",
+              "atkFormula": "INT80_DEX20",
+              "power": 115,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "barrage",
+              "attribute": "pa",
+              "name": "もくもくスター",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "rainbow",
+              "atkFormula": "INT80_DEX20",
+              "power": 135,
+              "hits": 3,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            64,
+            81,
+            66,
+            90,
+            79,
+            71,
+            75,
+            47,
+            62,
+            82
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "strike",
+              "attribute": "pa",
+              "name": "ぱあっとキック",
+              "flavor": "",
+              "vfx": "slash",
+              "colour": "pink",
+              "atkFormula": "STR70_VIT30",
+              "power": 100,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "heal",
+              "attribute": "none",
+              "name": "わくわくげんき",
+              "flavor": "",
+              "vfx": "bubbles",
+              "colour": "white",
+              "healPct": 25,
+              "spCost": 25,
+              "castTicks": 0,
+              "cooldownTicks": 100
+            },
+            {
+              "template": "strike",
+              "attribute": "gu",
+              "name": "どすんずつき",
+              "flavor": "",
+              "vfx": "slash",
+              "colour": "black",
+              "atkFormula": "STR70_VIT30",
+              "power": 165,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 20,
+              "castTicks": 6,
+              "cooldownTicks": 40
+            }
+          ]
+        },
+        "controllers": [
+          {
+            "tier": "strong",
+            "think": 4
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 0,
+        "endReason": "ko",
+        "ticks": 780,
+        "hp": [
+          164,
+          0
+        ],
+        "maxHp": [
+          764,
+          730
+        ],
+        "actions": [
+          20,
+          16
+        ],
+        "eventCount": 177,
+        "eventsFnv1a": 358930890,
+        "stateHash": 1511422703,
+        "inputLog": [
+          [
+            39,
+            0,
+            2
+          ],
+          [
+            48,
+            1,
+            0
+          ],
+          [
+            78,
+            0,
+            2
+          ],
+          [
+            96,
+            1,
+            0
+          ],
+          [
+            117,
+            0,
+            2
+          ],
+          [
+            144,
+            1,
+            0
+          ],
+          [
+            156,
+            0,
+            2
+          ],
+          [
+            192,
+            1,
+            0
+          ],
+          [
+            195,
+            0,
+            2
+          ],
+          [
+            234,
+            0,
+            2
+          ],
+          [
+            240,
+            1,
+            0
+          ],
+          [
+            273,
+            0,
+            2
+          ],
+          [
+            288,
+            1,
+            1
+          ],
+          [
+            312,
+            0,
+            0
+          ],
+          [
+            336,
+            1,
+            0
+          ],
+          [
+            351,
+            0,
+            2
+          ],
+          [
+            384,
+            1,
+            0
+          ],
+          [
+            390,
+            0,
+            2
+          ],
+          [
+            429,
+            0,
+            0
+          ],
+          [
+            432,
+            1,
+            1
+          ],
+          [
+            468,
+            0,
+            2
+          ],
+          [
+            480,
+            1,
+            0
+          ],
+          [
+            507,
+            0,
+            2
+          ],
+          [
+            528,
+            1,
+            0
+          ],
+          [
+            546,
+            0,
+            0
+          ],
+          [
+            576,
+            1,
+            1
+          ],
+          [
+            585,
+            0,
+            2
+          ],
+          [
+            624,
+            0,
+            2
+          ],
+          [
+            624,
+            1,
+            0
+          ],
+          [
+            663,
+            0,
+            0
+          ],
+          [
+            672,
+            1,
+            0
+          ],
+          [
+            702,
+            0,
+            2
+          ],
+          [
+            720,
+            1,
+            1
+          ],
+          [
+            741,
+            0,
+            2
+          ],
+          [
+            768,
+            1,
+            0
+          ],
+          [
+            780,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "よわい vs ふつう",
+        "seed": 2002,
+        "a": {
+          "stats": [
+            31,
+            53,
+            49,
+            41,
+            45,
+            52,
+            47,
+            48,
+            37,
+            55
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "もくもくウェーブ",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "blue",
+              "atkFormula": "INT60_LUK40",
+              "power": 100,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ぐるぐるウェーブ",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "black",
+              "atkFormula": "INT60_LUK40",
+              "power": 115,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            57,
+            35,
+            39,
+            45,
+            52,
+            42,
+            43,
+            29,
+            55,
+            42
+          ],
+          "attribute": "gu",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "がっちりスター",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "black",
+              "atkFormula": "INT70_RES30",
+              "power": 100,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "choki",
+              "name": "とげとげスター",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "yellow",
+              "atkFormula": "INT70_RES30",
+              "power": 115,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "controllers": [
+          {
+            "tier": "weak",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 1,
+        "endReason": "ko",
+        "ticks": 484,
+        "hp": [
+          0,
+          60
+        ],
+        "maxHp": [
+          404,
+          480
+        ],
+        "actions": [
+          9,
+          11
+        ],
+        "eventCount": 99,
+        "eventsFnv1a": 3475364753,
+        "stateHash": 1269659771,
+        "inputLog": [
+          [
+            44,
+            1,
+            1
+          ],
+          [
+            49,
+            0,
+            1
+          ],
+          [
+            88,
+            1,
+            1
+          ],
+          [
+            98,
+            0,
+            0
+          ],
+          [
+            132,
+            1,
+            1
+          ],
+          [
+            147,
+            0,
+            0
+          ],
+          [
+            176,
+            1,
+            1
+          ],
+          [
+            196,
+            0,
+            1
+          ],
+          [
+            220,
+            1,
+            1
+          ],
+          [
+            245,
+            0,
+            1
+          ],
+          [
+            264,
+            1,
+            1
+          ],
+          [
+            294,
+            0,
+            0
+          ],
+          [
+            308,
+            1,
+            1
+          ],
+          [
+            343,
+            0,
+            0
+          ],
+          [
+            352,
+            1,
+            1
+          ],
+          [
+            392,
+            0,
+            1
+          ],
+          [
+            396,
+            1,
+            1
+          ],
+          [
+            440,
+            1,
+            1
+          ],
+          [
+            441,
+            0,
+            0
+          ],
+          [
+            484,
+            1,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "さきどり: scripted taps (some invalid) + timeouts",
+        "seed": 2003,
+        "a": {
+          "stats": [
+            37,
+            68,
+            48,
+            41,
+            53,
+            59,
+            57,
+            65,
+            74,
+            79
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "ふわふわスター",
+              "flavor": "",
+              "vfx": "orb",
+              "colour": "blue",
+              "atkFormula": "INT60_LUK40",
+              "power": 90,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "debuff",
+                "chance": 20,
+                "stat": "RES"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "ぴかぴかビーム",
+              "flavor": "",
+              "vfx": "orb",
+              "colour": "white",
+              "atkFormula": "INT60_LUK40",
+              "power": 85,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "paralyze",
+                "chance": 30
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "barrage",
+              "attribute": "none",
+              "name": "ぴかぴかスター",
+              "flavor": "",
+              "vfx": "stars",
+              "colour": "white",
+              "atkFormula": "INT60_LUK40",
+              "power": 140,
+              "hits": 2,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            55,
+            51,
+            49,
+            66,
+            53,
+            61,
+            82,
+            46,
+            65,
+            51
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "もくもくビーム",
+              "flavor": "",
+              "vfx": "wave",
+              "colour": "rainbow",
+              "atkFormula": "INT70_RES30",
+              "power": 100,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "heal",
+              "attribute": "none",
+              "name": "にこにこおひるね",
+              "flavor": "",
+              "vfx": "bubbles",
+              "colour": "yellow",
+              "healPct": 25,
+              "spCost": 25,
+              "castTicks": 0,
+              "cooldownTicks": 100
+            },
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ごつごつスター",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "black",
+              "atkFormula": "INT70_RES30",
+              "power": 165,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 20,
+              "castTicks": 6,
+              "cooldownTicks": 40
+            }
+          ]
+        },
+        "controllers": [
+          null,
+          {
+            "tier": "normal",
+            "think": 10
+          }
+        ],
+        "inputs": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            24,
+            0,
+            1
+          ],
+          [
+            47,
+            0,
+            2
+          ],
+          [
+            70,
+            0,
+            0
+          ],
+          [
+            93,
+            0,
+            1
+          ],
+          [
+            116,
+            0,
+            2
+          ],
+          [
+            139,
+            0,
+            0
+          ],
+          [
+            162,
+            0,
+            1
+          ],
+          [
+            185,
+            0,
+            2
+          ],
+          [
+            208,
+            0,
+            0
+          ],
+          [
+            231,
+            0,
+            1
+          ],
+          [
+            254,
+            0,
+            2
+          ],
+          [
+            277,
+            0,
+            0
+          ],
+          [
+            300,
+            0,
+            1
+          ],
+          [
+            323,
+            0,
+            2
+          ],
+          [
+            346,
+            0,
+            0
+          ],
+          [
+            369,
+            0,
+            1
+          ],
+          [
+            392,
+            0,
+            2
+          ],
+          [
+            415,
+            0,
+            0
+          ],
+          [
+            438,
+            0,
+            1
+          ],
+          [
+            461,
+            0,
+            2
+          ],
+          [
+            484,
+            0,
+            0
+          ],
+          [
+            507,
+            0,
+            1
+          ],
+          [
+            530,
+            0,
+            2
+          ],
+          [
+            553,
+            0,
+            0
+          ],
+          [
+            576,
+            0,
+            1
+          ],
+          [
+            599,
+            0,
+            2
+          ],
+          [
+            622,
+            0,
+            0
+          ],
+          [
+            645,
+            0,
+            1
+          ],
+          [
+            668,
+            0,
+            2
+          ],
+          [
+            691,
+            0,
+            0
+          ],
+          [
+            714,
+            0,
+            1
+          ],
+          [
+            737,
+            0,
+            2
+          ],
+          [
+            760,
+            0,
+            0
+          ],
+          [
+            783,
+            0,
+            1
+          ],
+          [
+            806,
+            0,
+            2
+          ],
+          [
+            829,
+            0,
+            0
+          ],
+          [
+            852,
+            0,
+            1
+          ],
+          [
+            875,
+            0,
+            2
+          ],
+          [
+            898,
+            0,
+            0
+          ],
+          [
+            921,
+            0,
+            1
+          ],
+          [
+            944,
+            0,
+            2
+          ],
+          [
+            967,
+            0,
+            0
+          ],
+          [
+            990,
+            0,
+            1
+          ],
+          [
+            1013,
+            0,
+            2
+          ],
+          [
+            1036,
+            0,
+            0
+          ],
+          [
+            1059,
+            0,
+            1
+          ],
+          [
+            1082,
+            0,
+            2
+          ],
+          [
+            1105,
+            0,
+            0
+          ],
+          [
+            1128,
+            0,
+            1
+          ],
+          [
+            1151,
+            0,
+            2
+          ],
+          [
+            1174,
+            0,
+            0
+          ],
+          [
+            1197,
+            0,
+            1
+          ],
+          [
+            1220,
+            0,
+            2
+          ],
+          [
+            1243,
+            0,
+            0
+          ],
+          [
+            1266,
+            0,
+            1
+          ],
+          [
+            1289,
+            0,
+            2
+          ],
+          [
+            1312,
+            0,
+            0
+          ],
+          [
+            1335,
+            0,
+            1
+          ],
+          [
+            1358,
+            0,
+            2
+          ],
+          [
+            1381,
+            0,
+            0
+          ],
+          [
+            1404,
+            0,
+            1
+          ],
+          [
+            1427,
+            0,
+            2
+          ],
+          [
+            1450,
+            0,
+            0
+          ],
+          [
+            1473,
+            0,
+            1
+          ],
+          [
+            1496,
+            0,
+            2
+          ],
+          [
+            1519,
+            0,
+            0
+          ],
+          [
+            1542,
+            0,
+            1
+          ],
+          [
+            1565,
+            0,
+            2
+          ],
+          [
+            1588,
+            0,
+            0
+          ],
+          [
+            1611,
+            0,
+            1
+          ],
+          [
+            1634,
+            0,
+            2
+          ],
+          [
+            1657,
+            0,
+            0
+          ],
+          [
+            1680,
+            0,
+            1
+          ],
+          [
+            1703,
+            0,
+            2
+          ],
+          [
+            1726,
+            0,
+            0
+          ],
+          [
+            1749,
+            0,
+            1
+          ],
+          [
+            1772,
+            0,
+            2
+          ],
+          [
+            1795,
+            0,
+            0
+          ],
+          [
+            5,
+            0,
+            7
+          ]
+        ]
+      },
+      "expected": {
+        "winner": 1,
+        "endReason": "ko",
+        "ticks": 734,
+        "hp": [
+          0,
+          119
+        ],
+        "maxHp": [
+          483,
+          586
+        ],
+        "actions": [
+          20,
+          14
+        ],
+        "eventCount": 163,
+        "eventsFnv1a": 1845209912,
+        "stateHash": 2440813082,
+        "inputLog": [
+          [
+            36,
+            0,
+            1
+          ],
+          [
+            47,
+            1,
+            2
+          ],
+          [
+            72,
+            0,
+            0
+          ],
+          [
+            100,
+            1,
+            2
+          ],
+          [
+            108,
+            0,
+            1
+          ],
+          [
+            144,
+            0,
+            0
+          ],
+          [
+            153,
+            1,
+            0
+          ],
+          [
+            180,
+            0,
+            1
+          ],
+          [
+            206,
+            1,
+            2
+          ],
+          [
+            216,
+            0,
+            0
+          ],
+          [
+            252,
+            0,
+            1
+          ],
+          [
+            270,
+            1,
+            1
+          ],
+          [
+            288,
+            0,
+            0
+          ],
+          [
+            317,
+            1,
+            2
+          ],
+          [
+            324,
+            0,
+            2
+          ],
+          [
+            360,
+            0,
+            0
+          ],
+          [
+            370,
+            1,
+            2
+          ],
+          [
+            396,
+            0,
+            2
+          ],
+          [
+            423,
+            1,
+            0
+          ],
+          [
+            432,
+            0,
+            0
+          ],
+          [
+            468,
+            0,
+            2
+          ],
+          [
+            470,
+            1,
+            2
+          ],
+          [
+            504,
+            0,
+            0
+          ],
+          [
+            523,
+            1,
+            0
+          ],
+          [
+            540,
+            0,
+            2
+          ],
+          [
+            570,
+            1,
+            1
+          ],
+          [
+            576,
+            0,
+            1
+          ],
+          [
+            612,
+            0,
+            2
+          ],
+          [
+            617,
+            1,
+            0
+          ],
+          [
+            648,
+            0,
+            1
+          ],
+          [
+            668,
+            1,
+            2
+          ],
+          [
+            684,
+            0,
+            2
+          ],
+          [
+            720,
+            0,
+            1
+          ],
+          [
+            734,
+            1,
+            0
+          ]
+        ],
+        "events": [
+          "36 ready side=0",
+          "36 select auto=0,cast=0,side=0,slot=1",
+          "36 moveStart attr=none,side=0,slot=1,template=blast",
+          "36 hit amount=40,crit=1,hp=546,n=0,pct=100,side=0,target=1",
+          "36 statusFail status=paralyze,target=1",
+          "37 ready side=1",
+          "47 select auto=0,cast=6,side=1,slot=2",
+          "53 moveStart attr=gu,side=1,slot=2,template=blast",
+          "53 effective pct=75,side=1,target=0",
+          "53 miss n=0,side=1,target=0",
+          "72 ready side=0",
+          "72 select auto=0,cast=0,side=0,slot=0",
+          "72 moveStart attr=pa,side=0,slot=0,template=blast",
+          "72 hit amount=30,crit=0,hp=516,n=0,pct=100,side=0,target=1",
+          "90 ready side=1",
+          "100 select auto=0,cast=6,side=1,slot=2",
+          "106 moveStart attr=gu,side=1,slot=2,template=blast",
+          "106 effective pct=75,side=1,target=0",
+          "106 hit amount=47,crit=0,hp=436,n=0,pct=75,side=1,target=0",
+          "108 ready side=0",
+          "108 select auto=0,cast=0,side=0,slot=1",
+          "108 moveStart attr=none,side=0,slot=1,template=blast",
+          "108 hit amount=29,crit=0,hp=487,n=0,pct=100,side=0,target=1",
+          "108 statusFail status=paralyze,target=1",
+          "143 ready side=1",
+          "144 ready side=0",
+          "144 select auto=0,cast=0,side=0,slot=0",
+          "144 moveStart attr=pa,side=0,slot=0,template=blast",
+          "144 hit amount=30,crit=0,hp=457,n=0,pct=100,side=0,target=1",
+          "144 stage side=1,stage=-1,stat=RES,ticks=60",
+          "153 select auto=0,cast=0,side=1,slot=0",
+          "153 moveStart attr=pa,side=1,slot=0,template=blast",
+          "153 hit amount=36,crit=0,hp=400,n=0,pct=100,side=1,target=0",
+          "180 ready side=0",
+          "180 select auto=0,cast=0,side=0,slot=1",
+          "180 moveStart attr=none,side=0,slot=1,template=blast",
+          "180 hit amount=30,crit=0,hp=427,n=0,pct=100,side=0,target=1",
+          "180 status status=paralyze,target=1,ticks=60",
+          "196 ready side=1",
+          "204 expire kind=RES,side=1",
+          "206 select auto=0,cast=6,side=1,slot=2",
+          "212 moveStart attr=gu,side=1,slot=2,template=blast",
+          "212 effective pct=75,side=1,target=0",
+          "212 hit amount=48,crit=0,hp=352,n=0,pct=75,side=1,target=0",
+          "216 ready side=0",
+          "216 select auto=0,cast=0,side=0,slot=0",
+          "216 moveStart attr=pa,side=0,slot=0,template=blast",
+          "216 hit amount=31,crit=0,hp=396,n=0,pct=100,side=0,target=1",
+          "240 expire kind=paralyze,side=1",
+          "252 ready side=0",
+          "252 select auto=0,cast=0,side=0,slot=1",
+          "252 moveStart attr=none,side=0,slot=1,template=blast",
+          "252 hit amount=28,crit=0,hp=368,n=0,pct=100,side=0,target=1",
+          "252 statusFail status=paralyze,target=1",
+          "260 ready side=1",
+          "270 select auto=0,cast=0,side=1,slot=1",
+          "270 moveStart attr=none,side=1,slot=1,template=heal",
+          "270 heal amount=149,hp=517,side=1,source=move",
+          "288 ready side=0",
+          "288 select auto=0,cast=0,side=0,slot=0",
+          "288 moveStart attr=pa,side=0,slot=0,template=blast",
+          "288 hit amount=30,crit=0,hp=487,n=0,pct=100,side=0,target=1",
+          "307 ready side=1",
+          "317 select auto=0,cast=6,side=1,slot=2",
+          "323 moveStart attr=gu,side=1,slot=2,template=blast",
+          "323 effective pct=75,side=1,target=0",
+          "323 hit amount=52,crit=0,hp=300,n=0,pct=75,side=1,target=0",
+          "324 ready side=0",
+          "324 select auto=0,cast=0,side=0,slot=2",
+          "324 moveStart attr=none,side=0,slot=2,template=barrage",
+          "324 hit amount=25,crit=0,hp=462,n=0,pct=100,side=0,target=1",
+          "324 hit amount=22,crit=0,hp=440,n=1,pct=100,side=0,target=1",
+          "360 ready side=0",
+          "360 ready side=1",
+          "360 select auto=0,cast=0,side=0,slot=0",
+          "360 moveStart attr=pa,side=0,slot=0,template=blast",
+          "360 hit amount=29,crit=0,hp=411,n=0,pct=100,side=0,target=1",
+          "370 select auto=0,cast=6,side=1,slot=2",
+          "376 moveStart attr=gu,side=1,slot=2,template=blast",
+          "376 effective pct=75,side=1,target=0",
+          "376 hit amount=49,crit=0,hp=251,n=0,pct=75,side=1,target=0",
+          "396 ready side=0",
+          "396 select auto=0,cast=0,side=0,slot=2",
+          "396 moveStart attr=none,side=0,slot=2,template=barrage",
+          "396 hit amount=25,crit=0,hp=386,n=0,pct=100,side=0,target=1",
+          "396 hit amount=23,crit=0,hp=363,n=1,pct=100,side=0,target=1",
+          "413 ready side=1",
+          "423 select auto=0,cast=0,side=1,slot=0",
+          "423 moveStart attr=pa,side=1,slot=0,template=blast",
+          "423 hit amount=40,crit=0,hp=211,n=0,pct=100,side=1,target=0",
+          "432 ready side=0",
+          "432 select auto=0,cast=0,side=0,slot=0",
+          "432 moveStart attr=pa,side=0,slot=0,template=blast",
+          "432 hit amount=29,crit=0,hp=334,n=0,pct=100,side=0,target=1",
+          "460 ready side=1",
+          "468 ready side=0",
+          "468 select auto=0,cast=0,side=0,slot=2",
+          "468 moveStart attr=none,side=0,slot=2,template=barrage",
+          "468 hit amount=22,crit=0,hp=312,n=0,pct=100,side=0,target=1",
+          "468 hit amount=25,crit=0,hp=287,n=1,pct=100,side=0,target=1",
+          "470 select auto=0,cast=6,side=1,slot=2",
+          "476 moveStart attr=gu,side=1,slot=2,template=blast",
+          "476 effective pct=75,side=1,target=0",
+          "476 hit amount=50,crit=0,hp=161,n=0,pct=75,side=1,target=0",
+          "504 ready side=0",
+          "504 select auto=0,cast=0,side=0,slot=0",
+          "504 moveStart attr=pa,side=0,slot=0,template=blast",
+          "504 hit amount=30,crit=0,hp=257,n=0,pct=100,side=0,target=1",
+          "513 ready side=1",
+          "523 select auto=0,cast=0,side=1,slot=0",
+          "523 moveStart attr=pa,side=1,slot=0,template=blast",
+          "523 hit amount=41,crit=0,hp=120,n=0,pct=100,side=1,target=0",
+          "540 ready side=0",
+          "540 select auto=0,cast=0,side=0,slot=2",
+          "540 moveStart attr=none,side=0,slot=2,template=barrage",
+          "540 hit amount=24,crit=0,hp=233,n=0,pct=100,side=0,target=1",
+          "540 hit amount=23,crit=0,hp=210,n=1,pct=100,side=0,target=1",
+          "560 ready side=1",
+          "570 select auto=0,cast=0,side=1,slot=1",
+          "570 moveStart attr=none,side=1,slot=1,template=heal",
+          "570 heal amount=112,hp=322,side=1,source=move",
+          "576 ready side=0",
+          "576 select auto=0,cast=0,side=0,slot=1",
+          "576 moveStart attr=none,side=0,slot=1,template=blast",
+          "576 hit amount=27,crit=0,hp=295,n=0,pct=100,side=0,target=1",
+          "576 statusFail status=paralyze,target=1",
+          "601 heatUp ",
+          "607 ready side=1",
+          "612 ready side=0",
+          "612 select auto=0,cast=0,side=0,slot=2",
+          "612 moveStart attr=none,side=0,slot=2,template=barrage",
+          "612 hit amount=23,crit=0,hp=272,n=0,pct=100,side=0,target=1",
+          "612 hit amount=24,crit=0,hp=248,n=1,pct=100,side=0,target=1",
+          "617 select auto=0,cast=0,side=1,slot=0",
+          "617 moveStart attr=pa,side=1,slot=0,template=blast",
+          "617 hit amount=39,crit=0,hp=81,n=0,pct=100,side=1,target=0",
+          "648 ready side=0",
+          "648 select auto=0,cast=0,side=0,slot=1",
+          "648 moveStart attr=none,side=0,slot=1,template=blast",
+          "648 hit amount=30,crit=0,hp=218,n=0,pct=100,side=0,target=1",
+          "648 status status=paralyze,target=1,ticks=60",
+          "658 ready side=1",
+          "668 select auto=0,cast=6,side=1,slot=2",
+          "674 moveStart attr=gu,side=1,slot=2,template=blast",
+          "674 effective pct=75,side=1,target=0",
+          "674 hit amount=59,crit=0,hp=22,n=0,pct=75,side=1,target=0",
+          "684 ready side=0",
+          "684 select auto=0,cast=0,side=0,slot=2",
+          "684 moveStart attr=none,side=0,slot=2,template=barrage",
+          "684 hit amount=29,crit=0,hp=189,n=0,pct=100,side=0,target=1",
+          "684 hit amount=31,crit=0,hp=158,n=1,pct=100,side=0,target=1",
+          "708 expire kind=paralyze,side=1",
+          "720 ready side=0",
+          "720 select auto=0,cast=0,side=0,slot=1",
+          "720 moveStart attr=none,side=0,slot=1,template=blast",
+          "720 hit amount=39,crit=0,hp=119,n=0,pct=100,side=0,target=1",
+          "720 statusFail status=paralyze,target=1",
+          "724 ready side=1",
+          "734 select auto=0,cast=0,side=1,slot=0",
+          "734 moveStart attr=pa,side=1,slot=0,template=blast",
+          "734 hit amount=54,crit=0,hp=0,n=0,pct=100,side=1,target=0",
+          "734 faint side=0",
+          "734 end reason=ko,winner=1"
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "no input at all: every move is the 5 s おまかせ",
+        "seed": 2004,
+        "a": {
+          "stats": [
+            118,
+            93,
+            82,
+            76,
+            61,
+            108,
+            92,
+            122,
+            177,
+            85
+          ],
+          "attribute": "choki",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "choki",
+              "name": "ちょきちょきボール",
+              "flavor": "",
+              "vfx": "stars",
+              "colour": "yellow",
+              "atkFormula": "INT80_DEX20",
+              "power": 90,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "debuff",
+                "chance": 20,
+                "stat": "RES"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "ぽかぽかスター",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "pink",
+              "atkFormula": "INT80_DEX20",
+              "power": 75,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "poison",
+                "chance": 30
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "barrage",
+              "attribute": "none",
+              "name": "のびのびウェーブ",
+              "flavor": "",
+              "vfx": "wave",
+              "colour": "pink",
+              "atkFormula": "INT80_DEX20",
+              "power": 140,
+              "hits": 2,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            76,
+            148,
+            72,
+            81,
+            65,
+            109,
+            98,
+            93,
+            114,
+            128
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "きらきらスター",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "green",
+              "atkFormula": "INT60_LUK40",
+              "power": 110,
+              "hits": 1,
+              "accuracy": 90,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ぐるぐるスター",
+              "flavor": "",
+              "vfx": "stars",
+              "colour": "red",
+              "atkFormula": "INT60_LUK40",
+              "power": 115,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "barrage",
+              "attribute": "pa",
+              "name": "ぱあっとビーム",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "green",
+              "atkFormula": "INT60_LUK40",
+              "power": 135,
+              "hits": 3,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "controllers": [
+          null,
+          null
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 1,
+        "endReason": "ko",
+        "ticks": 792,
+        "hp": [
+          0,
+          60
+        ],
+        "maxHp": [
+          1013,
+          882
+        ],
+        "actions": [
+          9,
+          9
+        ],
+        "eventCount": 96,
+        "eventsFnv1a": 1434292550,
+        "stateHash": 3509634511,
+        "inputLog": [
+          [
+            83,
+            0,
+            0
+          ],
+          [
+            88,
+            1,
+            1
+          ],
+          [
+            166,
+            0,
+            2
+          ],
+          [
+            176,
+            1,
+            1
+          ],
+          [
+            249,
+            0,
+            1
+          ],
+          [
+            264,
+            1,
+            2
+          ],
+          [
+            332,
+            0,
+            0
+          ],
+          [
+            352,
+            1,
+            1
+          ],
+          [
+            415,
+            0,
+            0
+          ],
+          [
+            440,
+            1,
+            1
+          ],
+          [
+            498,
+            0,
+            0
+          ],
+          [
+            528,
+            1,
+            1
+          ],
+          [
+            581,
+            0,
+            0
+          ],
+          [
+            616,
+            1,
+            1
+          ],
+          [
+            664,
+            0,
+            0
+          ],
+          [
+            704,
+            1,
+            1
+          ],
+          [
+            747,
+            0,
+            0
+          ],
+          [
+            792,
+            1,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "rated sync: pre-rebirth bloomer vs Lv7 kid (both at Lv50)",
+        "seed": 2005,
+        "a": {
+          "stats": [
+            64,
+            48,
+            64,
+            61,
+            63,
+            78,
+            64,
+            48,
+            35,
+            58
+          ],
+          "attribute": "gu",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ごつごつスター",
+              "flavor": "",
+              "vfx": "wave",
+              "colour": "red",
+              "atkFormula": "INT70_RES30",
+              "power": 60,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "debuff",
+                "chance": 20,
+                "stat": "RES"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "わくわくスター",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "yellow",
+              "atkFormula": "INT70_RES30",
+              "power": 45,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "poison",
+                "chance": 30
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "barrage",
+              "attribute": "none",
+              "name": "わくわくウェーブ",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "pink",
+              "atkFormula": "INT70_RES30",
+              "power": 100,
+              "hits": 3,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            176,
+            146,
+            71,
+            97,
+            84,
+            139,
+            82,
+            115,
+            140,
+            115
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "ぱあっとビーム",
+              "flavor": "",
+              "vfx": "wave",
+              "colour": "pink",
+              "atkFormula": "INT80_DEX20",
+              "power": 105,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ぐるぐるビーム",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "red",
+              "atkFormula": "INT80_DEX20",
+              "power": 120,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            }
+          ]
+        },
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 1,
+        "endReason": "ko",
+        "ticks": 164,
+        "hp": [
+          0,
+          1262
+        ],
+        "maxHp": [
+          605,
+          1304
+        ],
+        "actions": [
+          3,
+          4
+        ],
+        "eventCount": 35,
+        "eventsFnv1a": 2674592089,
+        "stateHash": 1730672108,
+        "inputLog": [
+          [
+            41,
+            1,
+            1
+          ],
+          [
+            54,
+            0,
+            1
+          ],
+          [
+            82,
+            1,
+            0
+          ],
+          [
+            108,
+            0,
+            1
+          ],
+          [
+            123,
+            1,
+            0
+          ],
+          [
+            162,
+            0,
+            1
+          ],
+          [
+            164,
+            1,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "rated sync: reborn bloomer vs Lv50 kid",
+        "seed": 2006,
+        "a": {
+          "stats": [
+            136,
+            124,
+            118,
+            111,
+            98,
+            135,
+            95,
+            97,
+            126,
+            123
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "きらきらスター",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "green",
+              "atkFormula": "INT80_DEX20",
+              "power": 115,
+              "hits": 1,
+              "accuracy": 90,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "のびのびスター",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "pink",
+              "atkFormula": "INT80_DEX20",
+              "power": 80,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "poison",
+                "chance": 30
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "ぱあっとウェーブ",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "green",
+              "atkFormula": "INT80_DEX20",
+              "power": 175,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 20,
+              "castTicks": 6,
+              "cooldownTicks": 40
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "ぽかぽかビーム",
+              "flavor": "",
+              "vfx": "stars",
+              "colour": "white",
+              "atkFormula": "INT80_DEX20",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            106,
+            135,
+            109,
+            158,
+            137,
+            123,
+            127,
+            74,
+            104,
+            142
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "strike",
+              "attribute": "pa",
+              "name": "ぱあっとキック",
+              "flavor": "",
+              "vfx": "slash",
+              "colour": "pink",
+              "atkFormula": "STR70_VIT30",
+              "power": 105,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "heal",
+              "attribute": "none",
+              "name": "わくわくげんき",
+              "flavor": "",
+              "vfx": "bubbles",
+              "colour": "white",
+              "healPct": 26,
+              "spCost": 25,
+              "castTicks": 0,
+              "cooldownTicks": 100
+            },
+            {
+              "template": "strike",
+              "attribute": "gu",
+              "name": "どすんずつき",
+              "flavor": "",
+              "vfx": "slash",
+              "colour": "black",
+              "atkFormula": "STR70_VIT30",
+              "power": 170,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 20,
+              "castTicks": 6,
+              "cooldownTicks": 40
+            },
+            {
+              "template": "strike",
+              "attribute": "none",
+              "name": "ぴかぴかタックル",
+              "flavor": "",
+              "vfx": "burst",
+              "colour": "yellow",
+              "atkFormula": "STR70_VIT30",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 1,
+        "endReason": "ko",
+        "ticks": 794,
+        "hp": [
+          0,
+          111
+        ],
+        "maxHp": [
+          1211,
+          1241
+        ],
+        "actions": [
+          16,
+          16
+        ],
+        "eventCount": 156,
+        "eventsFnv1a": 1263398551,
+        "stateHash": 2936175138,
+        "inputLog": [
+          [
+            45,
+            0,
+            2
+          ],
+          [
+            47,
+            1,
+            2
+          ],
+          [
+            96,
+            0,
+            2
+          ],
+          [
+            100,
+            1,
+            3
+          ],
+          [
+            147,
+            0,
+            2
+          ],
+          [
+            159,
+            1,
+            0
+          ],
+          [
+            198,
+            0,
+            2
+          ],
+          [
+            206,
+            1,
+            0
+          ],
+          [
+            249,
+            0,
+            1
+          ],
+          [
+            253,
+            1,
+            3
+          ],
+          [
+            294,
+            0,
+            2
+          ],
+          [
+            312,
+            1,
+            0
+          ],
+          [
+            345,
+            0,
+            1
+          ],
+          [
+            359,
+            1,
+            1
+          ],
+          [
+            390,
+            0,
+            1
+          ],
+          [
+            406,
+            1,
+            0
+          ],
+          [
+            435,
+            0,
+            1
+          ],
+          [
+            453,
+            1,
+            0
+          ],
+          [
+            480,
+            0,
+            0
+          ],
+          [
+            500,
+            1,
+            1
+          ],
+          [
+            525,
+            0,
+            2
+          ],
+          [
+            547,
+            1,
+            0
+          ],
+          [
+            576,
+            0,
+            1
+          ],
+          [
+            594,
+            1,
+            0
+          ],
+          [
+            621,
+            0,
+            1
+          ],
+          [
+            641,
+            1,
+            1
+          ],
+          [
+            666,
+            0,
+            0
+          ],
+          [
+            688,
+            1,
+            0
+          ],
+          [
+            711,
+            0,
+            2
+          ],
+          [
+            735,
+            1,
+            3
+          ],
+          [
+            762,
+            0,
+            2
+          ],
+          [
+            794,
+            1,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "family: bloomer boosted past Lv50 keeps its pre-rebirth form",
+        "seed": 2007,
+        "a": {
+          "stats": [
+            66,
+            73,
+            77,
+            62,
+            49,
+            37,
+            70,
+            47,
+            72,
+            71
+          ],
+          "attribute": "choki",
+          "moves": [
+            {
+              "template": "strike",
+              "attribute": "choki",
+              "name": "スパッとタックル",
+              "flavor": "",
+              "vfx": "slash",
+              "colour": "purple",
+              "atkFormula": "STR80_AGI20",
+              "power": 75,
+              "hits": 1,
+              "accuracy": 90,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "power_up",
+              "attribute": "none",
+              "name": "ぴかぴかきあい",
+              "flavor": "",
+              "vfx": "glow",
+              "colour": "white",
+              "stat": "STR",
+              "stages": 2,
+              "durationTicks": 80,
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 120
+            },
+            {
+              "template": "combo",
+              "attribute": "none",
+              "name": "ぴかぴかキック",
+              "flavor": "",
+              "vfx": "spiral",
+              "colour": "pink",
+              "atkFormula": "STR80_AGI20",
+              "power": 100,
+              "hits": 3,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "strike",
+              "attribute": "none",
+              "name": "わくわくキック",
+              "flavor": "",
+              "vfx": "punch",
+              "colour": "pink",
+              "atkFormula": "STR80_AGI20",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            74,
+            146,
+            118,
+            104,
+            108,
+            133,
+            126,
+            129,
+            89,
+            155
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "pa",
+              "name": "もくもくウェーブ",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "blue",
+              "atkFormula": "INT60_LUK40",
+              "power": 105,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ぐるぐるウェーブ",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "black",
+              "atkFormula": "INT60_LUK40",
+              "power": 120,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "barrage",
+              "attribute": "pa",
+              "name": "きらきらビーム",
+              "flavor": "",
+              "vfx": "orb",
+              "colour": "blue",
+              "atkFormula": "INT60_LUK40",
+              "power": 145,
+              "hits": 2,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "ぽかぽかビーム",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "white",
+              "atkFormula": "INT60_LUK40",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "strong",
+            "think": 4
+          }
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 1,
+        "endReason": "ko",
+        "ticks": 117,
+        "hp": [
+          0,
+          904
+        ],
+        "maxHp": [
+          634,
+          1021
+        ],
+        "actions": [
+          2,
+          3
+        ],
+        "eventCount": 25,
+        "eventsFnv1a": 1703783166,
+        "stateHash": 1427617416,
+        "inputLog": [
+          [
+            39,
+            1,
+            1
+          ],
+          [
+            47,
+            0,
+            1
+          ],
+          [
+            78,
+            1,
+            1
+          ],
+          [
+            94,
+            0,
+            3
+          ],
+          [
+            117,
+            1,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "tanks: heat-up ramp and the 3-minute cap (HP ratio)",
+        "seed": 2008,
+        "a": {
+          "stats": [
+            197,
+            161,
+            3,
+            217,
+            900,
+            3,
+            900,
+            195,
+            218,
+            244
+          ],
+          "attribute": "gu",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "がっちりボール",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "black",
+              "atkFormula": "INT60_LUK40",
+              "power": 105,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "power_up",
+              "attribute": "none",
+              "name": "のびのびパワー",
+              "flavor": "",
+              "vfx": "glow",
+              "colour": "white",
+              "stat": "INT",
+              "stages": 2,
+              "durationTicks": 100,
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 120
+            },
+            {
+              "template": "barrage",
+              "attribute": "none",
+              "name": "ぴかぴかボール",
+              "flavor": "",
+              "vfx": "stars",
+              "colour": "pink",
+              "atkFormula": "INT60_LUK40",
+              "power": 145,
+              "hits": 2,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "にこにこビーム",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "yellow",
+              "atkFormula": "INT60_LUK40",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            218,
+            199,
+            3,
+            207,
+            900,
+            3,
+            900,
+            221,
+            189,
+            327
+          ],
+          "attribute": "pa",
+          "moves": [
+            {
+              "template": "strike",
+              "attribute": "pa",
+              "name": "ひらひらキック",
+              "flavor": "",
+              "vfx": "burst",
+              "colour": "rainbow",
+              "atkFormula": "STR80_AGI20",
+              "power": 120,
+              "hits": 1,
+              "accuracy": 90,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "strike",
+              "attribute": "gu",
+              "name": "どすんキック",
+              "flavor": "",
+              "vfx": "slash",
+              "colour": "red",
+              "atkFormula": "STR80_AGI20",
+              "power": 125,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "strike",
+              "attribute": "gu",
+              "name": "ドカンタックル",
+              "flavor": "",
+              "vfx": "burst",
+              "colour": "orange",
+              "atkFormula": "STR80_AGI20",
+              "power": 175,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 20,
+              "castTicks": 6,
+              "cooldownTicks": 40
+            },
+            {
+              "template": "strike",
+              "attribute": "none",
+              "name": "わくわくタックル",
+              "flavor": "",
+              "vfx": "burst",
+              "colour": "white",
+              "atkFormula": "STR80_AGI20",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 10
+          },
+          {
+            "tier": "normal",
+            "think": 10
+          }
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 0,
+        "endReason": "timeUp",
+        "ticks": 1800,
+        "hp": [
+          2408,
+          2163
+        ],
+        "maxHp": [
+          2544,
+          2651
+        ],
+        "actions": [
+          39,
+          37
+        ],
+        "eventCount": 380,
+        "eventsFnv1a": 3574630909,
+        "stateHash": 1386690075,
+        "inputLog": [
+          [
+            46,
+            0,
+            1
+          ],
+          [
+            47,
+            1,
+            0
+          ],
+          [
+            92,
+            0,
+            0
+          ],
+          [
+            94,
+            1,
+            0
+          ],
+          [
+            138,
+            0,
+            0
+          ],
+          [
+            141,
+            1,
+            0
+          ],
+          [
+            184,
+            0,
+            1
+          ],
+          [
+            188,
+            1,
+            0
+          ],
+          [
+            230,
+            0,
+            0
+          ],
+          [
+            235,
+            1,
+            0
+          ],
+          [
+            276,
+            0,
+            0
+          ],
+          [
+            282,
+            1,
+            0
+          ],
+          [
+            322,
+            0,
+            1
+          ],
+          [
+            329,
+            1,
+            0
+          ],
+          [
+            368,
+            0,
+            0
+          ],
+          [
+            376,
+            1,
+            0
+          ],
+          [
+            414,
+            0,
+            0
+          ],
+          [
+            423,
+            1,
+            0
+          ],
+          [
+            460,
+            0,
+            1
+          ],
+          [
+            470,
+            1,
+            0
+          ],
+          [
+            506,
+            0,
+            0
+          ],
+          [
+            517,
+            1,
+            0
+          ],
+          [
+            552,
+            0,
+            0
+          ],
+          [
+            564,
+            1,
+            0
+          ],
+          [
+            598,
+            0,
+            1
+          ],
+          [
+            611,
+            1,
+            0
+          ],
+          [
+            644,
+            0,
+            0
+          ],
+          [
+            658,
+            1,
+            0
+          ],
+          [
+            690,
+            0,
+            0
+          ],
+          [
+            705,
+            1,
+            0
+          ],
+          [
+            736,
+            0,
+            1
+          ],
+          [
+            752,
+            1,
+            0
+          ],
+          [
+            782,
+            0,
+            0
+          ],
+          [
+            799,
+            1,
+            0
+          ],
+          [
+            828,
+            0,
+            0
+          ],
+          [
+            846,
+            1,
+            0
+          ],
+          [
+            874,
+            0,
+            1
+          ],
+          [
+            893,
+            1,
+            0
+          ],
+          [
+            920,
+            0,
+            0
+          ],
+          [
+            940,
+            1,
+            0
+          ],
+          [
+            966,
+            0,
+            0
+          ],
+          [
+            987,
+            1,
+            0
+          ],
+          [
+            1012,
+            0,
+            1
+          ],
+          [
+            1034,
+            1,
+            0
+          ],
+          [
+            1058,
+            0,
+            0
+          ],
+          [
+            1081,
+            1,
+            0
+          ],
+          [
+            1104,
+            0,
+            0
+          ],
+          [
+            1128,
+            1,
+            0
+          ],
+          [
+            1150,
+            0,
+            1
+          ],
+          [
+            1175,
+            1,
+            0
+          ],
+          [
+            1196,
+            0,
+            0
+          ],
+          [
+            1222,
+            1,
+            0
+          ],
+          [
+            1242,
+            0,
+            0
+          ],
+          [
+            1269,
+            1,
+            3
+          ],
+          [
+            1288,
+            0,
+            1
+          ],
+          [
+            1328,
+            1,
+            0
+          ],
+          [
+            1334,
+            0,
+            0
+          ],
+          [
+            1375,
+            1,
+            0
+          ],
+          [
+            1380,
+            0,
+            0
+          ],
+          [
+            1422,
+            1,
+            0
+          ],
+          [
+            1426,
+            0,
+            1
+          ],
+          [
+            1469,
+            1,
+            0
+          ],
+          [
+            1472,
+            0,
+            0
+          ],
+          [
+            1516,
+            1,
+            0
+          ],
+          [
+            1518,
+            0,
+            0
+          ],
+          [
+            1563,
+            1,
+            0
+          ],
+          [
+            1564,
+            0,
+            1
+          ],
+          [
+            1610,
+            0,
+            0
+          ],
+          [
+            1610,
+            1,
+            0
+          ],
+          [
+            1656,
+            0,
+            2
+          ],
+          [
+            1657,
+            1,
+            0
+          ],
+          [
+            1702,
+            0,
+            1
+          ],
+          [
+            1704,
+            1,
+            2
+          ],
+          [
+            1748,
+            0,
+            0
+          ],
+          [
+            1757,
+            1,
+            0
+          ],
+          [
+            1794,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "note": "stage-style CPU power 93 %",
+        "seed": 2009,
+        "a": {
+          "stats": [
+            152,
+            112,
+            98,
+            118,
+            127,
+            146,
+            171,
+            80,
+            64,
+            88
+          ],
+          "attribute": "gu",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "gu",
+              "name": "ぐるぐるスター",
+              "flavor": "",
+              "vfx": "beam",
+              "colour": "orange",
+              "atkFormula": "INT70_RES30",
+              "power": 115,
+              "hits": 1,
+              "accuracy": 90,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "choki",
+              "name": "ビュンビーム",
+              "flavor": "",
+              "vfx": "wave",
+              "colour": "cyan",
+              "atkFormula": "INT70_RES30",
+              "power": 120,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "barrage",
+              "attribute": "gu",
+              "name": "ドカンスター",
+              "flavor": "",
+              "vfx": "orb",
+              "colour": "black",
+              "atkFormula": "INT70_RES30",
+              "power": 140,
+              "hits": 3,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "のびのびウェーブ",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "white",
+              "atkFormula": "INT70_RES30",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "b": {
+          "stats": [
+            116,
+            138,
+            107,
+            136,
+            101,
+            110,
+            107,
+            95,
+            139,
+            114
+          ],
+          "attribute": "choki",
+          "moves": [
+            {
+              "template": "blast",
+              "attribute": "choki",
+              "name": "シャキーンビーム",
+              "flavor": "",
+              "vfx": "stars",
+              "colour": "purple",
+              "atkFormula": "INT80_DEX20",
+              "power": 115,
+              "hits": 1,
+              "accuracy": 90,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 0,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "わくわくボール",
+              "flavor": "",
+              "vfx": "orb",
+              "colour": "white",
+              "atkFormula": "INT80_DEX20",
+              "power": 95,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "paralyze",
+                "chance": 30
+              },
+              "spCost": 10,
+              "castTicks": 0,
+              "cooldownTicks": 0
+            },
+            {
+              "template": "barrage",
+              "attribute": "none",
+              "name": "ぴかぴかビーム",
+              "flavor": "",
+              "vfx": "stars",
+              "colour": "yellow",
+              "atkFormula": "INT80_DEX20",
+              "power": 140,
+              "hits": 3,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 15,
+              "castTicks": 0,
+              "cooldownTicks": 30
+            },
+            {
+              "template": "blast",
+              "attribute": "none",
+              "name": "にこにこスター",
+              "flavor": "",
+              "vfx": "sparks",
+              "colour": "yellow",
+              "atkFormula": "INT80_DEX20",
+              "power": 200,
+              "hits": 1,
+              "accuracy": 100,
+              "critBonus": 0,
+              "secondary": {
+                "type": "none"
+              },
+              "spCost": 40,
+              "castTicks": 12,
+              "cooldownTicks": 80
+            }
+          ]
+        },
+        "controllers": [
+          {
+            "tier": "normal",
+            "think": 0
+          },
+          {
+            "tier": "strong",
+            "think": 4
+          }
+        ],
+        "inputs": []
+      },
+      "expected": {
+        "winner": 0,
+        "endReason": "ko",
+        "ticks": 292,
+        "hp": [
+          922,
+          0
+        ],
+        "maxHp": [
+          1270,
+          1201
+        ],
+        "actions": [
+          6,
+          7
+        ],
+        "eventCount": 82,
+        "eventsFnv1a": 1503995547,
+        "stateHash": 94621615,
+        "inputLog": [
+          [
+            37,
+            1,
+            1
+          ],
+          [
+            41,
+            0,
+            2
+          ],
+          [
+            74,
+            1,
+            1
+          ],
+          [
+            87,
+            0,
+            2
+          ],
+          [
+            111,
+            1,
+            2
+          ],
+          [
+            146,
+            0,
+            2
+          ],
+          [
+            148,
+            1,
+            1
+          ],
+          [
+            185,
+            1,
+            1
+          ],
+          [
+            187,
+            0,
+            2
+          ],
+          [
+            222,
+            1,
+            1
+          ],
+          [
+            231,
+            0,
+            2
+          ],
+          [
+            259,
+            1,
+            2
+          ],
+          [
+            292,
+            0,
+            0
+          ]
+        ]
       }
     }
   ],
@@ -4147,6 +10218,1312 @@
       "cost": 100
     }
   ],
+  "ratedSetups": [
+    {
+      "genomeIndex": 0,
+      "actualLevel": 5,
+      "expected": {
+        "stats": [
+          176,
+          146,
+          71,
+          97,
+          84,
+          139,
+          82,
+          115,
+          140,
+          115
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ぱあっとビーム",
+            "flavor": "",
+            "vfx": "wave",
+            "colour": "pink",
+            "atkFormula": "INT80_DEX20",
+            "power": 105,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "ぐるぐるビーム",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "red",
+            "atkFormula": "INT80_DEX20",
+            "power": 120,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 0,
+      "actualLevel": 49,
+      "expected": {
+        "stats": [
+          176,
+          146,
+          71,
+          97,
+          84,
+          139,
+          82,
+          115,
+          140,
+          115
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ぱあっとビーム",
+            "flavor": "",
+            "vfx": "wave",
+            "colour": "pink",
+            "atkFormula": "INT80_DEX20",
+            "power": 105,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "ぐるぐるビーム",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "red",
+            "atkFormula": "INT80_DEX20",
+            "power": 120,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          },
+          {
+            "template": "barrage",
+            "attribute": "pa",
+            "name": "もくもくスター",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "rainbow",
+            "atkFormula": "INT80_DEX20",
+            "power": 140,
+            "hits": 3,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 0,
+      "actualLevel": 50,
+      "expected": {
+        "stats": [
+          176,
+          146,
+          71,
+          97,
+          84,
+          139,
+          82,
+          115,
+          140,
+          115
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ぱあっとビーム",
+            "flavor": "",
+            "vfx": "wave",
+            "colour": "pink",
+            "atkFormula": "INT80_DEX20",
+            "power": 105,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "ぐるぐるビーム",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "red",
+            "atkFormula": "INT80_DEX20",
+            "power": 120,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          },
+          {
+            "template": "barrage",
+            "attribute": "pa",
+            "name": "もくもくスター",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "rainbow",
+            "atkFormula": "INT80_DEX20",
+            "power": 140,
+            "hits": 3,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "わくわくスター",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "white",
+            "atkFormula": "INT80_DEX20",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 0,
+      "actualLevel": 80,
+      "expected": {
+        "stats": [
+          176,
+          146,
+          71,
+          97,
+          84,
+          139,
+          82,
+          115,
+          140,
+          115
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ぱあっとビーム",
+            "flavor": "",
+            "vfx": "wave",
+            "colour": "pink",
+            "atkFormula": "INT80_DEX20",
+            "power": 105,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "ぐるぐるビーム",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "red",
+            "atkFormula": "INT80_DEX20",
+            "power": 120,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          },
+          {
+            "template": "barrage",
+            "attribute": "pa",
+            "name": "もくもくスター",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "rainbow",
+            "atkFormula": "INT80_DEX20",
+            "power": 140,
+            "hits": 3,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "わくわくスター",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "white",
+            "atkFormula": "INT80_DEX20",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 3,
+      "actualLevel": 5,
+      "expected": {
+        "stats": [
+          64,
+          48,
+          64,
+          61,
+          63,
+          78,
+          64,
+          48,
+          35,
+          58
+        ],
+        "attribute": "gu",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "ごつごつスター",
+            "flavor": "",
+            "vfx": "wave",
+            "colour": "red",
+            "atkFormula": "INT70_RES30",
+            "power": 60,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "debuff",
+              "chance": 20,
+              "stat": "RES"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "わくわくスター",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "yellow",
+            "atkFormula": "INT70_RES30",
+            "power": 45,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "poison",
+              "chance": 30
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 3,
+      "actualLevel": 49,
+      "expected": {
+        "stats": [
+          64,
+          48,
+          64,
+          61,
+          63,
+          78,
+          64,
+          48,
+          35,
+          58
+        ],
+        "attribute": "gu",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "ごつごつスター",
+            "flavor": "",
+            "vfx": "wave",
+            "colour": "red",
+            "atkFormula": "INT70_RES30",
+            "power": 60,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "debuff",
+              "chance": 20,
+              "stat": "RES"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "わくわくスター",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "yellow",
+            "atkFormula": "INT70_RES30",
+            "power": 45,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "poison",
+              "chance": 30
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "barrage",
+            "attribute": "none",
+            "name": "わくわくウェーブ",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "pink",
+            "atkFormula": "INT70_RES30",
+            "power": 100,
+            "hits": 3,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 3,
+      "actualLevel": 50,
+      "expected": {
+        "stats": [
+          122,
+          95,
+          131,
+          122,
+          132,
+          162,
+          129,
+          103,
+          71,
+          128
+        ],
+        "attribute": "gu",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "がっちりビーム",
+            "flavor": "",
+            "vfx": "stars",
+            "colour": "black",
+            "atkFormula": "INT70_RES30",
+            "power": 115,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "power_up",
+            "attribute": "none",
+            "name": "ぴかぴかきあい",
+            "flavor": "",
+            "vfx": "bubbles",
+            "colour": "yellow",
+            "stat": "INT",
+            "stages": 2,
+            "durationTicks": 100,
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 120
+          },
+          {
+            "template": "blast",
+            "attribute": "choki",
+            "name": "ちょきちょきボール",
+            "flavor": "",
+            "vfx": "orb",
+            "colour": "cyan",
+            "atkFormula": "INT70_RES30",
+            "power": 175,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 20,
+            "castTicks": 6,
+            "cooldownTicks": 40
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "ぴかぴかビーム",
+            "flavor": "",
+            "vfx": "stars",
+            "colour": "white",
+            "atkFormula": "INT70_RES30",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 3,
+      "actualLevel": 80,
+      "expected": {
+        "stats": [
+          122,
+          95,
+          131,
+          122,
+          132,
+          162,
+          129,
+          103,
+          71,
+          128
+        ],
+        "attribute": "gu",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "gu",
+            "name": "がっちりビーム",
+            "flavor": "",
+            "vfx": "stars",
+            "colour": "black",
+            "atkFormula": "INT70_RES30",
+            "power": 115,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "power_up",
+            "attribute": "none",
+            "name": "ぴかぴかきあい",
+            "flavor": "",
+            "vfx": "bubbles",
+            "colour": "yellow",
+            "stat": "INT",
+            "stages": 2,
+            "durationTicks": 100,
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 120
+          },
+          {
+            "template": "blast",
+            "attribute": "choki",
+            "name": "ちょきちょきボール",
+            "flavor": "",
+            "vfx": "orb",
+            "colour": "cyan",
+            "atkFormula": "INT70_RES30",
+            "power": 175,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 20,
+            "castTicks": 6,
+            "cooldownTicks": 40
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "ぴかぴかビーム",
+            "flavor": "",
+            "vfx": "stars",
+            "colour": "white",
+            "atkFormula": "INT70_RES30",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 7,
+      "actualLevel": 5,
+      "expected": {
+        "stats": [
+          55,
+          55,
+          55,
+          54,
+          46,
+          57,
+          45,
+          41,
+          57,
+          68
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "もくもくウェーブ",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "green",
+            "atkFormula": "INT60_LUK40",
+            "power": 75,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "poison",
+            "attribute": "gu",
+            "name": "ぐるぐるビリビリ",
+            "flavor": "",
+            "vfx": "bubbles",
+            "colour": "red",
+            "accuracy": 90,
+            "chance": 95,
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 60
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 7,
+      "actualLevel": 49,
+      "expected": {
+        "stats": [
+          55,
+          55,
+          55,
+          54,
+          46,
+          57,
+          45,
+          41,
+          57,
+          68
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "もくもくウェーブ",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "green",
+            "atkFormula": "INT60_LUK40",
+            "power": 75,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "poison",
+            "attribute": "gu",
+            "name": "ぐるぐるビリビリ",
+            "flavor": "",
+            "vfx": "bubbles",
+            "colour": "red",
+            "accuracy": 90,
+            "chance": 95,
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 60
+          },
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ふわふわウェーブ",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "blue",
+            "atkFormula": "INT60_LUK40",
+            "power": 130,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 20,
+            "castTicks": 6,
+            "cooldownTicks": 40
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 7,
+      "actualLevel": 50,
+      "expected": {
+        "stats": [
+          136,
+          124,
+          118,
+          111,
+          98,
+          135,
+          95,
+          97,
+          126,
+          123
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "きらきらスター",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "green",
+            "atkFormula": "INT80_DEX20",
+            "power": 115,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "のびのびスター",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "pink",
+            "atkFormula": "INT80_DEX20",
+            "power": 80,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "poison",
+              "chance": 30
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ぱあっとウェーブ",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "green",
+            "atkFormula": "INT80_DEX20",
+            "power": 175,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 20,
+            "castTicks": 6,
+            "cooldownTicks": 40
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "ぽかぽかビーム",
+            "flavor": "",
+            "vfx": "stars",
+            "colour": "white",
+            "atkFormula": "INT80_DEX20",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 7,
+      "actualLevel": 80,
+      "expected": {
+        "stats": [
+          136,
+          124,
+          118,
+          111,
+          98,
+          135,
+          95,
+          97,
+          126,
+          123
+        ],
+        "attribute": "pa",
+        "moves": [
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "きらきらスター",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "green",
+            "atkFormula": "INT80_DEX20",
+            "power": 115,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "のびのびスター",
+            "flavor": "",
+            "vfx": "beam",
+            "colour": "pink",
+            "atkFormula": "INT80_DEX20",
+            "power": 80,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "poison",
+              "chance": 30
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "blast",
+            "attribute": "pa",
+            "name": "ぱあっとウェーブ",
+            "flavor": "",
+            "vfx": "sparks",
+            "colour": "green",
+            "atkFormula": "INT80_DEX20",
+            "power": 175,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 20,
+            "castTicks": 6,
+            "cooldownTicks": 40
+          },
+          {
+            "template": "blast",
+            "attribute": "none",
+            "name": "ぽかぽかビーム",
+            "flavor": "",
+            "vfx": "stars",
+            "colour": "white",
+            "atkFormula": "INT80_DEX20",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 11,
+      "actualLevel": 5,
+      "expected": {
+        "stats": [
+          58,
+          64,
+          68,
+          54,
+          44,
+          33,
+          62,
+          42,
+          64,
+          62
+        ],
+        "attribute": "choki",
+        "moves": [
+          {
+            "template": "strike",
+            "attribute": "choki",
+            "name": "スパッとタックル",
+            "flavor": "",
+            "vfx": "slash",
+            "colour": "purple",
+            "atkFormula": "STR80_AGI20",
+            "power": 75,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "power_up",
+            "attribute": "none",
+            "name": "ぴかぴかきあい",
+            "flavor": "",
+            "vfx": "glow",
+            "colour": "white",
+            "stat": "STR",
+            "stages": 2,
+            "durationTicks": 80,
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 120
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 11,
+      "actualLevel": 49,
+      "expected": {
+        "stats": [
+          58,
+          64,
+          68,
+          54,
+          44,
+          33,
+          62,
+          42,
+          64,
+          62
+        ],
+        "attribute": "choki",
+        "moves": [
+          {
+            "template": "strike",
+            "attribute": "choki",
+            "name": "スパッとタックル",
+            "flavor": "",
+            "vfx": "slash",
+            "colour": "purple",
+            "atkFormula": "STR80_AGI20",
+            "power": 75,
+            "hits": 1,
+            "accuracy": 90,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "power_up",
+            "attribute": "none",
+            "name": "ぴかぴかきあい",
+            "flavor": "",
+            "vfx": "glow",
+            "colour": "white",
+            "stat": "STR",
+            "stages": 2,
+            "durationTicks": 80,
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 120
+          },
+          {
+            "template": "combo",
+            "attribute": "none",
+            "name": "ぴかぴかキック",
+            "flavor": "",
+            "vfx": "spiral",
+            "colour": "pink",
+            "atkFormula": "STR80_AGI20",
+            "power": 100,
+            "hits": 3,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 15,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 11,
+      "actualLevel": 50,
+      "expected": {
+        "stats": [
+          122,
+          144,
+          136,
+          128,
+          88,
+          74,
+          142,
+          92,
+          148,
+          97
+        ],
+        "attribute": "choki",
+        "moves": [
+          {
+            "template": "strike",
+            "attribute": "choki",
+            "name": "シャキーンパンチ",
+            "flavor": "",
+            "vfx": "burst",
+            "colour": "yellow",
+            "atkFormula": "STR80_AGI20",
+            "power": 95,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "debuff",
+              "chance": 20,
+              "stat": "DEF"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "strike",
+            "attribute": "pa",
+            "name": "きらきらキック",
+            "flavor": "",
+            "vfx": "burst",
+            "colour": "green",
+            "atkFormula": "STR80_AGI20",
+            "power": 120,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          },
+          {
+            "template": "strike",
+            "attribute": "choki",
+            "name": "とげとげキック",
+            "flavor": "",
+            "vfx": "burst",
+            "colour": "yellow",
+            "atkFormula": "STR80_AGI20",
+            "power": 175,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 20,
+            "castTicks": 6,
+            "cooldownTicks": 40
+          },
+          {
+            "template": "strike",
+            "attribute": "none",
+            "name": "ぴかぴかずつき",
+            "flavor": "",
+            "vfx": "slash",
+            "colour": "pink",
+            "atkFormula": "STR80_AGI20",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    },
+    {
+      "genomeIndex": 11,
+      "actualLevel": 80,
+      "expected": {
+        "stats": [
+          122,
+          144,
+          136,
+          128,
+          88,
+          74,
+          142,
+          92,
+          148,
+          97
+        ],
+        "attribute": "choki",
+        "moves": [
+          {
+            "template": "strike",
+            "attribute": "choki",
+            "name": "シャキーンパンチ",
+            "flavor": "",
+            "vfx": "burst",
+            "colour": "yellow",
+            "atkFormula": "STR80_AGI20",
+            "power": 95,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "debuff",
+              "chance": 20,
+              "stat": "DEF"
+            },
+            "spCost": 0,
+            "castTicks": 0,
+            "cooldownTicks": 0
+          },
+          {
+            "template": "strike",
+            "attribute": "pa",
+            "name": "きらきらキック",
+            "flavor": "",
+            "vfx": "burst",
+            "colour": "green",
+            "atkFormula": "STR80_AGI20",
+            "power": 120,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 10,
+            "castTicks": 0,
+            "cooldownTicks": 30
+          },
+          {
+            "template": "strike",
+            "attribute": "choki",
+            "name": "とげとげキック",
+            "flavor": "",
+            "vfx": "burst",
+            "colour": "yellow",
+            "atkFormula": "STR80_AGI20",
+            "power": 175,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 20,
+            "castTicks": 6,
+            "cooldownTicks": 40
+          },
+          {
+            "template": "strike",
+            "attribute": "none",
+            "name": "ぴかぴかずつき",
+            "flavor": "",
+            "vfx": "slash",
+            "colour": "pink",
+            "atkFormula": "STR80_AGI20",
+            "power": 200,
+            "hits": 1,
+            "accuracy": 100,
+            "critBonus": 0,
+            "secondary": {
+              "type": "none"
+            },
+            "spCost": 40,
+            "castTicks": 12,
+            "cooldownTicks": 80
+          }
+        ]
+      }
+    }
+  ],
   "xp": [
     {
       "win": true,
@@ -4201,6 +11578,135 @@
       "adBoost": false,
       "hiddenBloomer": true,
       "expected": 232
+    },
+    {
+      "win": false,
+      "stage": 100,
+      "level": 100,
+      "firstClear": false,
+      "adBoost": true,
+      "hiddenBloomer": false,
+      "expected": 396
+    },
+    {
+      "win": true,
+      "stage": 3,
+      "level": 30,
+      "firstClear": true,
+      "adBoost": false,
+      "hiddenBloomer": false,
+      "expected": 42
+    }
+  ],
+  "xpOnline": [
+    {
+      "win": true,
+      "level": 1,
+      "eligible": true,
+      "hiddenBloomerBonus": false,
+      "expected": 150
+    },
+    {
+      "win": false,
+      "level": 50,
+      "eligible": true,
+      "hiddenBloomerBonus": false,
+      "expected": 177
+    },
+    {
+      "win": true,
+      "level": 100,
+      "eligible": false,
+      "hiddenBloomerBonus": false,
+      "expected": 0
+    },
+    {
+      "win": true,
+      "level": 20,
+      "eligible": true,
+      "hiddenBloomerBonus": true,
+      "expected": 396
+    }
+  ],
+  "applyXp": [
+    {
+      "level": 1,
+      "xp": 0,
+      "gained": 79,
+      "isBloomer": false,
+      "expected": {
+        "level": 1,
+        "xp": 79,
+        "newSlots": [],
+        "evolutions": [],
+        "rebirth": false
+      }
+    },
+    {
+      "level": 1,
+      "xp": 0,
+      "gained": 5000,
+      "isBloomer": false,
+      "expected": {
+        "level": 17,
+        "xp": 204,
+        "newSlots": [
+          2
+        ],
+        "evolutions": [
+          "kagayaki"
+        ],
+        "rebirth": false
+      }
+    },
+    {
+      "level": 9,
+      "xp": 300,
+      "gained": 400,
+      "isBloomer": false,
+      "expected": {
+        "level": 11,
+        "xp": 65,
+        "newSlots": [
+          2
+        ],
+        "evolutions": [
+          "kagayaki"
+        ],
+        "rebirth": false
+      }
+    },
+    {
+      "level": 48,
+      "xp": 100,
+      "gained": 9000,
+      "isBloomer": true,
+      "expected": {
+        "level": 51,
+        "xp": 577,
+        "newSlots": [
+          3
+        ],
+        "evolutions": [
+          "densetsu"
+        ],
+        "rebirth": true
+      }
+    },
+    {
+      "level": 99,
+      "xp": 9000,
+      "gained": 100000,
+      "isBloomer": false,
+      "expected": {
+        "level": 100,
+        "xp": 0,
+        "newSlots": [],
+        "evolutions": [
+          "oukan"
+        ],
+        "rebirth": false
+      }
     }
   ],
   "xpToNext": {
@@ -4251,6 +11757,369 @@
       "k": 12,
       "expectedMille": 10,
       "delta": 12
+    },
+    {
+      "ratingA": 1234,
+      "ratingB": 1180,
+      "aWon": false,
+      "k": 24,
+      "expectedMille": 576,
+      "delta": -14
+    }
+  ],
+  "stagesFnv1a": 3473279383,
+  "rig": [
+    {
+      "note": "valid",
+      "input": {
+        "v": 1,
+        "width": 300,
+        "height": 400.5,
+        "root": [
+          150,
+          300
+        ],
+        "chest": [
+          150,
+          200.5
+        ],
+        "limbs": [
+          {
+            "kind": "head",
+            "base": [
+              150,
+              150
+            ],
+            "mid": [
+              150,
+              100
+            ],
+            "tip": [
+              150,
+              50
+            ]
+          },
+          {
+            "kind": "arm",
+            "base": [
+              120,
+              200
+            ],
+            "mid": [
+              80,
+              220
+            ],
+            "tip": [
+              40,
+              260
+            ],
+            "edited": true
+          }
+        ],
+        "source": "edited",
+        "futureKey": "kept"
+      },
+      "problem": null
+    },
+    {
+      "note": "not an object",
+      "input": [
+        1,
+        2
+      ],
+      "problem": "not an object"
+    },
+    {
+      "note": "unknown version",
+      "input": {
+        "v": 2
+      },
+      "problem": "version"
+    },
+    {
+      "note": "point out of range",
+      "input": {
+        "v": 1,
+        "width": 100,
+        "height": 100,
+        "root": [
+          50,
+          50
+        ],
+        "chest": [
+          50,
+          900
+        ],
+        "limbs": []
+      },
+      "problem": "body"
+    },
+    {
+      "note": "bad limb kind",
+      "input": {
+        "v": 1,
+        "width": 100,
+        "height": 100,
+        "root": [
+          50,
+          50
+        ],
+        "chest": [
+          50,
+          40
+        ],
+        "limbs": [
+          {
+            "kind": "wing",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          }
+        ]
+      },
+      "problem": "limb kind"
+    },
+    {
+      "note": "too many limbs",
+      "input": {
+        "v": 1,
+        "width": 100,
+        "height": 100,
+        "root": [
+          50,
+          50
+        ],
+        "chest": [
+          50,
+          40
+        ],
+        "limbs": [
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          },
+          {
+            "kind": "extra",
+            "base": [
+              1,
+              1
+            ],
+            "mid": [
+              2,
+              2
+            ],
+            "tip": [
+              3,
+              3
+            ]
+          }
+        ]
+      },
+      "problem": "too many limbs"
+    },
+    {
+      "note": "too large",
+      "input": {
+        "v": 1,
+        "width": 100,
+        "height": 100,
+        "root": [
+          50,
+          50
+        ],
+        "chest": [
+          50,
+          40
+        ],
+        "limbs": [],
+        "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "problem": "too large"
     }
   ]
 }

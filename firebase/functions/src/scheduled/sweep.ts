@@ -3,6 +3,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { startGhostMatch } from "../battle/matchmaking";
 import { enforceDeadline } from "../battle/matchService";
 import { LIMITS } from "../config";
+import { effectiveGhostAfterMs, getCostMode } from "../cost/costMode";
 import { clock } from "../lib/clock";
 import { COL, db } from "../lib/firebase";
 import type { QueueDoc } from "../model";
@@ -23,6 +24,7 @@ export interface SweepStats {
 export async function sweep(): Promise<SweepStats> {
   const stats: SweepStats = { staleQueueRemoved: 0, ghostMatches: 0, turnsEnforced: 0 };
   const now = clock.now();
+  const ghostAfterMs = effectiveGhostAfterMs(LIMITS.ghostAfterMs, await getCostMode());
   const waiting = await db().collection(COL.queue).where("status", "==", "waiting").limit(500).get();
   for (const d of waiting.docs) {
     const q = d.data() as QueueDoc;
@@ -31,8 +33,8 @@ export async function sweep(): Promise<SweepStats> {
         () => stats.staleQueueRemoved++,
         () => undefined, // changed meanwhile (heartbeat or matched)
       );
-    } else if (now - q.joinedAtMs >= LIMITS.ghostAfterMs) {
-      if (await startGhostMatch(q.uid)) stats.ghostMatches++;
+    } else if (now - q.joinedAtMs >= ghostAfterMs) {
+      if (await startGhostMatch(q.uid, ghostAfterMs)) stats.ghostMatches++;
     }
   }
   const expired = await db()

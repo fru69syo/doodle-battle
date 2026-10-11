@@ -5,7 +5,9 @@
 //   shared/ng_words/*.json            -> src/vendor/ng_words/
 //   shared/names/*.json               -> src/vendor/names/        (display-name words; the app bundles a copy)
 //   shared/battle_spec/*.json         -> src/vendor/battle_spec/      (if present)
+//   shared/cost_mode/*.json           -> src/vendor/cost_mode/        (normal/saving/minimal flags)
 //   shared/battle_engine_ts/src/**    -> src/vendor/battle_engine/    (if present)
+//   shared/battle_engine_v3_ts/src/** -> src/vendor/battle_engine_v3/ (engine v3: v2 characters)
 //
 // src/vendor/ is git-ignored: the shared/ directory is the single source of truth.
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
@@ -36,6 +38,7 @@ function copyJsonDir(from, to, required) {
 
 copyJsonDir("shared/ng_words", join(vendor, "ng_words"), true);
 copyJsonDir("shared/names", join(vendor, "names"), true);
+copyJsonDir("shared/cost_mode", join(vendor, "cost_mode"), true);
 copyJsonDir("shared/battle_spec", join(vendor, "battle_spec"), false);
 
 const engineSrc = join(repoRoot, "shared", "battle_engine_ts", "src");
@@ -48,3 +51,11 @@ if (existsSync(engineSrc)) {
 } else {
   console.log("[sync-shared] skip shared/battle_engine_ts/src (not present; stub engine is used)");
 }
+
+const engineV3Src = join(repoRoot, "shared", "battle_engine_v3_ts", "src");
+if (!existsSync(engineV3Src)) throw new Error("Missing required shared dir: shared/battle_engine_v3_ts/src");
+cpSync(engineV3Src, join(vendor, "battle_engine_v3"), {
+  recursive: true,
+  filter: (p) => !/\.(test|spec)\.ts$/.test(p),
+});
+console.log("[sync-shared] shared/battle_engine_v3_ts/src -> src/vendor/battle_engine_v3");
