@@ -101,6 +101,7 @@ module "cost_guard" {
   monthly_budget           = var.monthly_budget_jpy
   currency_code            = "JPY"
   notification_channel_ids = [module.monitoring.notification_channel_id]
+  grant_billing_publisher  = var.grant_billing_publisher
 
   depends_on = [module.services]
 }

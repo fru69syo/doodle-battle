@@ -90,7 +90,9 @@ resource "google_firebase_android_app" "android" {
   package_name  = var.android_package_name
   sha256_hashes = var.android_sha256_hashes
 
-  deletion_policy = "DELETE"
+  # ABANDON in prod: removing the app from Terraform must not delete it (the shipped app's
+  # config points at it).
+  deletion_policy = var.deletion_protection ? "ABANDON" : "DELETE"
   depends_on      = [google_firebase_project.this]
 }
 
@@ -102,7 +104,7 @@ resource "google_firebase_apple_app" "ios" {
   bundle_id    = var.ios_bundle_id
   team_id      = var.ios_team_id == "" ? null : var.ios_team_id
 
-  deletion_policy = "DELETE"
+  deletion_policy = var.deletion_protection ? "ABANDON" : "DELETE"
   depends_on      = [google_firebase_project.this]
 }
 

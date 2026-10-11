@@ -493,6 +493,7 @@ Firebase コンソール → Firestore。運用でよく見るのは `config/cos
 | `Permission 'iam.serviceAccounts.getAccessToken' denied`（GitHub Actions） | 環境の名前が WIF の許可と違う（例 `realtime-production`）、`id-token: write` が無い、変数 `GCP_WIF_PROVIDER` のまちがい |
 | `The caller does not have permission` で予算が作れない | `tf-apply@` に請求先アカウントの「費用管理者」が無い（§4.3） |
 | `Error acquiring the state lock` | 前の実行が途中で止まった。§8.2 |
+| `apply` で `billing-budget-alert@system.gserviceaccount.com … does not exist` | 予算の通知用の Google のアカウントを Pub/Sub に許可する設定が、組織の設定と合わない。`grant_billing_publisher = false` にして apply（予算を Pub/Sub につなぐと Cloud Billing が自動で許可を付けます） |
 | `terraform destroy` で Firestore が消えない | prod は削除保護つき（わざと）。dev は保護なし |
 | Identity Platform に切り替わった | Terraform で Auth を管理すると自動で切り替わる（**元に戻せない**）。無料枠（月数万人）を大きく超えなければ費用は変わらない。いやなら `manage_auth = false` にして、Auth は Firebase コンソールで匿名をオン |
 | デプロイ後にアプリが対戦サーバーにつながらない | URL のまちがい（`wss://…/v2`）、App Check（dev ビルドはデバッグトークンを登録）、`REQUIRE_APP_CHECK` |

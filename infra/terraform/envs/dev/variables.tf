@@ -104,3 +104,9 @@ variable "realtime_battle_engine" {
   type        = string
   default     = "dev"
 }
+
+variable "grant_billing_publisher" {
+  description = "Grant Cloud Billing's budget service account publish rights on the budget topic. Set false if your organisation already grants it or the apply reports the account does not exist."
+  type        = bool
+  default     = true
+}
