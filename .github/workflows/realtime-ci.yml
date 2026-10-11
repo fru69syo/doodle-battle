@@ -1,0 +1,109 @@
+# CI for the realtime battle server (server/realtime). Runs on PRs and pushes to main that touch
+# the server or the shared data it reads. See docs/LEARN_GCP.md §7.
+name: Realtime CI
+
+on:
+  pull_request:
+    paths:
+      - "server/realtime/**"
+      - "shared/cost_mode/**"
+      - "shared/battle_spec_v3/**"
+      - "firebase/firebase.json"
+      - ".github/workflows/realtime-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "server/realtime/**"
+      - "shared/cost_mode/**"
+      - "shared/battle_spec_v3/**"
+      - "firebase/firebase.json"
+      - ".github/workflows/realtime-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: realtime-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  JAVA_VERSION: "21"
+
+jobs:
+  test:
+    name: Lint / unit / integration / build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server/realtime
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: server/realtime/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  firestore:
+    name: FirestoreStore against the emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            server/realtime/package-lock.json
+            firebase/functions/package-lock.json
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Cache Firebase emulator binaries
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('firebase/functions/package-lock.json') }}
+          restore-keys: firebase-emulators-${{ runner.os }}-
+      # The firebase CLI comes from the functions package (one pinned version for the repo).
+      - name: Install firebase CLI (functions devDependencies)
+        run: npm ci
+        working-directory: firebase/functions
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server/realtime
+      - name: Emulator tests
+        working-directory: server/realtime
+        run: |
+          export PATH="$GITHUB_WORKSPACE/firebase/functions/node_modules/.bin:$PATH"
+          npm run test:firestore
+
+  image:
+    name: Container image builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build (no push)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: server/realtime/Dockerfile
+          push: false
+          tags: battle:ci
