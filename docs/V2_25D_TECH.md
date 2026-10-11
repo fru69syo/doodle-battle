@@ -1,5 +1,7 @@
 # v2.0 2.5D 技術スパイク（2.5D Spike チーム）
 
+> **製品化済み（Puppet チーム）**: スパイクのコード（`features/spike25d/`）は `features/puppet/`・`features/battle_stage/`・`features/draw_canvas/` に移して削除した。現在の仕様・精度・性能は `docs/PUPPET.md`。以下はスパイク時点の記録。
+
 オーナーの質問「**3D の代わりに、絵のパーツを 2D で動かす（2.5D）方式にすれば、費用を抑えられるか？**」に、動くプロトタイプで答えたもの。
 コードは `spike/25d` ブランチの `app/lib/features/spike25d/`（テストは `app/test/features/spike25d/`）。消すときはこの 2 つのフォルダ、`docs/v2_25d/`、ルーターの数行（§9）を戻すだけ。
 

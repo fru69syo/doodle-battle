@@ -27,6 +27,10 @@ Owner: Trust チーム. Code: `app/lib/features/drawing_analysis/non_drawing_det
   app session and again after a "not paper" / unreadable retake (`captureGuideSeenProvider`).
 - **Retake flow** (`showRetake`, keys `retake-drawMore|notPaper|unreadable`): the message, the tips
   (for notPaper/unreadable) and 「もういちど とる」/「かきたして とる」 or 「あとで」.
+- **In-app drawing tool** (「アプリで かく」, `draw-in-app`, SPEC §12.2 input ②): drawn with a finger on our
+  canvas, no import / paste. Its picture skips paper detection and the authenticity checks (§3) — it is
+  digital by construction — and a cloud "not hand-drawn" verdict is ignored for it; everything else
+  (empty check, features, stats, cloud appropriateness) is the same. Details: docs/PUPPET.md §4.2.
 - **Album import only via おうちのひと** (behind the parental gate): 「アルバムから とりこむ」 arms a
   one-shot flag (`albumImportArmProvider`) and goes to the draw screen, which consumes it and opens
   the gallery once. The picture goes through exactly the same checks.
