@@ -78,11 +78,11 @@ variable "deletion_protection" {
 }
 
 variable "battle_engine" {
-  description = "Battle engine the server loads: v3 (shared Engine v3) or dev (stand-in, development only)."
+  description = "Battle engine the server loads. v3 = the shared Engine v3. The dev stand-in is refused with NODE_ENV=production (always set here), so it is local-only."
   type        = string
   default     = "v3"
   validation {
-    condition     = contains(["v3", "dev"], var.battle_engine)
-    error_message = "battle_engine must be v3 or dev."
+    condition     = var.battle_engine == "v3"
+    error_message = "battle_engine must be v3 (the dev stand-in engine only runs locally: npm run dev)."
   }
 }

@@ -96,6 +96,17 @@ export interface BattleSim {
   stateHash(): string;
 }
 
+/**
+ * Thrown by `ratedFighter` when a snapshot cannot be battled by this engine (e.g. a v1 snapshot
+ * under Engine v3). The hub answers `NOT_FOUND` (the app asks the child to register again).
+ */
+export class UnsupportedFighterError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnsupportedFighterError";
+  }
+}
+
 export interface BattleEngine {
   /** Stored with every replay, e.g. "v3.1" or "dev-0". */
   readonly engineId: string;

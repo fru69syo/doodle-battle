@@ -79,6 +79,7 @@ describe("rate limiter", () => {
 describe("config", () => {
   it("refuses the insecure dev auth in production", () => {
     expect(() => loadConfig({ NODE_ENV: "production", AUTH_MODE: "insecure-dev" })).toThrow();
+    expect(() => loadConfig({ NODE_ENV: "production", BATTLE_ENGINE: "dev" })).toThrow(/BATTLE_ENGINE=dev/);
     expect(loadConfig({ NODE_ENV: "production" })).toMatchObject({ requireAppCheck: true, engine: "v3", authMode: "firebase", tickMs: 100 });
     expect(loadConfig({ BATTLE_ENGINE: "dev", REQUIRE_APP_CHECK: "false" })).toMatchObject({ engine: "dev", requireAppCheck: false });
   });

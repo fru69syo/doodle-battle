@@ -100,9 +100,9 @@ variable "require_app_check" {
 }
 
 variable "realtime_battle_engine" {
-  description = "Battle engine of the realtime server: v3 or dev (see server/realtime/README.md)."
+  description = "Battle engine of the realtime server. Only v3 (the shared Engine v3) runs on Cloud Run; the dev stand-in is for local development (docs/REALTIME_PROTOCOL.md §9)."
   type        = string
-  default     = "dev"
+  default     = "v3"
 }
 
 variable "grant_billing_publisher" {

@@ -75,8 +75,8 @@ resource "google_cloud_run_v2_service" "battle" {
         value = "info"
       }
       env {
-        # "v3" = shared Engine v3 (production). "dev" = the simplified stand-in engine that ships
-        # with the server until Engine v3 lands (never use it for rated play in prod).
+        # "v3" = shared Engine v3 (shared/battle_engine_v3_ts, bit-exact with the app). The
+        # simplified "dev" stand-in is refused by the server when NODE_ENV=production.
         name  = "BATTLE_ENGINE"
         value = var.battle_engine
       }

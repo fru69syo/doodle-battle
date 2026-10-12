@@ -21,6 +21,7 @@
     "test:firestore": "firebase emulators:exec --config ../../firebase/firebase.json --project demo-doodle-battle --only firestore \"vitest run --project firestore\""
   },
   "dependencies": {
+    "@doodle-battle/battle-engine-v3": "file:../../shared/battle_engine_v3_ts",
     "firebase-admin": "^14.5.0",
     "ws": "^8.22.0",
     "zod": "^4.6.5"
