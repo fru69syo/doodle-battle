@@ -100,7 +100,7 @@ export async function registerCharacterV2Handler(req: CallableRequest<unknown>):
   await consumeRateLimit(uid, RATE_LIMITS.registerCharacter);
 
   if (input.level < LIMITS.onlineMinLevel) return no(uid, "LEVEL_TOO_LOW");
-  const claim = {
+  const baseClaim = {
     features: input.features,
     energy10: input.energy10,
     skill10: input.skill10,
@@ -108,9 +108,10 @@ export async function registerCharacterV2Handler(req: CallableRequest<unknown>):
     verdict: input.verdict ?? null,
     level: input.level,
     xp: input.xp,
-    ...(input.stats ? { stats: input.stats } : {}),
     moves: input.moves,
   };
+  // The device's own numbers (its hash, its verdict, its stats) must be self-consistent.
+  const claim = { ...baseClaim, ...(input.stats ? { stats: input.stats } : {}) };
   const first = validateCharacterClaimV2(claim, { ngCheck, maxLevel: V2_MAX_LEVEL });
   if (!first.ok || !first.snapshot) {
     logger.warn("registerCharacterV2 claim invalid", { uid, problems: first.problems });
@@ -180,8 +181,10 @@ export async function registerCharacterV2Handler(req: CallableRequest<unknown>):
     canvas: canvas ? (canvas.plausible ? `ok:${canvas.explainedPct ?? ""}` : `x:${canvas.problem ?? ""}:${canvas.explainedPct ?? ""}`) : null,
     hashMatchesDevice: imageHash === input.imageHash,
   });
+  // The device's `stats` were cross-checked against its own hash above; they are not compared
+  // again (the server seed / verdict may legitimately differ).
   const final = validateCharacterClaimV2(
-    { ...claim, imageHash, verdict: origin, moves: proposals, rig: input.rig ?? null },
+    { ...baseClaim, imageHash, verdict: origin, moves: proposals, rig: input.rig ?? null },
     { ngCheck, serverOrigin: origin, maxLevel: V2_MAX_LEVEL },
   );
   if (!final.ok || !final.snapshot) return no(uid, "STATS_INVALID");

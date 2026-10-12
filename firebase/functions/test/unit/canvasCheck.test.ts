@@ -11,7 +11,8 @@ describe("decodePngPixels", () => {
   it("decodes every row filter to the same pixels", () => {
     const ref = decodePngPixels(gradientPng(0));
     expect(ref).toMatchObject({ width: CANVAS_TEST_SIZE.width, height: CANVAS_TEST_SIZE.height });
-    for (const f of [1, 2, 3, 4] as const) expect(decodePngPixels(gradientPng(f))?.rgba).toEqual(ref?.rgba);
+    const same = (a?: Uint8Array, b?: Uint8Array) => a !== undefined && b !== undefined && Buffer.from(a).equals(Buffer.from(b));
+    for (const f of [1, 2, 3, 4] as const) expect(same(decodePngPixels(gradientPng(f))?.rgba, ref?.rgba), `filter ${f}`).toBe(true);
   });
 
   it("returns null for shapes it does not support or broken files", () => {
