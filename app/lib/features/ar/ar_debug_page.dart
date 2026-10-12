@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../domain/character_v2.dart';
-import '../../domain/character_v2_view.dart';
 import '../../domain/element_type.dart';
 import '../../domain/battle_v3/battle_v3.dart';
 import 'ar_effects.dart';

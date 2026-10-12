@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
@@ -27,14 +28,17 @@ import 'rig/limb_hints.dart';
 /// The look comes from the domain rule ([drawsSimpleLook]); no flag
 /// reaches the UI. The rig is `CharacterV2.rig` (the edited joints), else
 /// the [PuppetStore] copy, else the auto-rig.
+/// Reads a provider (`ref.read` of a `Ref` or a `WidgetRef`).
+typedef ProviderReader = T Function<T>(ProviderListenable<T> provider);
+
 Future<PuppetSpec?> characterPuppetSpec(
-  Ref ref,
+  ProviderReader read,
   CharacterV2 c, {
   PuppetQuality quality = PuppetQuality.high,
 }) async {
-  final base = await ref.read(characterRepositoryProvider).readImage(c.id);
+  final base = await read(characterRepositoryProvider).readImage(c.id);
   if (base == null) return null;
-  final store = ref.read(puppetStoreProvider);
+  final store = read(puppetStoreProvider);
   final look = lookOf(c);
   final stored =
       CharacterRig.fromBlob(c.rig) ??
@@ -51,7 +55,7 @@ Future<PuppetSpec?> characterPuppetSpec(
   }
   // With drawn parts: rig the base drawing, then add one limb per part in
   // the composite picture's coordinates.
-  final loop = ref.read(drawingLoopStorageProvider);
+  final loop = read(drawingLoopStorageProvider);
   final partPngs = <String, Uint8List>{};
   for (final p in c.cosmetics.parts) {
     final png = await loop.readAsset(c.id, p.assetName);
@@ -59,10 +63,10 @@ Future<PuppetSpec?> characterPuppetSpec(
   }
   final baseRig =
       stored ??
-      await ref.read(puppetBuilderProvider).autoRig(base, strokes: strokes);
+      await read(puppetBuilderProvider).autoRig(base, strokes: strokes);
   final CompositeImage comp;
   try {
-    comp = await ref.read(compositeRunnerProvider)(
+    comp = await read(compositeRunnerProvider)(
       compositeRequestFor(
         c,
         base,
@@ -144,4 +148,4 @@ PuppetLook lookOf(CharacterV2 c) => PuppetLook(
 
 /// [characterPuppetSpec] as a provider (character id → spec).
 final characterPuppetSpecProvider = FutureProvider.autoDispose
-    .family<PuppetSpec?, CharacterV2>((ref, c) => characterPuppetSpec(ref, c));
+    .family<PuppetSpec?, CharacterV2>((ref, c) => characterPuppetSpec(ref.read, c));

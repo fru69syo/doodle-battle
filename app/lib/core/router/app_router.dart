@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
 import '../../domain/cosmetics.dart';
 import '../../features/battle_stage/debug/stage_debug_page.dart';
 import '../../features/battle_ui/battle_outcome.dart';
@@ -171,13 +171,20 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: ':id/stages',
                 builder: (_, s) =>
-                    StageSelectScreen(characterId: s.pathParameters['id']!),
+                    WorldSelectScreen(characterId: s.pathParameters['id']!),
+              ),
+              GoRoute(
+                path: ':id/world/:world',
+                builder: (_, s) => StageSelectScreen(
+                  characterId: s.pathParameters['id']!,
+                  world: int.tryParse(s.pathParameters['world']!) ?? 1,
+                ),
               ),
               GoRoute(
                 path: ':id/stage/:stage',
                 builder: (_, s) => CpuBattleScreen(
                   characterId: s.pathParameters['id']!,
-                  stage: int.parse(s.pathParameters['stage']!),
+                  stage: int.tryParse(s.pathParameters['stage']!) ?? 1,
                 ),
               ),
             ],
@@ -190,17 +197,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'queue/:id',
                 builder: (_, s) => _WithCharacter(
                   id: s.pathParameters['id']!,
-                  builder: (c) => OnlineQueueScreen(character: c),
-                ),
-              ),
-              GoRoute(
-                path: 'match/:matchId',
-                builder: (_, s) => _WithCharacter(
-                  id: s.uri.queryParameters['c'] ?? '',
-                  builder: (c) => OnlineBattleScreen(
-                    matchId: s.pathParameters['matchId']!,
-                    character: c,
-                  ),
+                  builder: (c) => OnlineBattleScreen(character: c),
                 ),
               ),
             ],
@@ -251,7 +248,7 @@ class _Splash extends StatelessWidget {
 class _WithCharacter extends ConsumerWidget {
   const _WithCharacter({required this.id, required this.builder});
   final String id;
-  final Widget Function(Character c) builder;
+  final Widget Function(CharacterV2 c) builder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

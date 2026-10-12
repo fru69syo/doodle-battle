@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/widgets/character_picture.dart';
-import '../../core/widgets/element_badge.dart';
+import '../../core/widgets/attr_badge.dart';
 import '../../data/app_state.dart';
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
 import 'family_setup.dart';
 import 'family_theme.dart';
 
@@ -25,7 +23,7 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
 
   /// Defaults: newest character for あか, the one before it for あお (the
   /// same one when there is only one: a mirror match).
-  FamilyBattleConfig _defaults(List<Character> chars) {
+  FamilyBattleConfig _defaults(List<CharacterV2> chars) {
     final newest = chars.last;
     final second = chars.length > 1 ? chars[chars.length - 2] : newest;
     return FamilyBattleConfig(
@@ -36,10 +34,10 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
 
   /// Keeps the chosen characters in sync with the ずかん (level changes,
   /// release).
-  FamilyBattleConfig? _resolve(List<Character> chars) {
+  FamilyBattleConfig? _resolve(List<CharacterV2> chars) {
     if (chars.isEmpty) return null;
     final base = _config ?? _defaults(chars);
-    Character fresh(Character c) =>
+    CharacterV2 fresh(CharacterV2 c) =>
         chars.where((x) => x.id == c.id).firstOrNull ?? chars.last;
     return base.copyWith(
       a: base.a.copyWith(character: fresh(base.a.character)),
@@ -50,12 +48,11 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
   @override
   Widget build(BuildContext context) {
     final chars = ref.watch(charactersProvider).value;
-    final spec = ref.watch(battleSpecProvider).value;
     final config = chars == null ? null : _resolve(chars);
     return Scaffold(
       appBar: AppBar(title: const Text('かぞくで たいせん')),
       body: SafeArea(
-        child: chars == null || spec == null
+        child: chars == null
             ? const Center(child: CircularProgressIndicator())
             : config == null
             ? const _NoCharacters()
@@ -68,14 +65,13 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
-                  for (final side in Side.values) ...[
+                  for (final side in FamilySide.values) ...[
                     _PlayerPanel(
                       side: side,
                       config: config,
-                      spec: spec,
                       characters: chars,
                       onChanged: (p) => setState(
-                        () => _config = side == Side.a
+                        () => _config = side == FamilySide.a
                             ? config.copyWith(a: p)
                             : config.copyWith(b: p),
                       ),
@@ -155,15 +151,13 @@ class _PlayerPanel extends StatelessWidget {
   const _PlayerPanel({
     required this.side,
     required this.config,
-    required this.spec,
     required this.characters,
     required this.onChanged,
   });
 
-  final Side side;
+  final FamilySide side;
   final FamilyBattleConfig config;
-  final BattleSpec spec;
-  final List<Character> characters;
+  final List<CharacterV2> characters;
   final ValueChanged<FamilyPlayer> onChanged;
 
   @override
@@ -171,7 +165,7 @@ class _PlayerPanel extends StatelessWidget {
     final p = config.player(side);
     final colour = familyColour(side);
     final c = p.character;
-    final level = config.battleLevel(spec, side);
+    final level = config.battleLevel(side);
     return Card(
       key: Key('family-panel-${side.name}'),
       shape: RoundedRectangleBorder(
@@ -258,7 +252,7 @@ class _PlayerPanel extends StatelessWidget {
                                 Icons.arrow_upward,
                                 color: Color(0xFF2E9E44),
                               ),
-                            ElementBadge(c.element),
+                            AttrBadge(c.attribute()),
                           ],
                         ),
                         const Text(
@@ -297,7 +291,7 @@ class _PlayerPanel extends StatelessWidget {
   }
 }
 
-Future<String?> _pickLabel(BuildContext context, Side side, String current) =>
+Future<String?> _pickLabel(BuildContext context, FamilySide side, String current) =>
     showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -333,11 +327,11 @@ Future<String?> _pickLabel(BuildContext context, Side side, String current) =>
       ),
     );
 
-Future<Character?> _pickCharacter(
+Future<CharacterV2?> _pickCharacter(
   BuildContext context,
   String label,
-  List<Character> characters,
-) => showModalBottomSheet<Character>(
+  List<CharacterV2> characters,
+) => showModalBottomSheet<CharacterV2>(
   context: context,
   showDragHandle: true,
   isScrollControlled: true,

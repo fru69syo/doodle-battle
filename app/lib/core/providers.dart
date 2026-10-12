@@ -2,7 +2,10 @@
 /// backend; tests override anything with fakes.
 library;
 
+import 'dart:convert';
 import 'dart:math';
+
+import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +13,8 @@ import '../data/backend/backend_api.dart';
 import '../data/character_repository.dart';
 import '../data/settings_repository.dart';
 import '../domain/battle/battle.dart';
+import '../domain/cost_mode.dart';
+import '../domain/cpu_roster_v2.dart';
 import '../domain/battle/battle_spec_asset.dart';
 import '../features/draw/drawing_services.dart';
 import '../features/monetization/monetization_service.dart';
@@ -63,3 +68,21 @@ final battleSpecProvider = FutureProvider<BattleSpec>(
 final ngFilterProvider = FutureProvider<NgFilter>((ref) => NgFilter.load());
 
 final cpuRosterProvider = FutureProvider<CpuRoster>((ref) => loadCpuRoster());
+
+/// Bundled CPU doodles of v2.0 single-player (`manifest_v2.json`).
+final cpuRosterV2Provider = FutureProvider<CpuRosterV2>(
+  (ref) async => CpuRosterV2.fromManifestJson(
+    (jsonDecode(await rootBundle.loadString(kCpuManifestV2Path)) as Map)
+        .cast<String, Object?>(),
+  ),
+);
+
+/// Bytes of a bundled asset (CPU doodles for the stage puppets).
+final assetBytesProvider = FutureProvider.family<Uint8List, String>(
+  (ref, key) async => (await rootBundle.load(key)).buffer.asUint8List(),
+);
+
+/// `config/costMode` (SPEC §12.7), read when a server feature starts.
+final costModeProvider = FutureProvider<CostMode>(
+  (ref) => ref.watch(backendApiProvider).costMode(),
+);

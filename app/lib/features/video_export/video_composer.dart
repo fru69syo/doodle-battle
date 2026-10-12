@@ -11,8 +11,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/before_photo.dart';
-import '../../domain/battle/battle.dart' show BattleAction;
+import '../../domain/cosmetics.dart';
 import '../../domain/element_type.dart';
+import '../puppet/anim/clips.dart';
+import '../puppet/render/puppet_sprite.dart';
 import 'battle_highlight.dart';
 import 'video_timeline.dart';
 
@@ -48,6 +50,8 @@ class VideoContent {
     required this.cpuImage,
     this.original,
     this.moveEffects = const {},
+    this.puppet,
+    this.cpuPuppet,
   });
 
   /// The paper photo (or the generated paper fallback).
@@ -70,7 +74,13 @@ class VideoContent {
 
   /// The child's drawn move effects by move (Loop feature); drawn as the
   /// projectile, otherwise an element-coloured energy ball.
-  final Map<BattleAction, ui.Image> moveEffects;
+  final Map<DrawnMove, ui.Image> moveEffects;
+
+  /// The 2.5D puppets (docs/PUPPET.md): once the drawing has come alive it
+  /// moves with its own joints (hop, punch, get hit, faint). Null = the
+  /// flat picture (e.g. the puppet could not be built).
+  final PuppetSprite? puppet;
+  final PuppetSprite? cpuPuppet;
 
   ui.Image get drawing => original ?? character;
 }
@@ -361,7 +371,13 @@ class VideoComposer {
     if (morph < 1) {
       _drawContain(canvas, content.drawing, r, opacity: 1 - morph);
     }
-    if (morph > 0) _drawContain(canvas, content.character, r, opacity: morph);
+    final puppet = content.puppet;
+    if (puppet != null && alive > 0) {
+      // Alive: the 2.5D puppet hops with its own joints.
+      _drawPuppet(canvas, puppet, Anim.hop, t - 1.3, r: r);
+    } else if (morph > 0) {
+      _drawContain(canvas, content.character, r, opacity: morph);
+    }
     canvas.restore();
 
     _paintSparkles(canvas, center, _phase(t, 0.95, 2.2));
@@ -435,7 +451,8 @@ class VideoComposer {
         if (last.faint) cpuFaint = 1;
     }
 
-    // Fighters.
+    // Fighters (2.5D puppets when available: punch, get hit, faint).
+    final attacking = hitLocal != null && hitLocal >= 0.2 && hitLocal < 0.9;
     _paintFighter(
       canvas,
       content.cpuImage,
@@ -443,12 +460,24 @@ class VideoComposer {
       _cpuBox,
       flash: cpuFlash,
       faint: cpuFaint,
+      puppet: content.cpuPuppet,
+      clip: cpuFaint > 0
+          ? (Anim.faint, (hitLocal ?? 1.6) - 1.0)
+          : (attacking && hitLocal >= 0.45
+                ? (Anim.hit, hitLocal - 0.45)
+                : (Anim.idle, t)),
+      facing: -1,
     );
     _paintFighter(
       canvas,
       content.character,
       _playerCenter + playerOffset + Offset(0, -idle),
       _playerBox,
+      puppet: content.puppet,
+      clip: attacking
+          ? (Anim.shoot, hitLocal - 0.2)
+          : (beat is OutroBeat ? (Anim.victory, t) : (Anim.idle, t)),
+      facing: 1,
     );
 
     // Panels.
@@ -536,7 +565,7 @@ class VideoComposer {
         final q = (p - i * 0.06).clamp(0.0, 1.0);
         final pos = Offset.lerp(from, _cpuCenter, _ease(q))!;
         final r = 34.0 - i * 5;
-        final drawn = content.moveEffects[hit.action];
+        final drawn = content.moveEffects[hit.move];
         if (drawn != null && i == 0) {
           canvas.save();
           canvas.translate(pos.dx, pos.dy);
@@ -780,6 +809,28 @@ class VideoComposer {
     );
   }
 
+  /// Draws [sprite] with [clip] at [time], feet at the bottom of [r]
+  /// (the canvas is already placed at the picture's centre).
+  void _drawPuppet(
+    Canvas canvas,
+    PuppetSprite sprite,
+    Anim clip,
+    double time, {
+    Rect? r,
+    int facing = 1,
+  }) {
+    final box = r ?? Rect.zero;
+    final scale = box.height / math.max(1.0, sprite.height);
+    sprite.draw(
+      canvas,
+      clip,
+      math.max(0.0, time),
+      feet: Offset(0, box.bottom),
+      scale: scale,
+      screenDir: facing,
+    );
+  }
+
   void _paintFighter(
     Canvas canvas,
     ui.Image image,
@@ -787,7 +838,22 @@ class VideoComposer {
     Size box, {
     double flash = 0,
     double faint = 0,
+    PuppetSprite? puppet,
+    (Anim, double) clip = (Anim.idle, 0),
+    int facing = 1,
   }) {
+    if (puppet != null) {
+      final r = Rect.fromCenter(
+        center: Offset.zero,
+        width: box.width,
+        height: box.height,
+      );
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      _drawPuppet(canvas, puppet, clip.$1, clip.$2, r: r, facing: facing);
+      canvas.restore();
+      return;
+    }
     final fit = _fit(image.width.toDouble(), image.height.toDouble(), box);
     canvas.save();
     canvas.translate(center.dx, center.dy + faint * 40);

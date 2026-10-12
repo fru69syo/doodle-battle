@@ -13,9 +13,12 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
-import '../../domain/battle/battle.dart' show BattleAction;
 import '../../domain/cosmetics.dart' show DrawnMove;
 import '../drawing_loop/display_image.dart';
+import '../puppet/character_puppet.dart';
+import '../puppet/puppet_builder.dart';
+import '../puppet/puppet_look.dart';
+import '../puppet/render/puppet_view.dart' show puppetBuilderProvider;
 import 'video_composer.dart';
 import 'video_content_loader.dart';
 import 'video_encoder.dart';
@@ -104,6 +107,8 @@ class _VideoExportScreenState extends ConsumerState<VideoExportScreen>
 
   @override
   void dispose() {
+    _composer?.content.puppet?.dispose();
+    _composer?.content.cpuPuppet?.dispose();
     _cancel?.cancel();
     _preview.dispose();
     unawaited(_deleteVideo());
@@ -133,23 +138,30 @@ class _VideoExportScreenState extends ConsumerState<VideoExportScreen>
       if (png == null) {
         throw const VideoContentException('character image not found');
       }
-      final effects = <BattleAction, Uint8List>{};
-      for (final (action, move) in [
-        (BattleAction.element, DrawnMove.element),
-        (BattleAction.special, DrawnMove.special),
-      ]) {
+      final effects = <DrawnMove, Uint8List>{};
+      for (final move in DrawnMove.values) {
         final drawn = await display.effectImageFor(c, move);
-        if (drawn != null) effects[action] = drawn;
+        if (drawn != null) effects[move] = drawn;
       }
+      final builder = ref.read(puppetBuilderProvider);
+      final rigged = await characterPuppetSpec(ref.read, c);
       final content = await loadVideoContent(
         character: c,
         displayPng: png,
         originalPng: original,
         moveEffectPngs: effects,
         before: await repo.readBeforePhoto(id),
-        spec: await ref.read(battleSpecProvider.future),
-        roster: await ref.read(cpuRosterProvider.future),
+        roster: await ref.read(cpuRosterV2Provider.future),
         loadAsset: ref.read(videoAssetLoaderProvider),
+        // The 2.5D puppets (docs/PUPPET.md): the child's joints and look.
+        puppetOf: (png, {required cpu}) => builder.sprite(
+          cpu || rigged == null
+              ? PuppetSpec(
+                  png: png,
+                  look: cpu ? const PuppetLook() : lookOf(c),
+                )
+              : rigged,
+        ),
       );
       if (!mounted) return;
       final composer = VideoComposer(content);

@@ -8,8 +8,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
 
 import '../../data/before_photo.dart';
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
+import '../../domain/cosmetics.dart';
+import '../../domain/cpu_roster_v2.dart';
+import '../puppet/render/puppet_sprite.dart';
 import 'battle_highlight.dart';
 import 'video_composer.dart';
 
@@ -30,20 +33,17 @@ class VideoContentException implements Exception {
 /// generated sheet of paper. [moveEffectPngs] are the child's drawn move
 /// effects (used as the projectile).
 Future<VideoContent> loadVideoContent({
-  required Character character,
+  required CharacterV2 character,
   required Uint8List displayPng,
   required BeforePhoto? before,
   Uint8List? originalPng,
-  Map<BattleAction, Uint8List> moveEffectPngs = const {},
-  required BattleSpec spec,
-  required CpuRoster roster,
+  Map<DrawnMove, Uint8List> moveEffectPngs = const {},
+  required CpuRosterV2 roster,
   required Future<Uint8List> Function(String asset) loadAsset,
+  Future<PuppetSprite?> Function(Uint8List png, {required bool cpu})?
+  puppetOf,
 }) async {
-  final highlight = scriptBattleHighlight(
-    spec: spec,
-    roster: roster,
-    player: character,
-  );
+  final highlight = scriptBattleHighlight(roster: roster, player: character);
   if (highlight == null) {
     throw const VideoContentException('no battle highlight');
   }
@@ -51,7 +51,7 @@ Future<VideoContent> loadVideoContent({
   final original = originalPng == null || identical(originalPng, displayPng)
       ? charImage
       : await decodeImage(originalPng);
-  final effects = <BattleAction, ui.Image>{};
+  final effects = <DrawnMove, ui.Image>{};
   for (final e in moveEffectPngs.entries) {
     try {
       effects[e.key] = await decodeImage(e.value);
@@ -59,7 +59,18 @@ Future<VideoContent> loadVideoContent({
       // A broken drawing falls back to the default effect.
     }
   }
-  final cpuImage = await decodeImage(await loadAsset(highlight.cpu.asset));
+  final cpuPng = await loadAsset(highlight.cpu.asset);
+  final cpuImage = await decodeImage(cpuPng);
+  // 2.5D puppets (docs/PUPPET.md); the flat pictures when building fails.
+  PuppetSprite? puppet, cpuPuppet;
+  if (puppetOf != null) {
+    try {
+      puppet = await puppetOf(displayPng, cpu: false);
+      cpuPuppet = await puppetOf(cpuPng, cpu: true);
+    } on Object {
+      puppet = cpuPuppet = null;
+    }
+  }
   ui.Image? beforeImage;
   NormRect? inkRect;
   if (before != null) {
@@ -85,6 +96,8 @@ Future<VideoContent> loadVideoContent({
     element: character.element,
     highlight: highlight,
     cpuImage: cpuImage,
+    puppet: puppet,
+    cpuPuppet: cpuPuppet,
   );
 }
 

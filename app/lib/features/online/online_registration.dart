@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../data/app_state.dart';
 import '../../data/backend/backend_api.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
 import 'online_messages.dart';
 
 sealed class RegistrationResult {
@@ -12,7 +12,7 @@ sealed class RegistrationResult {
 
 class RegistrationOk extends RegistrationResult {
   const RegistrationOk(this.character);
-  final Character character;
+  final CharacterV2 character;
 }
 
 class RegistrationRejected extends RegistrationResult {
@@ -29,7 +29,7 @@ class OnlineRegistration {
   OnlineRegistration(this._ref);
   final Ref _ref;
 
-  Future<RegistrationResult> ensureRegistered(Character c) async {
+  Future<RegistrationResult> ensureRegistered(CharacterV2 c) async {
     final progress = await _ref.read(progressProvider.future);
     if (c.onlineId != null && progress.onlineLevels[c.id] == c.level) {
       return RegistrationOk(c);
@@ -44,7 +44,7 @@ class OnlineRegistration {
       );
       switch (outcome) {
         case RegisterAccepted(:final snapshotId, :final displayName):
-          final updated = c.copyWith(onlineId: snapshotId);
+          final updated = c.copyWith(onlineId: () => snapshotId);
           await _ref.read(charactersProvider.notifier).save(updated);
           final progress = _ref.read(progressProvider.notifier);
           await progress.setOnlineLevel(c.id, c.level);
@@ -73,7 +73,7 @@ class OnlineRegistration {
   }
 
   /// Renames the local character to a server-provided preset name.
-  Future<Character> rename(Character c, String presetName) async {
+  Future<CharacterV2> rename(CharacterV2 c, String presetName) async {
     final updated = c.copyWith(name: presetName);
     await _ref.read(charactersProvider.notifier).save(updated);
     return updated;

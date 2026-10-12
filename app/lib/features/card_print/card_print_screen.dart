@@ -6,7 +6,6 @@ import '../../core/providers.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
 import '../../domain/character_v2.dart';
-import '../../domain/character_v2_view.dart';
 import '../drawing_loop/drawing_loop.dart';
 import '../monetization/card_frames.dart';
 import '../monetization/monetization_service.dart';

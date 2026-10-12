@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/element_badge.dart';
-import '../../domain/character_v2.dart';
 import '../../domain/character_v2_view.dart';
 import '../../domain/stats.dart';
 import 'card_content.dart';

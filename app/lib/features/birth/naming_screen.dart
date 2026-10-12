@@ -10,7 +10,6 @@ import '../../data/app_state.dart';
 import '../../data/backend/backend_models.dart' show AiSuggestionKind;
 import '../../data/character_repository.dart';
 import '../../domain/cosmetics.dart';
-import '../../domain/character_v2_view.dart';
 import '../drawing_loop/drawing_loop.dart';
 import '../drawing_loop/loop_labels.dart' show showOdaiStampMessage;
 import '../drawing_loop/odai/stamp_card.dart' show StampKind;

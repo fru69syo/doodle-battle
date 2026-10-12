@@ -13,7 +13,6 @@ import '../../../data/drawing_loop_storage.dart';
 import '../../../domain/character_v2.dart';
 import '../../../domain/character_v2_view.dart';
 import '../../../domain/cosmetics.dart';
-import '../display_image.dart';
 import '../loop_capture.dart';
 import '../loop_labels.dart';
 import '../odai/odai_controller.dart';

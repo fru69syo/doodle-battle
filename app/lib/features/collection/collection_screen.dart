@@ -8,7 +8,6 @@ import '../../core/widgets/character_picture.dart';
 import '../../core/widgets/attr_badge.dart';
 import '../../data/app_state.dart';
 import '../../domain/character_v2.dart';
-import '../../domain/character_v2_view.dart';
 
 /// 「ずかん」: grid of the child's characters.
 class CollectionScreen extends ConsumerWidget {

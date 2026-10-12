@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,345 +10,207 @@ import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/character_picture.dart';
-import '../../domain/battle/battle.dart';
-import '../battle_ui/battle_arena.dart';
-import '../battle_ui/battle_display.dart';
-import '../battle_ui/cpu_battle_screen.dart' show battleStepProvider;
-import '../battle_ui/move_labels.dart';
-import '../drawing_loop/drawing_loop.dart';
-import 'family_battle_session.dart';
+import '../../data/drawing_loop_storage.dart';
+import '../../domain/battle_v3/battle_v3.dart';
+import '../../domain/cosmetics.dart';
+import '../battle_stage/adapters/battle_v3_feed.dart';
+import '../battle_stage/battle_stage.dart';
+import '../battle_ui/atb_parts.dart';
+import '../puppet/character_puppet.dart';
+import '../puppet/puppet_builder.dart';
 import 'family_setup.dart';
 import 'family_theme.dart';
 
-/// Where the hot-seat flow is.
-enum FamilyPhase {
-  /// 「〇〇の ばん！ △△は みないでね」 until the picker taps.
-  cover,
-
-  /// The picker chooses a move.
-  pick,
-
-  /// The resolved turn is being animated (both watch).
-  animating,
-
-  /// Winner shown.
-  finished,
-}
-
-/// Loads the spec, then runs a [FamilyBattleSession].
-class FamilyBattleScreen extends ConsumerWidget {
+/// かぞくで たいせん on one device (docs/FAMILY.md), real-time ATB: あか
+/// (side a) plays from the bottom, あお (side b) from the top with its
+/// buttons turned towards the player sitting opposite. Each side has its
+/// own さきどり, 5 s ring and おまかせ. Levels via [familyBattleLevel]; no
+/// XP is given (practice battles).
+class FamilyBattleScreen extends ConsumerStatefulWidget {
   const FamilyBattleScreen({super.key, required this.config});
   final FamilyBattleConfig config;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final spec = ref.watch(battleSpecProvider).value;
-    if (spec == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-    return _FamilyBattleView(
-      session: FamilyBattleSession(
-        spec: spec,
-        config: config,
-        seed: ref.read(randomProvider).nextInt(1 << 32),
-      ),
-    );
-  }
+  ConsumerState<FamilyBattleScreen> createState() => _FamilyBattleScreenState();
 }
 
-class _FamilyBattleView extends ConsumerStatefulWidget {
-  const _FamilyBattleView({required this.session});
-  final FamilyBattleSession session;
+class _FamilyBattleScreenState extends ConsumerState<FamilyBattleScreen> {
+  static const _spec = V3Spec();
+  late final FamilyBattleConfig _c = widget.config;
+  late final int _seed = ref.read(randomProvider).nextInt(1 << 32);
+  late final Battle _engine = Battle(
+    _spec,
+    _c.setup(FamilySide.a),
+    _c.setup(FamilySide.b),
+    seed: _seed,
+  );
+  final _auto = aiController();
+
+  /// おまかせ for あお (the feed's own flag is あか's).
+  bool _autoB = false;
+  late final BattleV3Feed _feed = BattleV3Feed(
+    _engine,
+    // Side b is a person too: no CPU; null = wait (5 s → おまかせ).
+    cpu: (b, side) => _autoB ? _auto(b, side) : null,
+  );
+  late final AtbFeed _atb = AtbFeed(
+    _feed,
+    timeScale: ref.read(battleTimeScaleProvider),
+  );
+  late final BattleStageController _controller = BattleStageController(
+    feed: _atb,
+    seed: _seed,
+    theme: StageTheme.candy,
+  );
+  List<PuppetSpec>? _puppets;
+  Map<int, ui.Image> _drawn = const {};
 
   @override
-  ConsumerState<_FamilyBattleView> createState() => _FamilyBattleViewState();
-}
-
-class _FamilyBattleViewState extends ConsumerState<_FamilyBattleView> {
-  late final FamilyBattleSession _s = widget.session;
-  late final FamilyBattleConfig _c = _s.config;
-  late final BattleDisplay _d = _displayFor();
-  FamilyPhase _phase = FamilyPhase.cover;
-
-  BattleDisplay _displayFor() {
-    FighterDisplay f(Side side) {
-      final c = _c.player(side).character;
-      final st = _s.state.fighter(side);
-      return FighterDisplay(
-        name: _c.fighterName(side),
-        level: st.level,
-        element: c.element,
-        maxHp: st.maxHp,
-        hp: st.hp,
-        elementMoveName: c.elementMoveName,
-        specialMoveName: c.specialMoveName,
-      );
-    }
-
-    return BattleDisplay(a: f(Side.a), b: f(Side.b))
-      ..message = '${_c.a.label} たい ${_c.b.label}！';
+  void initState() {
+    super.initState();
+    unawaited(_load());
   }
 
-  String _moveName(Side side, BattleAction a) =>
-      characterMoveLabel(_c.player(side).character, a);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
-  Future<void> _onMove(BattleAction action) async {
-    if (_phase != FamilyPhase.pick) return;
-    final events = _s.pick(action);
-    if (events == null) {
-      // Side a has chosen secretly: hand the device to side b.
-      setState(() => _phase = FamilyPhase.cover);
+  Future<void> _load() async {
+    final specs = [
+      for (final s in FamilySide.values)
+        await characterPuppetSpec(ref.read, _c.player(s).character),
+    ];
+    // Both players' drawn ぞくせいわざ effects (docs/LOOP.md §5).
+    final store = ref.read(drawingLoopStorageProvider);
+    final pngs = <int, Uint8List>{};
+    final slots = <int, Set<int>>{};
+    for (final s in FamilySide.values) {
+      final ch = _c.player(s).character;
+      final asset =
+          ch.cosmetics.effects[DrawnMove.element] ??
+          ch.cosmetics.effects[DrawnMove.special];
+      if (asset == null) continue;
+      final png = await store.readAsset(ch.id, asset);
+      if (png == null) continue;
+      pngs[s.index] = png;
+      slots[s.index] = {
+        if (ch.cosmetics.effects.containsKey(DrawnMove.element)) 0,
+        if (ch.cosmetics.effects.containsKey(DrawnMove.special)) 3,
+      };
+    }
+    final images = pngs.isEmpty
+        ? const <int, ui.Image>{}
+        : await decodeDrawnEffects(pngs);
+    if (!mounted || specs.any((s) => s == null)) return;
+    _atb.drawnSlots = {
+      for (final e in slots.entries)
+        if (images.containsKey(e.key)) e.key: e.value,
+    };
+    setState(() {
+      _drawn = images;
+      _puppets = specs.cast<PuppetSpec>();
+    });
+  }
+
+  double? _choiceLeft(int side) {
+    final f = _engine.fighters[side];
+    final auto = side == 0 ? _feed.alwaysAuto : _autoB;
+    if (f.phase != Phase.ready || auto || _engine.finished) return null;
+    return f.decisionTicksLeft(_spec) / _spec.tickHz;
+  }
+
+  void _tap(int side, int slot) {
+    if (side == 0) {
+      setState(() => _feed.tap(slot));
       return;
     }
-    setState(() => _phase = FamilyPhase.animating);
-    final step = ref.read(battleStepProvider);
-    for (final e in events) {
-      final wait = applyBattleEvent(
-        _d,
-        e,
-        texts: _s.spec.texts,
-        moveName: _moveName,
-        step: step,
-      );
-      if (!mounted) return;
-      setState(() {});
-      if (wait > Duration.zero) await Future<void>.delayed(wait);
-    }
-    if (!mounted) return;
-    if (_s.isOver) {
-      await Future<void>.delayed(step);
-      if (mounted) setState(() => _phase = FamilyPhase.finished);
-    } else {
-      setState(() => _phase = FamilyPhase.cover);
-    }
+    final f = _engine.fighters[1];
+    if (_engine.finished || _autoB || f.phase == Phase.casting) return;
+    setState(() => _engine.queueInput(1, slot));
   }
+
+  void _omakase(int side, bool on) => setState(() {
+    if (side == 0) {
+      _feed.alwaysAuto = on;
+      _feed.cancelTap();
+    } else {
+      _autoB = on;
+      _engine.clearInput(1);
+    }
+  });
+
+  Widget _controls(int side) => Container(
+    key: Key('family-controls-${FamilySide.values[side].name}'),
+    decoration: BoxDecoration(
+      border: Border.all(
+        color: familyColour(FamilySide.values[side]),
+        width: 4,
+      ),
+      borderRadius: BorderRadius.circular(24),
+    ),
+    child: LocalControls(
+      engine: _engine,
+      side: side,
+      selected: _engine.fighters[side].queued,
+      choiceLeft: _choiceLeft(side),
+      omakase: side == 0 ? _feed.alwaysAuto : _autoB,
+      onOmakase: (on) => _omakase(side, on),
+      onTap: (slot) => _tap(side, slot),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final picker = _s.picker;
-    final body = switch (_phase) {
-      FamilyPhase.cover => _Cover(
-        player: _c.player(picker).label,
-        other: _c.player(picker.other).label,
-        colour: familyColour(picker),
-        turn: _s.state.turn + 1,
-        onContinue: () => setState(() => _phase = FamilyPhase.pick),
-      ),
-      FamilyPhase.finished => _Result(
-        config: _c,
-        winner: _s.winner!,
-        onRematch: () =>
-            context.pushReplacement(Routes.familyBattle, extra: _c),
-        onChangeMembers: () => context.pop(),
-        onExit: () => context.go(Routes.home),
-      ),
-      FamilyPhase.pick || FamilyPhase.animating => _Arena(
-        session: _s,
-        display: _d,
-        picker: _phase == FamilyPhase.pick ? picker : null,
-        onMove: _onMove,
-      ),
-    };
-    return Scaffold(
-      appBar: AppBar(title: const Text('かぞくで たいせん')),
-      body: SafeArea(child: body),
+    final puppets = _puppets;
+    if (puppets == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final winner = _controller.winner;
+        if (winner != null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('かぞくで たいせん')),
+            body: SafeArea(
+              child: _Result(
+                config: _c,
+                winner: FamilySide.values[winner],
+                onRematch: () =>
+                    context.pushReplacement(Routes.familyBattle, extra: _c),
+                onChangeMembers: () => context.pop(),
+                onExit: () => context.go(Routes.home),
+              ),
+            ),
+          );
+        }
+        return Scaffold(
+          body: AtbStageLayout(
+            controller: _controller,
+            drawnEffects: _drawn,
+            playerSide: -1,
+            sides: [
+              for (final s in FamilySide.values)
+                AtbSide(
+                  name: '${_c.player(s).label}: ${_c.fighterName(s)}',
+                  level: _c.battleLevel(s),
+                  puppet: puppets[s.index],
+                ),
+            ],
+            top: (_) => Padding(
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
+              child: RotatedBox(quarterTurns: 2, child: _controls(1)),
+            ),
+            bottom: (_) => _controls(0),
+          ),
+        );
+      },
     );
   }
 }
 
-/// Hides the screen while the device changes hands.
-class _Cover extends StatelessWidget {
-  const _Cover({
-    required this.player,
-    required this.other,
-    required this.colour,
-    required this.turn,
-    required this.onContinue,
-  });
-
-  final String player;
-  final String other;
-  final Color colour;
-  final int turn;
-  final VoidCallback onContinue;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    key: const Key('family-cover'),
-    color: colour,
-    width: double.infinity,
-    padding: const EdgeInsets.all(24),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          '$turn ターンめ',
-          style: const TextStyle(color: Colors.white, fontSize: 20),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          '$playerの ばん！',
-          key: const Key('family-cover-title'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 34,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 24),
-        const Icon(Icons.visibility_off, color: Colors.white, size: 72),
-        const SizedBox(height: 12),
-        Text(
-          '$otherは みないでね',
-          key: const Key('family-cover-hint'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 40),
-        FilledButton(
-          key: const Key('family-cover-continue'),
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: colour,
-            minimumSize: const Size(240, 72),
-          ),
-          onPressed: onContinue,
-          child: Text('$playerが タップ'),
-        ),
-      ],
-    ),
-  );
-}
-
-/// Both fighters (あお top, あか bottom) and, while picking, the picker's
-/// moves in their team colour.
-class _Arena extends ConsumerWidget {
-  const _Arena({
-    required this.session,
-    required this.display,
-    required this.picker,
-    required this.onMove,
-  });
-
-  final FamilyBattleSession session;
-  final BattleDisplay display;
-
-  /// Null while the turn animates.
-  final Side? picker;
-  final ValueChanged<BattleAction> onMove;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = session.config;
-    final p = picker;
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // あか fights at the bottom, あお at the top.
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _TeamTag(side: Side.a, label: c.a.label),
-                      _TeamTag(side: Side.b, label: c.b.label),
-                    ],
-                  ),
-                  BattleArena(
-                    display: display,
-                    gaugeMax: session.spec.gauge.max,
-                    // Both players' drawn move effects (docs/LOOP.md §5).
-                    effectImages: {
-                      Side.a: watchMoveEffects(ref, c.a.character),
-                      Side.b: watchMoveEffects(ref, c.b.character),
-                    },
-                    pictures: {
-                      Side.a: CharacterPicture(
-                        character: c.a.character,
-                        size: 130,
-                      ),
-                      Side.b: CharacterPicture(
-                        character: c.b.character,
-                        size: 120,
-                      ),
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (p != null) ...[
-            Text(
-              '${c.player(p).label}: わざを えらんでね',
-              key: const Key('family-pick-title'),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: familyColour(p),
-              ),
-            ),
-            MoveButtons(
-              labels: (a) => characterMoveLabel(c.player(p).character, a),
-              enabled: true,
-              specialReady: session.specialReady(p),
-              onMove: onMove,
-            ),
-          ] else
-            const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-class _TeamTag extends StatelessWidget {
-  const _TeamTag({required this.side, required this.label});
-  final Side side;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    key: Key('family-tag-${side.name}'),
-    margin: const EdgeInsets.only(bottom: 4),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: familyColour(side),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          side == Side.a ? Icons.arrow_downward : Icons.arrow_upward,
-          color: Colors.white,
-          size: 18,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-/// Winner, then 「もういちど」 / 「メンバーを かえる」 / 「おわる」. No XP.
 class _Result extends StatelessWidget {
   const _Result({
     required this.config,
@@ -355,7 +221,7 @@ class _Result extends StatelessWidget {
   });
 
   final FamilyBattleConfig config;
-  final Side winner;
+  final FamilySide winner;
   final VoidCallback onRematch;
   final VoidCallback onChangeMembers;
   final VoidCallback onExit;
@@ -412,6 +278,7 @@ class _Result extends StatelessWidget {
         const SizedBox(height: 12),
         TextButton(
           key: const Key('family-exit'),
+          style: TextButton.styleFrom(minimumSize: const Size(120, 48)),
           onPressed: onExit,
           child: const Text('おわる', style: TextStyle(fontSize: 18)),
         ),

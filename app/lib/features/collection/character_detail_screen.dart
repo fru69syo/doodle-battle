@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/character_picture.dart';
@@ -10,7 +9,6 @@ import '../../core/widgets/attr_badge.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../core/widgets/stat_bars.dart';
 import '../../data/app_state.dart';
-import '../../domain/battle_v3/battle_v3.dart';
 import '../../domain/character_v2.dart';
 import '../../domain/character_v2_view.dart';
 import '../drawing_loop/drawing_loop.dart';
