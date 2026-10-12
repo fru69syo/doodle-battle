@@ -78,8 +78,24 @@ export function okVerdict(names: readonly string[]): ModerationVerdict {
 export function fakeAi() {
   const judgeDrawing = vi.fn<AiService["judgeDrawing"]>(async () => okJudgement);
   const moderateCharacter = vi.fn<AiService["moderateCharacter"]>(async (_png, names) => okVerdict(names));
-  const svc: AiService = { judgeDrawing, moderateCharacter };
-  return { svc, judgeDrawing, moderateCharacter };
+  const generateMove = vi.fn<AiService["generateMove"]>(async (_png, ctx) => ({
+    template: ctx.slot === 3 ? "blast" : "strike",
+    attribute: ctx.slot === 3 ? "none" : "gu",
+    name: "きらきらスター",
+    flavor: "ほしが きらきら ふってくる",
+    vfx: "stars",
+    colour: "yellow",
+    atkFormula: ctx.slot === 3 ? "INT80_DEX20" : "STR80_AGI20",
+    power: 300,
+    hits: 1,
+    accuracy: 100,
+    critBonus: 0,
+    spCost: 10,
+    castTicks: 0,
+    cooldownTicks: 0,
+  }));
+  const svc: AiService = { judgeDrawing, moderateCharacter, generateMove };
+  return { svc, judgeDrawing, moderateCharacter, generateMove };
 }
 
 export function registerInput(over: Record<string, unknown> = {}): Record<string, unknown> {

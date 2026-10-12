@@ -15,6 +15,8 @@ import type { SnapshotDocV2 } from "../model";
 import { randomDisplayName } from "../names/displayName";
 import { canonicalName, checkCharacterName, sanitizeSubject } from "../names/validateName";
 import { isClean, NG_WORDS_VERSION } from "../ngwords/ngFilter";
+import { checkCanvasClaim } from "../trust/canvasCheck";
+import { hiddenOrigin } from "../trust/origin";
 import { DEFAULT_SPEC, ENGINE_ID, EVOLUTIONS, validateCharacterClaimV2 } from "../vendor/battle_engine_v3";
 import {
   IMAGE_REASON,
@@ -38,8 +40,16 @@ const Input = z
     features: z.record(z.string().max(40), z.number()).refine((f) => Object.keys(f).length <= 40),
     energy10: z.number().int(),
     skill10: z.number().int(),
+    /**
+     * The device's image hash. Only used to cross-check the device's own numbers: the stored
+     * engine seed is recomputed from the uploaded bytes (`seedImageHash`).
+     */
     imageHash: z.string().max(80),
     verdict: z.string().max(20).optional(),
+    /** How the drawing was made (SPEC §12.2). `canvas` must come with a stroke summary. */
+    source: z.enum(["photo", "canvas"]).default("photo"),
+    /** Stroke summary of a canvas drawing (trust/canvasCheck.ts). */
+    canvas: z.unknown().optional(),
     stats: z.array(z.number().int()).length(10).optional(),
     moves: z.array(z.record(z.string(), z.unknown()).nullable()).max(4).default([]),
     rig: z.unknown().optional(),
@@ -48,10 +58,27 @@ const Input = z
   .strict();
 
 export type RegisterCharacterV2Response =
-  | { ok: true; snapshotId: string; name: string; moveNames: (string | null)[]; displayName: string }
+  | {
+      ok: true;
+      snapshotId: string;
+      name: string;
+      moveNames: (string | null)[];
+      displayName: string;
+      /** The seed hash the server used (sha256 of the uploaded PNG); the app may adopt it. */
+      imageHash: string;
+    }
   | { ok: false; reason: RejectionReason; presetNames?: string[] };
 
 const ngCheck = (x: string) => !isClean(x);
+
+/**
+ * The engine seed hash of a registered character: SHA-256 (hex) of the exact PNG bytes the
+ * device uploaded, i.e. of the picture other children see. The device's own hash is never
+ * trusted, so stats cannot be "re-rolled" by sending made-up hashes (docs/TRUST.md §7).
+ */
+export function seedImageHash(png: Buffer): string {
+  return createHash("sha256").update(png).digest("hex");
+}
 
 /** Logs and returns a kid-friendly rejection (same codes as v1). */
 async function no(uid: string, reason: RejectionReason): Promise<RegisterCharacterV2Response> {
@@ -136,12 +163,26 @@ export async function registerCharacterV2Handler(req: CallableRequest<unknown>):
     if (!v?.ok || v.category !== "ok") proposals[m.slot] = null; // offline move instead
   });
 
-  // Final, server-authoritative recomputation (the moderation verdict can
-  // make the hidden form; the response never says so).
-  const serverOrigin = verdict.origin === "ai_generated" ? "ai_generated" : null;
+  // Final, server-authoritative recomputation: the seed comes from the uploaded bytes and the
+  // hidden form from the server's verdict (trust/origin.ts); the response never says which.
+  const canvas = input.source === "canvas" ? checkCanvasClaim(input.canvas, png.bytes) : null;
+  const deviceVerdict = input.verdict ?? null;
+  const origin = hiddenOrigin({
+    source: input.source,
+    canvasPlausible: canvas?.plausible ?? false,
+    serverOrigin: verdict.origin,
+    deviceVerdict,
+  });
+  const imageHash = seedImageHash(png.bytes);
+  logger.info("registerCharacterV2 trust", {
+    uid,
+    source: input.source,
+    canvas: canvas ? (canvas.plausible ? `ok:${canvas.explainedPct ?? ""}` : `x:${canvas.problem ?? ""}:${canvas.explainedPct ?? ""}`) : null,
+    hashMatchesDevice: imageHash === input.imageHash,
+  });
   const final = validateCharacterClaimV2(
-    { ...claim, moves: proposals, rig: input.rig ?? null },
-    { ngCheck, serverOrigin, maxLevel: V2_MAX_LEVEL },
+    { ...claim, imageHash, verdict: origin, moves: proposals, rig: input.rig ?? null },
+    { ngCheck, serverOrigin: origin, maxLevel: V2_MAX_LEVEL },
   );
   if (!final.ok || !final.snapshot) return no(uid, "STATS_INVALID");
   const snap = final.snapshot;
@@ -184,11 +225,11 @@ export async function registerCharacterV2Handler(req: CallableRequest<unknown>):
       energy10: snap.energy10,
       skill10: snap.skill10,
       imageHash: snap.imageHash,
-      trust: serverOrigin ?? (input.verdict ?? null),
+      trust: origin,
       proposals: snap.proposals,
     },
     imagePath,
-    imageSha256: createHash("sha256").update(png.bytes).digest("hex"),
+    imageSha256: imageHash,
     moderation: {
       aiSkillEstimate: aiSkill,
       suspectSkill: aiSkill - Math.round(input.skill10 / 10) >= SUSPECT_SKILL_GAP,
@@ -222,5 +263,5 @@ export async function registerCharacterV2Handler(req: CallableRequest<unknown>):
     throw err;
   }
   logger.info("registerCharacterV2 ok", { uid, snapshotId: ref.id });
-  return { ok: true, snapshotId: ref.id, name, moveNames, displayName: displayName.text };
+  return { ok: true, snapshotId: ref.id, name, moveNames, displayName: displayName.text, imageHash };
 }

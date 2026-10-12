@@ -7,8 +7,8 @@
  * - Meter: every AI call adds an estimate to ops/aiUsage_<YYYYMM>. The AI provider bills outside
  *   GCP, so the GCP budget cannot see it; the kill switch adds this estimate to the GCP spend.
  *
- * NOTE for new AI methods (e.g. v2 move generation): add their names to COST_GATED_AI_METHODS
- * if they are optional; moderation must never be gated.
+ * NOTE for new AI methods: add their names to COST_GATED_AI_METHODS if they are optional
+ * (generateMove is); moderation must never be gated.
  */
 import { FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
