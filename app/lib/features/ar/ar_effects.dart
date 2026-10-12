@@ -6,8 +6,8 @@ import '../../domain/element_type.dart';
 /// evolution stage (SPEC §6: "進化の段階に応じたエフェクト（オーラ・きらきら）").
 ///
 /// - [EvolutionStage.normal]   (Lv1–9):  none
-/// - [EvolutionStage.kagayaki] (Lv10–19): aura
-/// - [EvolutionStage.densetsu] (Lv20+):   aura + sparkles
+/// - [EvolutionStage.kagayaki] (Lv10–49): aura
+/// - [EvolutionStage.densetsu] (Lv50+):   aura + sparkles
 class ArEffects {
   const ArEffects({
     this.aura = false,

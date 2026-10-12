@@ -115,6 +115,27 @@ class StrokeDrawing {
     return r < l ? null : (l, t, r, b);
   }
 
+  /// Stroke summary sent with `registerCharacter` (`source: canvas`) so the
+  /// server can check that the cut-out was rendered by this tool
+  /// (docs/TRUST.md §8.2): non-eraser strokes, their points, the palette
+  /// colours used (ARGB) and the ink box. Null when there is no ink.
+  Map<String, Object?>? canvasSummary() {
+    final ink = [
+      for (final s in strokes)
+        if (!s.isEraser && s.length > 0) s,
+    ];
+    final box = inkBounds();
+    if (ink.isEmpty || box == null) return null;
+    final points = ink.fold(0, (a, s) => a + s.length);
+    return {
+      'v': 1,
+      'strokes': ink.length.clamp(1, maxStrokes),
+      'points': points.clamp(ink.length, maxPoints),
+      'colors': {for (final s in ink) s.color & 0xFFFFFFFF}.toList(),
+      'inkBox': [box.$1, box.$2, box.$3, box.$4],
+    };
+  }
+
   Map<String, Object?> toJson() => {
     'v': 1,
     'w': size,

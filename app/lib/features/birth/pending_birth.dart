@@ -38,7 +38,8 @@ class PendingBirth {
       id: id,
       name: name,
       imagePath: imagePath,
-      imageHash: result.imageHash,
+      // The seed: SHA-256 of the stored / uploaded cut-out (TRUST §8.1).
+      imageHash: cutoutHash(result.cutoutPng),
       rawFeatures: result.features,
       energy: result.energy,
       skill: result.skill,

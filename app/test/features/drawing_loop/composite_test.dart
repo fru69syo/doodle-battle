@@ -1,9 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:doodle_battle/domain/cosmetics.dart';
-import 'package:doodle_battle/domain/element_type.dart';
-import 'package:doodle_battle/domain/stats.dart';
 import 'package:doodle_battle/features/drawing_loop/parts/composite.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -166,17 +165,16 @@ void main() {
   });
 
   test('compositeRequestFor skips parts whose PNG is missing', () {
-    final c = Character(
+    final c = CharacterV2.create(
       id: 'c1',
       name: 'x',
       imagePath: '',
       imageHash: 'h',
-      element: ElementType.values.first,
-      baseStats: const Stats(hp: 1, atk: 1, def: 1, spd: 1),
+      rawFeatures: const {},
       energy: 1,
       skill: 1,
-      features: const {},
       createdAt: DateTime.utc(2026),
+    ).copyWith(
       level: 20,
       cosmetics: const CharacterCosmetics(
         parts: [

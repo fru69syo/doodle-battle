@@ -102,6 +102,9 @@ class RealtimeSession extends ChangeNotifier {
 
   RealtimePhase phase = RealtimePhase.connecting;
   String? error;
+
+  /// Protocol error code that ended the session, if any.
+  String? errorCode;
   MatchMsg? match;
   EndMsg? end;
 
@@ -212,7 +215,10 @@ class RealtimeSession extends ChangeNotifier {
       return;
     }
     final msg = realtimeErrorMessage(code);
-    if (msg != null) _fail(msg);
+    if (msg != null) {
+      errorCode = code;
+      _fail(msg);
+    }
   }
 
   void _finishSilently() {

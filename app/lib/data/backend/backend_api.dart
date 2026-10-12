@@ -32,6 +32,10 @@ abstract interface class BackendApi {
 
   Future<RegisterOutcome> registerCharacter(RegisterCharacterRequest request);
 
+  /// One AI move for a newly unlocked slot; null = keep the template move
+  /// (offline, cost mode, refusal…, never shown to the child).
+  Future<Map<String, Object?>?> generateMove(GenerateMoveRequest request);
+
   /// Fresh Firebase ID token (+ App Check token) for the realtime battle
   /// server's `hello` (signs in if needed).
   Future<RealtimeAuth> realtimeAuth();
@@ -81,6 +85,9 @@ class UnavailableBackendApi implements BackendApi {
   @override
   Future<RegisterOutcome> registerCharacter(RegisterCharacterRequest r) async =>
       _fail();
+  @override
+  Future<Map<String, Object?>?> generateMove(GenerateMoveRequest r) async =>
+      null;
   @override
   Future<RealtimeAuth> realtimeAuth() async => _fail();
   @override

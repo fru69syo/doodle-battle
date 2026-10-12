@@ -4,6 +4,8 @@
 /// (`test/domain/hidden_state_guard_test.dart`).
 library;
 
+import 'package:crypto/crypto.dart';
+
 import 'battle_v3/battle_v3.dart';
 import 'character.dart' show EvolutionStage;
 import 'character_v2.dart';
@@ -163,4 +165,21 @@ CharacterV2 newCharacterV2({
       ngCheck: ngCheck,
     ),
   );
+}
+
+/// The seed hash of a cut-out: SHA-256 (hex) of the exact PNG bytes that
+/// are stored and uploaded (the server uses the same, docs/TRUST.md §8.1).
+String cutoutHash(List<int> png) => sha256.convert(png).toString();
+
+/// Stores an AI proposal for one move slot (e.g. the new Lv10 / Lv50 move
+/// from `generateMove`); it is re-validated at every level like the others.
+extension CharacterV2Moves on CharacterV2 {
+  CharacterV2 withMoveProposal(int slot, Map<String, Object?> proposal) {
+    final moves = [
+      for (var i = 0; i < 4; i++)
+        i < this.moves.length ? this.moves[i] : CharacterMove.empty,
+    ];
+    moves[slot] = CharacterMove(proposal: proposal, name: moves[slot].name);
+    return copyWith(moves: moves);
+  }
 }

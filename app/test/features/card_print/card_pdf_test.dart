@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
+import 'package:doodle_battle/domain/character_v2_view.dart';
 import 'package:doodle_battle/domain/stats.dart';
-import 'package:doodle_battle/features/battle_ui/move_labels.dart';
 import 'package:doodle_battle/features/card_print/card_content.dart';
 import 'package:doodle_battle/features/card_print/card_pdf.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,13 +21,8 @@ final testCardFonts = CardFonts(
   ),
 );
 
-CardContent content(Character c, {Uint8List? image, bool noImage = false}) =>
-    cardContentFor(
-      testSpec,
-      c,
-      image: noImage ? null : (image ?? testPng()),
-      moveLabel: characterMoveLabel,
-    );
+CardContent content(CharacterV2 c, {Uint8List? image, bool noImage = false}) =>
+    cardContentFor(c, image: noImage ? null : (image ?? testPng()));
 
 void main() {
   group('cardStars', () {
@@ -46,7 +41,7 @@ void main() {
       const weak = Stats(hp: 70, atk: 56, def: 42, spd: 28);
       expect(cardStars(weak), cardStars(strong));
       // Level does not change the stars either (Lv shown as its own field).
-      final c = testCharacter(stats: strong);
+      final c = testCharacter();
       expect(
         content(c.copyWith(level: 25)).stars,
         content(c.copyWith(level: 1)).stars,
@@ -59,16 +54,24 @@ void main() {
     });
   });
 
-  test('content: name, Lv, moves, evolution, birth date', () {
-    final c = testCharacter(
-      name: 'ねこまる',
-      level: 20,
-    ).copyWith(elementMoveName: 'めらめらビーム', specialMoveName: 'ねこパンチ');
+  test('content: name, Lv, moves (locked as ？？？), evolution, date', () {
+    final c = testCharacter(name: 'ねこまる', level: 20).copyWith(
+      moves: const [
+        CharacterMove(name: 'めらめらビーム'),
+        CharacterMove.empty,
+        CharacterMove.empty,
+        CharacterMove(name: 'ねこパンチ'),
+      ],
+    );
     final card = content(c);
     expect(card.name, 'ねこまる');
     expect(card.level, 20);
-    expect(card.stage, EvolutionStage.densetsu);
-    expect(card.moves, ['たいあたり', 'めらめらビーム', 'まもる', 'ねこパンチ']);
+    expect(card.stage, EvolutionStage.kagayaki);
+    expect(card.moves.first, 'めらめらビーム');
+    expect(card.moves.length, 4);
+    expect(card.moves.last, '？？？'); // ひっさつ opens at Lv50
+    expect(content(c.copyWith(level: 50)).moves.last, 'ねこパンチ');
+    expect(content(c.copyWith(level: 50)).stage, EvolutionStage.densetsu);
     expect(cardDateLabel(card.date), '2026.10.1');
   });
 

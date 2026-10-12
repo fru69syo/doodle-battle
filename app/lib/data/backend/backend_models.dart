@@ -132,9 +132,17 @@ class V2DrawingInput {
 /// server recomputes stats from the inputs; the response never depends on
 /// the hidden state.
 class RegisterCharacterRequest {
-  const RegisterCharacterRequest({required this.character, required this.png});
+  const RegisterCharacterRequest({
+    required this.character,
+    required this.png,
+    this.canvas,
+  });
 
   final CharacterV2 character;
+
+  /// Stroke summary of a drawing-tool character (`StrokeDrawing
+  /// .canvasSummary`, docs/TRUST.md §8.2); null for photos.
+  final Map<String, Object?>? canvas;
 
   /// Cut-out PNG (≤ 512 px).
   final Uint8List png;
@@ -156,6 +164,38 @@ class RegisterCharacterRequest {
       'moves': [for (final m in c.moves.take(4)) m.proposal],
       'rig': ?c.rig,
       'subject': ?c.subject,
+      'source': c.source == DrawingSource.canvas ? 'canvas' : 'photo',
+      if (c.source == DrawingSource.canvas) 'canvas': ?canvas,
+    };
+  }
+}
+
+/// `generateMove` request: one AI-designed move for the slot unlocked at
+/// Lv10 (slot 2) or Lv50 (slot 3). Needs the cloudJudge consent.
+class GenerateMoveRequest {
+  const GenerateMoveRequest({
+    required this.character,
+    required this.png,
+    required this.slot,
+    required this.otherNames,
+  });
+
+  final CharacterV2 character;
+  final Uint8List png;
+  final int slot;
+  final List<String> otherNames;
+
+  Map<String, Object?> toJson() {
+    final c = character;
+    return {
+      'imageBase64': base64Encode(png),
+      'features': c.features.toJson(),
+      'energy10': c.energy10,
+      'skill10': c.skill10,
+      'verdict': ?c.verdict,
+      'level': c.level,
+      'slot': slot,
+      'otherNames': otherNames.take(3).toList(),
     };
   }
 }
@@ -169,6 +209,7 @@ sealed class RegisterOutcome {
         snapshotId: j['snapshotId']! as String,
         name: j['name']! as String,
         displayName: j['displayName'] as String?,
+        imageHash: j['imageHash'] as String?,
       );
     }
     return RegisterRejected(
@@ -185,10 +226,15 @@ class RegisterAccepted extends RegisterOutcome {
     required this.snapshotId,
     required this.name,
     this.displayName,
+    this.imageHash,
   });
   final String snapshotId;
   final String name;
   final String? displayName;
+
+  /// The seed hash the server used (SHA-256 of the uploaded PNG): the
+  /// authority for the stored character (docs/TRUST.md §8.1).
+  final String? imageHash;
 }
 
 class RegisterRejected extends RegisterOutcome {

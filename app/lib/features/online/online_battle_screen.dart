@@ -93,6 +93,27 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
     await _register();
   }
 
+  bool _reregistered = false;
+
+  /// The server does not know the snapshot (e.g. a v1 snapshot after the
+  /// v2 switch): register again via schema 2, silently, once.
+  Future<void> _onSessionChanged() async {
+    final s = _session;
+    if (s == null || !mounted) return;
+    final code = s.errorCode;
+    if (s.phase == RealtimePhase.failed &&
+        (code == 'NOT_FOUND' || code == 'NOT_OWNER') &&
+        !_reregistered) {
+      _reregistered = true;
+      _session = null;
+      unawaited(Future<void>.microtask(s.dispose));
+      _c = await ref.read(onlineRegistrationProvider).forgetSnapshot(_c);
+      await _register();
+      return;
+    }
+    setState(() {});
+  }
+
   void _connect() {
     final backend = ref.read(backendApiProvider);
     final s = RealtimeSession(
@@ -108,9 +129,7 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
       ..onSnap = _onSnap
       ..onSel = _onSel
       ..onEnd = _onEnd
-      ..addListener(() {
-        if (mounted) setState(() {});
-      });
+      ..addListener(() => unawaited(_onSessionChanged()));
     _session = s;
     setState(() => _step = _Step.online);
     unawaited(s.start());

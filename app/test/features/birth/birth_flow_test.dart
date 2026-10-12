@@ -2,6 +2,9 @@ import 'package:doodle_battle/core/router/app_router.dart';
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/app_state.dart';
 import 'package:doodle_battle/data/backend/backend_api.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
+import 'package:doodle_battle/domain/character_v2_view.dart';
+import 'package:doodle_battle/domain/cost_mode.dart';
 import 'package:doodle_battle/features/birth/ai_report.dart';
 import 'package:doodle_battle/features/draw/album_import.dart';
 import 'package:doodle_battle/features/draw/drawing_services.dart';
@@ -30,6 +33,52 @@ Future<void> nameAndSave(WidgetTester tester, String name) async {
   await tapVisible(tester, find.byKey(const Key('name-save')));
 }
 
+/// Validated AI move proposals as judgeDrawing (v2) returns them.
+const catMoves = <Map<String, Object?>?>[
+  {
+    'template': 'strike',
+    'attribute': 'gu',
+    'name': 'にゃんにゃんぱんち',
+    'vfx': 'punch',
+    'colour': 'red',
+    'atkFormula': 'STR80_AGI20',
+    'power': 100,
+    'hits': 1,
+    'accuracy': 100,
+    'critBonus': 0,
+    'spCost': 0,
+    'castTicks': 0,
+    'cooldownTicks': 0,
+  },
+  null,
+  null,
+  {
+    'template': 'barrage',
+    'attribute': 'none',
+    'name': 'ねこびーむ',
+    'vfx': 'beam',
+    'colour': 'yellow',
+    'atkFormula': 'INT80_DEX20',
+    'power': 150,
+    'hits': 2,
+    'accuracy': 95,
+    'critBonus': 0,
+    'spCost': 40,
+    'castTicks': 12,
+    'cooldownTicks': 80,
+  },
+];
+
+CloudJudgement catJudgement({int skill = 20}) => CloudJudgement(
+  subject: 'ねこ',
+  suggestedNames: const ['にゃんた', 'みけまる', 'ねこりん'],
+  elementMoveName: null,
+  specialMoveName: null,
+  skillEstimate: skill,
+  appropriate: true,
+  moves: catMoves,
+);
+
 void main() {
   testWidgets('draw → reveal → name → saved in ずかん', (tester) async {
     final app = await pumpApp(tester);
@@ -39,13 +88,18 @@ void main() {
     await tester.pumpAndSettle(); // reveal animation
     expect(find.text('うまれたよ！'), findsOneWidget);
     expect(find.byKey(const Key('birth-traits')), findsOneWidget);
-    expect(find.text('めらめらパンチ'), findsOneWidget); // default fire move
+    // Two moves at Lv1 (offline template moves without the cloud).
+    expect(find.byKey(const Key('birth-move-0')), findsOneWidget);
+    expect(find.byKey(const Key('birth-move-1')), findsOneWidget);
+    expect(find.byKey(const Key('birth-move-2')), findsNothing);
     await tapVisible(tester, find.byKey(const Key('birth-name')));
 
     await nameAndSave(tester, 'ほのおまる');
     final chars = await app.characters.loadAll();
     expect(chars.single.name, 'ほのおまる');
     expect(chars.single.level, 1);
+    expect(chars.single.source, DrawingSource.photo);
+    expect(chars.single.moves, isEmpty); // offline moves, derived each time
     expect(await app.characters.readImage(chars.single.id), isNotNull);
     expect(find.byKey(const Key('detail-level')), findsOneWidget);
     expect(find.text('ほのおまる'), findsWidgets);
@@ -87,7 +141,7 @@ void main() {
   ) async {
     final app = await pumpApp(
       tester,
-      analyzer: FakeAnalyzer(reject: DrawingRejectReason.digital),
+      analyzer: FakeAnalyzer(reject: DrawingRejectReason.photo),
     );
     await drawWithCamera(tester);
     expect(find.byKey(const Key('retake-notPaper')), findsOneWidget);
@@ -104,19 +158,44 @@ void main() {
     expect(await app.characters.loadAll(), isEmpty);
   });
 
-  testWidgets('the cloud judge can refuse AI-generated pictures', (
+  testWidgets('a digital picture becomes a character like any other', (
+    tester,
+  ) async {
+    // v2 admission: digital / printed / screen pictures are accepted; the
+    // internal verdict is stored and never shown.
+    final app = await pumpApp(
+      tester,
+      analyzer: FakeAnalyzer(
+        result: fakeAnalysis(skill: 85),
+        verdict: 'digital',
+      ),
+    );
+    await drawWithCamera(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('うまれたよ！'), findsOneWidget);
+    expect(find.byKey(const Key('birth-move-0')), findsOneWidget);
+    await tapVisible(tester, find.byKey(const Key('birth-name')));
+    await nameAndSave(tester, 'ぴかぴか');
+    final c = (await app.characters.loadAll()).single;
+    expect(c.verdict, 'digital');
+    for (final word in ['しょぼ', 'AI', 'デジタル', 'じょうず', 'たいき']) {
+      expect(find.textContaining(word), findsNothing, reason: word);
+    }
+  });
+
+  testWidgets('the cloud judge can refuse photos of prints or screens', (
     tester,
   ) async {
     final backend = FakeBackend()
       ..judgement = const CloudJudgement(
         subject: 'ねこ',
         suggestedNames: ['にゃんた', 'みけまる', 'ねこりん'],
-        elementMoveName: 'にゃんにゃんぱんち',
-        specialMoveName: 'ねこびーむ',
+        elementMoveName: null,
+        specialMoveName: null,
         skillEstimate: 95,
         appropriate: false,
-        reasons: ['ai_generated'],
-        rejectCode: CloudJudgement.aiGenerated,
+        reasons: ['not_drawing'],
+        rejectCode: CloudJudgement.notDrawing,
       );
     final app = await pumpApp(
       tester,
@@ -202,15 +281,7 @@ void main() {
   testWidgets('cloud judging (consented) blends skill and suggests names', (
     tester,
   ) async {
-    final backend = FakeBackend()
-      ..judgement = const CloudJudgement(
-        subject: 'ねこ',
-        suggestedNames: ['にゃんた', 'みけまる', 'ねこりん'],
-        elementMoveName: 'にゃんにゃんぱんち',
-        specialMoveName: 'ねこびーむ',
-        skillEstimate: 80,
-        appropriate: true,
-      );
+    final backend = FakeBackend()..judgement = catJudgement(skill: 80);
     final app = await pumpApp(
       tester,
       backend: backend,
@@ -220,7 +291,15 @@ void main() {
     );
     await drawWithCamera(tester);
     await tester.pumpAndSettle();
-    expect(backend.calls, containsAllInOrder(['syncConsent', 'judgeDrawing']));
+    expect(
+      backend.calls,
+      containsAllInOrder(['costMode', 'syncConsent', 'judgeDrawing']),
+    );
+    // judgeDrawing got the v2 input (quantised features etc.).
+    final v2 = backend.judgeInputs.single!;
+    expect(v2.imageHash, cutoutHash(testPng()));
+    expect(v2.skill10, 200);
+    expect(v2.features, isNotEmpty);
     expect(find.text('にゃんにゃんぱんち'), findsOneWidget);
     expect(find.text('ねこ の キャラ'), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('birth-name')));
@@ -228,19 +307,40 @@ void main() {
     await nameAndSave(tester, 'にゃんた');
     final c = (await app.characters.loadAll()).single;
     // 0.6 × 20 + 0.4 × 80 = 44
-    expect(c.skill, 44);
+    expect(c.skill10, 440);
     expect(c.subject, 'ねこ');
+    expect(c.moves.first.isAi, isTrue);
+    expect(c.elementMoveName, 'にゃんにゃんぱんち');
     expect(c.specialMoveName, 'ねこびーむ');
   });
 
-  CloudJudgement catJudgement() => const CloudJudgement(
-    subject: 'ねこ',
-    suggestedNames: ['にゃんた', 'みけまる', 'ねこりん'],
-    elementMoveName: 'にゃんにゃんぱんち',
-    specialMoveName: 'ねこびーむ',
-    skillEstimate: 20,
-    appropriate: true,
-  );
+  testWidgets('cost mode "saving" / "minimal": judged on the phone only', (
+    tester,
+  ) async {
+    for (final mode in [CostMode.saving, CostMode.minimal]) {
+      final backend = FakeBackend()
+        ..judgement = catJudgement()
+        ..mode = mode;
+      final app = await pumpApp(
+        tester,
+        backend: backend,
+        settings: setupDone.copyWith(
+          consents: const ParentConsents(cloudJudge: true),
+        ),
+      );
+      await drawWithCamera(tester);
+      await tester.pumpAndSettle();
+      expect(backend.calls, contains('costMode'));
+      expect(backend.calls, isNot(contains('judgeDrawing')));
+      // Nothing tells the child (same birth, offline moves).
+      expect(find.text('うまれたよ！'), findsOneWidget);
+      expect(find.text('にゃんにゃんぱんち'), findsNothing);
+      await tapVisible(tester, find.byKey(const Key('birth-name')));
+      await nameAndSave(tester, 'せつやく');
+      expect((await app.characters.loadAll()).single.moves, isEmpty);
+      await unmount(tester);
+    }
+  });
 
   testWidgets('AI-suggested names and moves can be reported (preset reason)', (
     tester,
@@ -282,7 +382,7 @@ void main() {
     expect(store.entries.map((e) => e.sent), [true, true]);
     await nameAndSave(tester, 'みけまる');
     final c = (await app.characters.loadAll()).single;
-    expect(c.specialMoveName, isNull);
+    expect(c.specialMoveName, isNot('ねこびーむ')); // offline move instead
     expect(c.elementMoveName, 'にゃんにゃんぱんち');
   });
 
@@ -339,7 +439,7 @@ void main() {
     expect(find.text('うまれたよ！'), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('birth-name')));
     await nameAndSave(tester, 'ふつうまる');
-    expect((await app.characters.loadAll()).single.skill, 20);
+    expect((await app.characters.loadAll()).single.skill10, 200);
   });
 
   testWidgets('cloud judging is never called without consent', (tester) async {

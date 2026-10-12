@@ -268,6 +268,7 @@ class CharacterV2 {
 
   CharacterV2 copyWith({
     String? name,
+    String? imageHash,
     int? level,
     int? xp,
     List<CharacterMove>? moves,
@@ -281,7 +282,7 @@ class CharacterV2 {
     id: id,
     name: name ?? this.name,
     imagePath: imagePath,
-    imageHash: imageHash,
+    imageHash: imageHash ?? this.imageHash,
     features: features,
     energy10: energy10,
     skill10: skill10,

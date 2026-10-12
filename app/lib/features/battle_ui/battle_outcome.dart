@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_state.dart';
 import '../../domain/character_v2.dart';
 import '../../domain/character_v2_view.dart';
+import 'new_moves.dart';
 
 /// What the result screen shows after a single-player or online battle.
 class BattleOutcome {
@@ -106,6 +109,13 @@ class BattleRewards {
   ) async {
     final (after, p) = player.gainXp(xp);
     await _ref.read(charactersProvider.notifier).save(after);
+    // Lv10 / Lv50: the new move may get an AI-designed name (in the
+    // background; the result screen updates when it arrives).
+    if (p.newSlots.isNotEmpty) {
+      unawaited(
+        _ref.read(newMoveNamerProvider).nameNewSlots(after, p.newSlots),
+      );
+    }
     return (after, make(after, p.newSlots, p.evolutions));
   }
 

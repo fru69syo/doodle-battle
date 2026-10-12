@@ -8,6 +8,7 @@ import '../../data/app_state.dart';
 import '../../data/backend/backend_api.dart';
 import '../../domain/battle_v3/battle_v3.dart' show FeatureVector;
 import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart' show cutoutHash;
 import '../../domain/drawing_analysis_result.dart';
 import '../birth/pending_birth.dart';
 import 'drawing_services.dart';
@@ -146,7 +147,7 @@ V2DrawingInput v2InputOf(DrawingAnalysisResult r) => V2DrawingInput(
   features: FeatureVector.quantize(r.features).toJson(),
   energy10: CharacterV2.tenths(r.energy),
   skill10: CharacterV2.tenths(r.skill),
-  imageHash: r.imageHash,
+  imageHash: cutoutHash(r.cutoutPng),
 );
 
 final drawFlowProvider = Provider<DrawFlow>(DrawFlow.new);

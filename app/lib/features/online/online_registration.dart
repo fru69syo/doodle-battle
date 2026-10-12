@@ -4,6 +4,8 @@ import '../../core/providers.dart';
 import '../../data/app_state.dart';
 import '../../data/backend/backend_api.dart';
 import '../../domain/character_v2.dart';
+import '../draw_canvas/stroke_drawing.dart';
+import '../puppet/puppet_store.dart';
 import 'online_messages.dart';
 
 sealed class RegistrationResult {
@@ -40,11 +42,26 @@ class OnlineRegistration {
     try {
       await _ref.read(settingsProvider.notifier).ensureConsentSynced();
       final outcome = await backend.registerCharacter(
-        RegisterCharacterRequest(character: c, png: png),
+        RegisterCharacterRequest(
+          character: c,
+          png: png,
+          canvas: c.source == DrawingSource.canvas
+              ? await _canvasSummary(c.id)
+              : null,
+        ),
       );
       switch (outcome) {
-        case RegisterAccepted(:final snapshotId, :final displayName):
-          final updated = c.copyWith(onlineId: () => snapshotId);
+        case RegisterAccepted(
+          :final snapshotId,
+          :final displayName,
+          :final imageHash,
+        ):
+          // The server's seed hash is the authority: the stats on the
+          // phone stay equal to the online ones (docs/TRUST.md §8.1).
+          final updated = c.copyWith(
+            onlineId: () => snapshotId,
+            imageHash: imageHash,
+          );
           await _ref.read(charactersProvider.notifier).save(updated);
           final progress = _ref.read(progressProvider.notifier);
           await progress.setOnlineLevel(c.id, c.level);
@@ -70,6 +87,26 @@ class OnlineRegistration {
     } on BackendException catch (e) {
       return RegistrationRejected(backendErrorMessage(e.code));
     }
+  }
+
+  /// The drawing tool's stroke summary (kept on the phone with the
+  /// strokes for the rigger), or null.
+  Future<Map<String, Object?>?> _canvasSummary(String id) async {
+    try {
+      final json = await _ref.read(puppetStoreProvider).loadStrokesJson(id);
+      return StrokeDrawing.tryDecode(json)?.canvasSummary();
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Forgets the server snapshot (e.g. a v1 snapshot the v2 server no
+  /// longer knows) so the next [ensureRegistered] registers again.
+  Future<CharacterV2> forgetSnapshot(CharacterV2 c) async {
+    final updated = c.copyWith(onlineId: () => null);
+    await _ref.read(charactersProvider.notifier).save(updated);
+    await _ref.read(progressProvider.notifier).setOnlineLevel(c.id, -1);
+    return updated;
   }
 
   /// Renames the local character to a server-provided preset name.

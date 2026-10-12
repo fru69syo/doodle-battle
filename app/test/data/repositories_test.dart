@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:doodle_battle/data/app_settings.dart';
@@ -6,7 +7,7 @@ import 'package:doodle_battle/data/file_character_repository.dart';
 import 'package:doodle_battle/data/game_progress.dart';
 import 'package:doodle_battle/data/memory_character_repository.dart';
 import 'package:doodle_battle/data/settings_repository.dart';
-import 'package:doodle_battle/domain/stats.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';
@@ -20,8 +21,7 @@ void main() {
   group('FileCharacterRepository', () {
     test('add / loadAll / readImage round-trip', () async {
       final repo = FileCharacterRepository(dir);
-      final c = testCharacter(id: 'c_a')
-          .copyWith(seedAllocations: {StatKind.atk: 2});
+      final c = testCharacter(id: 'c_a', level: 3, xp: 5);
       await repo.add(c, testPng(), limit: 12);
       final all = await repo.loadAll();
       expect(all.single.toJson(), c.toJson());
@@ -67,6 +67,38 @@ void main() {
         () => repo.add(testCharacter(id: '../x'), testPng(), limit: 12),
         throwsArgumentError,
       );
+    });
+
+    test('migrates a saved v1 character on load and stores it as v2', () async {
+      final f = File('${dir.path}/characters/c_old.json')
+        ..createSync(recursive: true);
+      f.writeAsStringSync(
+        jsonEncode({
+          'id': 'c_old',
+          'name': 'むかしくん',
+          'imagePath': '/x/c_old.png',
+          'imageHash': 'deadbeef00',
+          'element': 'water',
+          'baseStats': {'hp': 100, 'atk': 90, 'def': 80, 'spd': 70},
+          'energy': 82.5,
+          'skill': 20.0,
+          'features': {'inkCoverage': 0.3, 'roundness': 0.6},
+          'createdAt': '2026-09-01T00:00:00.000Z',
+          'level': 12,
+          'xp': 10,
+          'seedAllocations': {'atk': 2},
+          'elementMoveName': 'ざぶーんパンチ',
+          'specialMoveName': null,
+          'onlineId': 'snap-v1',
+        }),
+      );
+      final c = (await FileCharacterRepository(dir).loadAll()).single;
+      expect(c.level, 12);
+      expect(c.onlineId, isNull); // v1 snapshots are not v2 ones
+      expect(c.allMoves().first.name, 'ざぶーんパンチ');
+      final stored = jsonDecode(f.readAsStringSync()) as Map;
+      expect(stored['schema'], CharacterV2.schema);
+      expect(stored.containsKey('baseStats'), isFalse);
     });
 
     test('skips corrupt files instead of losing the collection', () async {
@@ -124,6 +156,22 @@ void main() {
       await again.clear();
       expect((await again.loadSettings()).setupCompleted, isFalse);
     });
+  });
+
+  test('stage stars, おまかせ and the online badge round-trip', () {
+    const p = GameProgress(
+      clearedStage: 3,
+      stageStars: {1: 3, 2: 1, 3: 2},
+      omakase: true,
+      onlineBadge: 'fox',
+    );
+    final back = GameProgress.fromJson(
+      (jsonDecode(jsonEncode(p.toJson())) as Map).cast<String, Object?>(),
+    );
+    expect(back.stageStars, {1: 3, 2: 1, 3: 2});
+    expect(back.starsOf(4), 0);
+    expect(back.omakase, isTrue);
+    expect(back.onlineBadge, 'fox');
   });
 
   test('applied match ids are deduplicated and capped', () {

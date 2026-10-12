@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:doodle_battle/domain/element_type.dart';
-import 'package:doodle_battle/domain/stats.dart';
 import 'package:doodle_battle/features/ar/ar_support.dart';
 import 'package:doodle_battle/features/ar/ar_view_screen.dart';
 import 'package:doodle_battle/features/ar/sample_cutout.dart';
@@ -50,19 +49,17 @@ class FakePlatform extends ArPlatform {
   Future<bool> openAppSettings() async => true;
 }
 
-Character character({int level = 1}) => Character(
+CharacterV2 character({int level = 1}) => CharacterV2.create(
   id: 'c1',
   name: 'てすと',
   imagePath: '/sample.png',
   imageHash: 'abcdef0123456789abcdef',
-  element: ElementType.leaf,
-  baseStats: const Stats(hp: 1, atk: 1, def: 1, spd: 1),
+  rawFeatures: const {},
   energy: 60,
   skill: 20,
-  features: const {},
   createdAt: DateTime(2026),
-  level: level,
-);
+  legacyElement: ElementType.leaf,
+).copyWith(level: level);
 
 void main() {
   late Directory tmp;
@@ -74,7 +71,7 @@ void main() {
   Future<void> pumpScreen(
     WidgetTester tester,
     FakePlatform platform, {
-    Character? c,
+    CharacterV2? c,
     bool allowInstall = true,
     Future<Uint8List> Function(String)? readImage,
   }) async {

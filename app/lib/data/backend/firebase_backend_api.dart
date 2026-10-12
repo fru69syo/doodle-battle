@@ -145,6 +145,15 @@ class FirebaseBackendApi implements BackendApi {
   );
 
   @override
+  Future<Map<String, Object?>?> generateMove(
+    GenerateMoveRequest request,
+  ) async {
+    final r = await _call('generateMove', request.toJson());
+    final p = r['proposal'];
+    return p is Map ? p.cast<String, Object?>() : null;
+  }
+
+  @override
   Future<RealtimeAuth> realtimeAuth() async {
     await _ensureSignedIn();
     try {

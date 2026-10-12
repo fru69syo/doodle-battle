@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:doodle_battle/data/backend/backend_models.dart';
 import 'package:doodle_battle/data/file_character_repository.dart';
 import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:doodle_battle/domain/cosmetics.dart';
 import 'package:doodle_battle/domain/element_type.dart';
 import 'package:doodle_battle/domain/stats.dart';
@@ -31,6 +32,10 @@ Character sample({CharacterCosmetics cosmetics = CharacterCosmetics.none}) =>
       level: 12,
       cosmetics: cosmetics,
     );
+
+/// [sample] as the app stores it now (v2; migrated from the v1 record).
+CharacterV2 sampleV2({CharacterCosmetics cosmetics = CharacterCosmetics.none}) =>
+    CharacterV2.fromJson(sample(cosmetics: cosmetics).toJson());
 
 const fullCosmetics = CharacterCosmetics(
   parts: [
@@ -128,7 +133,11 @@ void main() {
         File('${chars.path}/c_1760000000000_ab12.json')
             .writeAsStringSync(v10Json);
         final repo = FileCharacterRepository(dir);
-        await repo.add(sample(cosmetics: fullCosmetics), testPng(), limit: 12);
+        await repo.add(
+          sampleV2(cosmetics: fullCosmetics),
+          testPng(),
+          limit: 12,
+        );
         final all = await repo.loadAll();
         expect(all.map((c) => c.id), ['c_1760000000000_ab12', 'c1']);
         expect(all.first.cosmetics.isEmpty, isTrue);
@@ -149,7 +158,7 @@ void main() {
 
     test('online registration never carries cosmetics', () {
       final json = RegisterCharacterRequest(
-        character: sample(cosmetics: fullCosmetics),
+        character: sampleV2(cosmetics: fullCosmetics),
         png: testPng(),
       ).toJson();
       expect(json.containsKey('cosmetics'), isFalse);
