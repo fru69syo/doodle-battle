@@ -1,11 +1,8 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/config/app_config.dart';
+import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/character_picture.dart';
@@ -18,15 +15,6 @@ import '../online/online_badges.dart';
 import '../video_export/video_export_entry.dart';
 import '../collection/xp_bar.dart';
 import 'battle_outcome.dart';
-
-/// Platform of this build for the rewarded-ad rule (Android only, SPEC
-/// §10.2). Overridable in tests.
-final appPlatformProvider = Provider<AppPlatform>((ref) {
-  if (kIsWeb) return AppPlatform.other;
-  if (Platform.isAndroid) return AppPlatform.android;
-  if (Platform.isIOS) return AppPlatform.ios;
-  return AppPlatform.other;
-});
 
 /// After a battle: win / lose, stars, XP, level up, new moves, しんか.
 class BattleResultScreen extends ConsumerStatefulWidget {
@@ -47,10 +35,12 @@ class _BattleResultScreenState extends ConsumerState<BattleResultScreen> {
 
   bool _adOffered() {
     if (_o.online || _o.stage == null || _o.adBonusXp <= 0) return false;
-    if (!kAdsEnabledOnAndroid) return false;
-    // The button itself checks the parent's consent and today's cap.
+    // Android only (adsSupportedProvider); the button itself checks the
+    // parent's consent and today's cap.
     return adBoostAvailable(
-      platform: ref.watch(appPlatformProvider),
+      platform: ref.watch(adsSupportedProvider)
+          ? AppPlatform.android
+          : AppPlatform.other,
       parentAllowsAds: true,
       usedToday: 0,
     );

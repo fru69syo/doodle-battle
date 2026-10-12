@@ -243,6 +243,17 @@ class FakeBackend implements BackendApi {
     return registerOutcomes.removeAt(0);
   }
 
+  /// Answer of `generateMove` (null = keep the template move).
+  Map<String, Object?>? moveProposal;
+  final generated = <GenerateMoveRequest>[];
+
+  @override
+  Future<Map<String, Object?>?> generateMove(GenerateMoveRequest r) async {
+    calls.add('generateMove');
+    generated.add(r);
+    return moveProposal;
+  }
+
   @override
   Future<RealtimeAuth> realtimeAuth() async {
     calls.add('realtimeAuth');

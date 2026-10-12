@@ -22,8 +22,9 @@ import '../puppet/puppet_look.dart';
 import 'atb_parts.dart';
 import 'battle_outcome.dart';
 
-/// Loads what a single-player battle needs, then shows [CpuBattleView].
-class CpuBattleScreen extends ConsumerWidget {
+/// Loads what a single-player battle needs (once), then shows
+/// [CpuBattleView].
+class CpuBattleScreen extends ConsumerStatefulWidget {
   const CpuBattleScreen({
     super.key,
     required this.characterId,
@@ -33,39 +34,51 @@ class CpuBattleScreen extends ConsumerWidget {
   final int stage;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final player = ref.watch(characterByIdProvider(characterId));
-    final roster = ref.watch(cpuRosterV2Provider).value;
-    final st = stageAt(stage.clamp(1, 100));
-    final cpu = roster?.byId[st.cpuId];
-    final cpuPng = cpu == null
-        ? null
-        : ref.watch(assetBytesProvider(cpu.asset)).value;
-    final spec = player == null
-        ? null
-        : ref.watch(characterPuppetSpecProvider(player)).value;
-    final progress = ref.watch(progressProvider).value;
-    if (player == null ||
-        roster == null ||
-        cpuPng == null ||
-        spec == null ||
-        progress == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    return CpuBattleView(
-      player: player,
-      playerPuppet: spec,
-      cpuPuppet: PuppetSpec(
-        png: cpuPng,
-        look: PuppetLook.of(level: st.cpuLevel),
+  ConsumerState<CpuBattleScreen> createState() => _CpuBattleScreenState();
+}
+
+class _CpuBattleScreenState extends ConsumerState<CpuBattleScreen> {
+  CpuBattleView? _view;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final chars = await ref.read(charactersProvider.future);
+    final player = chars.where((c) => c.id == widget.characterId).firstOrNull;
+    if (player == null) return;
+    final roster = await ref.read(cpuRosterV2Provider.future);
+    final st = stageAt(widget.stage.clamp(1, 100));
+    final cpu = roster.byId[st.cpuId];
+    if (cpu == null) return;
+    final cpuPng = await ref.read(assetBytesProvider(cpu.asset).future);
+    final spec = await characterPuppetSpec(ref.read, player);
+    final progress = await ref.read(progressProvider.future);
+    if (!mounted || spec == null) return;
+    setState(
+      () => _view = CpuBattleView(
+        player: player,
+        playerPuppet: spec,
+        cpuPuppet: PuppetSpec(
+          png: cpuPng,
+          look: PuppetLook.of(level: st.cpuLevel),
+        ),
+        cpuName: cpu.name,
+        stage: st,
+        roster: roster,
+        omakase: progress.omakase,
+        seed: ref.read(randomProvider).nextInt(1 << 32),
       ),
-      cpuName: cpu!.name,
-      stage: st,
-      roster: roster,
-      omakase: progress.omakase,
-      seed: ref.read(randomProvider).nextInt(1 << 32),
     );
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      _view ??
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
 /// A real-time ATB battle against the stage's CPU on the 2.5D stage. The

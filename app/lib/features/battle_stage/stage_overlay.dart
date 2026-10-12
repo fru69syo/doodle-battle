@@ -399,12 +399,18 @@ class MoveButton extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              _tag(data.tint.label),
-                              const SizedBox(width: 4),
-                              if (data.spCost > 0) _tag('SP${data.spCost}'),
-                            ],
+                          // Scales down on narrow phones / big text.
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _tag(data.tint.label),
+                                const SizedBox(width: 4),
+                                if (data.spCost > 0) _tag('SP${data.spCost}'),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -469,19 +475,23 @@ class LockedMoveSlot extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
     ),
     alignment: Alignment.center,
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.lock, size: 18, color: Color(0x991F1A3D)),
-        const SizedBox(width: 4),
-        Text(
-          'Lv$unlockLevel で おぼえるよ',
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Color(0x991F1A3D),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock, size: 18, color: Color(0x991F1A3D)),
+          const SizedBox(width: 4),
+          Text(
+            'Lv$unlockLevel で おぼえるよ',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Color(0x991F1A3D),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
