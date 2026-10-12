@@ -166,7 +166,8 @@ class StageSelectScreen extends ConsumerWidget {
               child: InkWell(
                 borderRadius: BorderRadius.circular(24),
                 onTap: open
-                    ? () => context.push(Routes.cpuBattle(characterId, st.stage))
+                    ? () =>
+                          context.push(Routes.cpuBattle(characterId, st.stage))
                     : null,
                 child: Padding(
                   padding: const EdgeInsets.all(8),

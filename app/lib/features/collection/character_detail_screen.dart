@@ -145,9 +145,7 @@ class _Header extends StatelessWidget {
       Chip(
         key: const Key('detail-stage'),
         avatar: Icon(
-          c.evolution == null
-              ? Icons.child_care
-              : Icons.auto_awesome,
+          c.evolution == null ? Icons.child_care : Icons.auto_awesome,
           color: c.stage == EvolutionStage.densetsu
               ? AppColors.gold
               : AppColors.purple,

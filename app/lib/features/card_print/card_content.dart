@@ -109,8 +109,7 @@ CardContent cardContentFor(
     stage: c.stage,
     stars: cardStars(cardStatsOf(c.stats())),
     moves: [
-      for (var i = 0; i < 4; i++)
-        i < open ? moveDisplayName(moves[i]) : '？？？',
+      for (var i = 0; i < 4; i++) i < open ? moveDisplayName(moves[i]) : '？？？',
     ],
     date: c.createdAt.toLocal(),
     image: image,

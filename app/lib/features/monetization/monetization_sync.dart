@@ -31,11 +31,11 @@ final monetizationSyncProvider = Provider<void>((ref) {
     if (!started) {
       started = true;
       unawaited(
-        service.start({for (final id in s.entitlements) ?Product.byId(id)}),
+        service.start({for (final id in s.ownedProducts) ?Product.byId(id)}),
       );
     }
     // こうこくなしパス: no ad is ever needed, so the ads SDK stays off.
-    final noAds = s.entitlements.contains(Product.noAdsPass.id);
+    final noAds = s.ownedProducts.contains(Product.noAdsPass.id);
     unawaited(service.setAdsAllowed(s.consents.ads && !noAds));
   }, fireImmediately: true);
 

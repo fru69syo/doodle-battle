@@ -40,8 +40,7 @@ Future<VideoContent> loadVideoContent({
   Map<DrawnMove, Uint8List> moveEffectPngs = const {},
   required CpuRosterV2 roster,
   required Future<Uint8List> Function(String asset) loadAsset,
-  Future<PuppetSprite?> Function(Uint8List png, {required bool cpu})?
-  puppetOf,
+  Future<PuppetSprite?> Function(Uint8List png, {required bool cpu})? puppetOf,
 }) async {
   final highlight = scriptBattleHighlight(roster: roster, player: character);
   if (highlight == null) {

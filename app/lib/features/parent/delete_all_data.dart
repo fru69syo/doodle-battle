@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/providers.dart';
 import '../../data/app_state.dart';
 import '../drawing_loop/drawing_loop.dart';
@@ -66,7 +67,9 @@ Future<bool> deleteAllData(BuildContext context, WidgetRef ref) async {
   await ref.read(settingsProvider.notifier).resetLocal();
   // Purchases live in the parent's Google account, not in our data: put
   // them back into the (now empty) local cache.
-  unawaited(ref.read(monetizationServiceProvider).restorePurchases());
+  if (kIapEnabled) {
+    unawaited(ref.read(monetizationServiceProvider).restorePurchases());
+  }
   ref.invalidate(progressProvider);
   ref.invalidate(stampCardProvider);
   ref.invalidate(activeOdaiProvider);

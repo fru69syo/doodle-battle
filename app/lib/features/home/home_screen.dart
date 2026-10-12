@@ -10,6 +10,7 @@ import '../../core/widgets/big_button.dart';
 import '../../data/app_state.dart';
 import '../drawing_loop/drawing_loop.dart';
 import '../parent/parent_session.dart';
+import '../online/realtime/realtime_client.dart';
 import '../parent/play_time.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -19,7 +20,9 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).value;
     final onlineAllowed = settings?.consents.online ?? false;
-    final serverReady = ref.watch(backendApiProvider).isAvailable;
+    final serverReady =
+        ref.watch(backendApiProvider).isAvailable &&
+        ref.watch(realtimeUrlProvider).isNotEmpty;
     final count = ref.watch(charactersProvider).value?.length ?? 0;
     final limit = ref.watch(collectionLimitProvider);
     return Scaffold(

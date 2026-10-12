@@ -286,8 +286,7 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
             controller: c,
             sides: sides,
             top: (_) => _foeReport(),
-            bottom: (_) =>
-                c.over ? const SizedBox(height: 120) : _controls(),
+            bottom: (_) => c.over ? const SizedBox(height: 120) : _controls(),
           ),
         );
     }

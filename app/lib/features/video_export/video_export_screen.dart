@@ -156,10 +156,7 @@ class _VideoExportScreenState extends ConsumerState<VideoExportScreen>
         // The 2.5D puppets (docs/PUPPET.md): the child's joints and look.
         puppetOf: (png, {required cpu}) => builder.sprite(
           cpu || rigged == null
-              ? PuppetSpec(
-                  png: png,
-                  look: cpu ? const PuppetLook() : lookOf(c),
-                )
+              ? PuppetSpec(png: png, look: cpu ? const PuppetLook() : lookOf(c))
               : rigged,
         ),
       );

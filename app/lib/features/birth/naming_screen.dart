@@ -42,7 +42,9 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
       for (final n in cloud.suggestedNames) (AiSuggestionKind.name, n),
       for (final (slot, name) in _aiMoveNames(birth))
         (
-          slot == 3 ? AiSuggestionKind.specialMove : AiSuggestionKind.elementMove,
+          slot == 3
+              ? AiSuggestionKind.specialMove
+              : AiSuggestionKind.elementMove,
           name,
         ),
     ].where((s) => !_reported.contains(s.$2)).toList();

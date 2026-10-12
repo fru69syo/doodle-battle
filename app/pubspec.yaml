@@ -91,10 +91,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    # Byte-identical copy of shared/battle_spec/battle_spec.json (Flutter cannot
-    # bundle files outside the package). Re-sync with
-    # `dart run tool/sync_battle_spec.dart`; a test fails if they diverge.
-    - assets/battle/battle_spec.json
     - assets/cpu/
     # Byte-identical copy of shared/ng_words/ng_words.json. Re-sync with
     # `dart run tool/sync_ng_words.dart`; a test fails if they diverge.

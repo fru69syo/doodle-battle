@@ -63,6 +63,7 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             const _Section('許可の設定'),
             const NoAiTrainingNotice(),
             ConsentToggles(
+              adsSupported: ref.watch(adsSupportedProvider),
               value: settings.consents,
               serverAvailable: backend.isAvailable,
               noAdsPass: settings.ownedProducts.contains(Product.noAdsPass.id),
@@ -79,10 +80,7 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
               key: const Key('parent-album-import'),
               leading: const Icon(Icons.photo_library),
               title: const Text('アルバムから とりこむ'),
-              subtitle: const Text(
-                '紙に描いた絵の写真を 1 枚だけ取り込みます。撮影と同じ確認を行い、'
-                'AI で作った画像・デジタルのイラスト・印刷物・画面を撮った写真は取り込めません。',
-              ),
+              subtitle: const Text('紙に描いた絵の写真を 1 枚だけ取り込みます。撮影と同じ確認を行います。'),
               onTap: () {
                 ref.read(albumImportArmProvider.notifier).arm();
                 // go (not push): leaving this screen locks it again.
@@ -91,8 +89,9 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             ),
             const _Section('AR'),
             const ArInstallTile(),
-            const _Section('ショップ'),
-            const ShopSection(),
+            // In-app purchases are switched off in v2.0 (SPEC §12.1); the
+            // shop code stays for when they come back.
+            if (kIapEnabled) ...[const _Section('ショップ'), const ShopSection()],
             const _Section('データ'),
             if (backend.supportId != null)
               ListTile(

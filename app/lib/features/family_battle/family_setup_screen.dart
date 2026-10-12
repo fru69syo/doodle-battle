@@ -291,41 +291,44 @@ class _PlayerPanel extends StatelessWidget {
   }
 }
 
-Future<String?> _pickLabel(BuildContext context, FamilySide side, String current) =>
-    showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+Future<String?> _pickLabel(
+  BuildContext context,
+  FamilySide side,
+  String current,
+) => showModalBottomSheet<String>(
+  context: context,
+  showDragHandle: true,
+  builder: (context) => SafeArea(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'なまえを えらんでね',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
             children: [
-              const Text(
-                'なまえを えらんでね',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (final l in familyPlayerLabels)
-                    ChoiceChip(
-                      key: Key('family-label-option-$l'),
-                      label: Text(l, style: const TextStyle(fontSize: 18)),
-                      selected: l == current,
-                      selectedColor: familyColour(side).withValues(alpha: 0.25),
-                      onSelected: (_) => Navigator.of(context).pop(l),
-                    ),
-                ],
-              ),
+              for (final l in familyPlayerLabels)
+                ChoiceChip(
+                  key: Key('family-label-option-$l'),
+                  label: Text(l, style: const TextStyle(fontSize: 18)),
+                  selected: l == current,
+                  selectedColor: familyColour(side).withValues(alpha: 0.25),
+                  onSelected: (_) => Navigator.of(context).pop(l),
+                ),
             ],
           ),
-        ),
+        ],
       ),
-    );
+    ),
+  ),
+);
 
 Future<CharacterV2?> _pickCharacter(
   BuildContext context,

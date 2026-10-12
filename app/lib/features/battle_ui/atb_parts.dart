@@ -48,8 +48,7 @@ class AtbFeed implements StageFeed {
   @override
   List<StageEvent> advance(double dt) => [
     for (final e in inner.advance(dt * timeScale))
-      if (e is StageAction &&
-          (drawnSlots[e.side]?.contains(e.slot) ?? false))
+      if (e is StageAction && (drawnSlots[e.side]?.contains(e.slot) ?? false))
         StageAction(
           side: e.side,
           slot: e.slot,
@@ -90,7 +89,11 @@ Future<Map<int, ui.Image>> decodeDrawnEffects(Map<int, Uint8List> pngs) async {
 
 /// One side as the overlay shows it.
 class AtbSide {
-  const AtbSide({required this.name, required this.level, required this.puppet});
+  const AtbSide({
+    required this.name,
+    required this.level,
+    required this.puppet,
+  });
   final String name;
   final int level;
   final PuppetSpec puppet;
@@ -114,6 +117,7 @@ class AtbStageLayout extends StatelessWidget {
 
   final BattleStageController controller;
   final List<AtbSide> sides;
+
   /// Rebuilt with the controller (every frame while the battle runs).
   final WidgetBuilder bottom;
   final WidgetBuilder? top;

@@ -148,4 +148,6 @@ PuppetLook lookOf(CharacterV2 c) => PuppetLook(
 
 /// [characterPuppetSpec] as a provider (character id → spec).
 final characterPuppetSpecProvider = FutureProvider.autoDispose
-    .family<PuppetSpec?, CharacterV2>((ref, c) => characterPuppetSpec(ref.read, c));
+    .family<PuppetSpec?, CharacterV2>(
+      (ref, c) => characterPuppetSpec(ref.read, c),
+    );

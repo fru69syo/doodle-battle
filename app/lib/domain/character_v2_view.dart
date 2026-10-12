@@ -73,8 +73,7 @@ extension CharacterV2Display on CharacterV2 {
       : EvolutionStage.normal;
 
   /// Moves usable now (2–4).
-  List<Move> get unlockedMoves =>
-      allMoves().sublist(0, unlockedSlotCount());
+  List<Move> get unlockedMoves => allMoves().sublist(0, unlockedSlotCount());
 
   /// Slot 1 (the character's own attribute move).
   String get elementMoveName => _nameOf(allMoves()[0]);

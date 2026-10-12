@@ -25,7 +25,10 @@ abstract interface class BackendApi {
 
   /// Cloud judgement; with [v2] the same call also proposes AI moves
   /// ([CloudJudgement.moves]).
-  Future<CloudJudgement> judgeDrawing(Uint8List cutoutPng, {V2DrawingInput? v2});
+  Future<CloudJudgement> judgeDrawing(
+    Uint8List cutoutPng, {
+    V2DrawingInput? v2,
+  });
 
   Future<RegisterOutcome> registerCharacter(RegisterCharacterRequest request);
 
