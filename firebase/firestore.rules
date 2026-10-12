@@ -50,7 +50,11 @@ service cloud.firestore {
     }
 
     match /snapshots/{snapshotId} {
-      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      // v2 snapshots (schema 2) hold engine input with the hidden trust verdict
+      // (engine.trust, docs/TRUST.md §7): server-only, even for the owner. The app
+      // never reads snapshots; it gets what it needs from the callables.
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid
+        && resource.data.get('schema', 1) != 2;
       allow write: if false;
     }
 
