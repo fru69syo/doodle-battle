@@ -274,7 +274,7 @@
         },
         "type": {
           "type": "string",
-          "description": "ready, act, cast, hit, heal, ko, end, autoPick, forfeit (+ any added by Engine v3; clients ignore unknown types)"
+          "description": "Engine v3 types (ready, inputIgnored, select, moveStart, effective, hit, miss, dot, heal, stage, status, statusFail, shield, expire, heatUp, faint, end) plus the server's autoPick and forfeit; clients ignore unknown types and fields"
         },
         "side": {
           "type": "integer",

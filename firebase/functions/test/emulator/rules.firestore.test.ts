@@ -27,6 +27,7 @@ beforeEach(async () => {
     const db = ctx.firestore();
     await setDoc(doc(db, "users/bob"), { consent: { cloudJudge: true, online: true, policyVersion: 1 }, rating: 1000 });
     await setDoc(doc(db, "snapshots/s-bob"), { ownerUid: "bob", status: "active" });
+    await setDoc(doc(db, "snapshots/s-bob-v2"), { schema: 2, ownerUid: "bob", status: "active", engine: { trust: "ai_generated" } });
     await setDoc(doc(db, "queue/bob"), { uid: "bob", status: "waiting" });
     await setDoc(doc(db, "matches/m1"), { playerUids: ["alice", "bob"], status: "active" });
     await setDoc(doc(db, "matches/m1/turns/1"), { turn: 1 });
@@ -107,6 +108,8 @@ describe("users/{uid}", () => {
 describe("server-owned collections", () => {
   it("snapshots: owner read only, no client writes", async () => {
     await assertSucceeds(getDoc(doc(fs("bob"), "snapshots/s-bob")));
+    // v2 snapshots carry the hidden trust verdict: nobody reads them from the app.
+    await assertFails(getDoc(doc(fs("bob"), "snapshots/s-bob-v2")));
     await assertFails(getDoc(doc(fs("alice"), "snapshots/s-bob")));
     await assertFails(setDoc(doc(fs("bob"), "snapshots/new"), { ownerUid: "bob", status: "active" }));
     await assertFails(updateDoc(doc(fs("bob"), "snapshots/s-bob"), { status: "active", reportCount: 0 }));

@@ -12,12 +12,15 @@ import {
   type DrawingJudgement,
   type JudgeOptions,
   type ModerationVerdict,
+  type MoveSlotContext,
 } from "./types";
 import {
   JUDGE_SYSTEM_PROMPT,
   JUDGE_USER_TEXT,
   MODERATION_SYSTEM_PROMPT,
+  MOVE_SYSTEM_PROMPT,
   moderationUserText,
+  moveSlotUserText,
   movesUserText,
 } from "./prompts";
 
@@ -138,6 +141,16 @@ export class ClaudeAiService implements AiService {
         `moderation returned ${out.names.length} name verdicts for ${candidateNames.length} names`,
       );
     }
+    return out;
+  }
+
+  async generateMove(png: Buffer, ctx: MoveSlotContext): Promise<Record<string, unknown>> {
+    const out = await this.call(
+      MOVE_SYSTEM_PROMPT,
+      [imageBlock(png), { type: "text", text: moveSlotUserText(ctx.attribute, ctx.slot, ctx.budget, ctx.otherNames) }],
+      AiMoveSchema,
+      "low",
+    );
     return out;
   }
 

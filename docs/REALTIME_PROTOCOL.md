@@ -122,10 +122,17 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
 ```
 `SideView`: `{ "hp", "maxHp", "sp" (1/100 SP, 0–10000), "gauge" (0–10000), "ready", "casting" }`.
 
-Battle events (`ev.events[]`) always have `tick` and `type`, most have `side` (0 = a, 1 = b). Types
-from the dev engine: `ready`, `act {slot}`, `cast {slot, ticks}`, `hit {dmg, hp, typePct}`,
-`heal {amount, hp}`, `ko`, `end {winner, reason}`; added by the server: `autoPick {slot}` (5 s
-timeout), `forfeit`. Engine v3 may add more types: **ignore unknown types**.
+Battle events (`ev.events[]`) always have `tick` and `type`, most have `side` (0 = a, 1 = b).
+Engine v3 types (docs/BATTLE_V3.md §2, all fields integers unless noted): `ready`,
+`inputIgnored {slot}`, `select {slot, cast, auto}` (`auto` is always 0 online: the server's
+timeout is the separate `autoPick`), `moveStart {slot, template, attr}` (strings),
+`effective {target, pct}`, `hit {target, n, amount, hp, crit, pct}`, `miss {target, n}`,
+`dot {target, amount, hp}`, `heal {amount, hp, source}`, `stage {stat, stage, ticks}`,
+`status` / `statusFail {target, status[, ticks]}`, `shield {pct, ticks}`, `expire {kind}`,
+`heatUp`, `faint`, `end {winner, reason: ko|timeUp}`. Added by the server: `autoPick {slot}`
+(5 s timeout, sent right before that tick's `select`), `forfeit`. **Ignore unknown types and
+fields.** (The local dev stand-in engine sends `act`, `cast`, `hit {dmg, hp, typePct}`, `ko`
+instead; it never runs on Cloud Run.)
 
 Badge ids → names: `egg` たまご, `chick` ひよこ, `rabbit` うさぎ, `fox` きつね, `bear` くま,
 `lion` ライオン, `dragon` ドラゴン, `legend` でんせつ. The rating number is never sent.
@@ -155,7 +162,7 @@ battle engine for online matches; the server's `ev`/`snap` are the truth.
 | `PROTOCOL_VERSION` | `proto` ≠ 1 (4400) | ask to update the app |
 | `BAD_MESSAGE` | invalid JSON/fields, binary, too large (too large: 4400) | – (bug) |
 | `RATE_LIMITED` | > 5 msg/s | – |
-| `NOT_FOUND` / `NOT_OWNER` | snapshot missing, not active, or someone else's | 「もういちど とうろく してね」 |
+| `NOT_FOUND` / `NOT_OWNER` | snapshot missing, not active, someone else's, or a v1 snapshot (not `schema: 2`) | 「もういちど とうろく してね」 |
 | `LEVEL_TOO_LOW` | character below Lv5 | 「レベル5に なったら オンラインで あそべるよ」 |
 | `ALREADY_IN_MATCH` / `NOT_IN_MATCH` | queue during a match / select outside a match | – (client state bug) |
 | `DRAINING` | server is restarting | reconnect after 1–2 s |
@@ -192,32 +199,45 @@ backoff (1 s, 2 s, 4 s, max 3 tries) while still showing the searching screen.
   `rtMatches/{matchId}` (players may read; no rating numbers), `replays/{matchId}` (server-only,
   deleted after 30 days). `deleteMyData` removes `rtMatches`/`replays` of the child.
 
-## 9. Engine swap (Engine team → GCP team)
+## 9. Engine swap (Engine team → GCP team) — **done** (Server team, v2.0)
 
-The server is written against `server/realtime/src/engine.ts`, a narrow interface mirroring the
-prototype (`app/lib/domain/battle_v2/atb_engine.dart`, `shared/battle_spec_v3/`). Until Engine v3
-lands it runs `src/engines/devEngine.ts` (`BATTLE_ENGINE=dev`), a simplified stand-in that is
-**not** the game rules. Production refuses to start with `BATTLE_ENGINE=v3` until the swap is done,
-so the stand-in can never be used for rated play by accident (dev Terraform sets `dev`).
+The server is written against `server/realtime/src/engine.ts`, a narrow interface. It now runs
+**Engine v3** (`shared/battle_engine_v3_ts`, bit-exact with the app's Dart engine and
+`shared/battle_spec_v3/`) through `src/engines/v3Engine.ts`. The simplified stand-in
+`src/engines/devEngine.ts` (`BATTLE_ENGINE=dev`, **not** the game rules) is only for local
+development: the server refuses it with `NODE_ENV=production` (always set on Cloud Run) and
+Terraform only accepts `v3`.
 
-Swap steps:
-1. `cd server/realtime && npm i ../../shared/battle_engine_v3_ts` (a `file:` dependency; the
-   Dockerfile must then also `COPY shared/battle_engine_v3_ts/` before `npm ci`, and
-   `Dockerfile.dockerignore` must allow it).
-2. Add `src/engines/v3Engine.ts` implementing `BattleEngine`:
-   - `ratedFighter(source, 50)` → v3 `ratedStats(actualLevel)` with the character's own growth and
-     the moves actually unlocked (2 / 3 at Lv10 / 4 at Lv50); `source.data` is the snapshot
-     document written by the v2 `registerCharacter`.
-   - `createBattle(a, b, {seed})` → v3 battle with **`decisionTicks` disabled**
-     (`Number.MAX_SAFE_INTEGER`): the server owns the 5 s timer and passes the おまかせ choice as
-     an input.
-   - `step([slotA, slotB])` → one tick; return the tick's events and which inputs were used.
-   - `chooseMove(side, tier)` → v3 `chooseMove` with the side's AI stream.
-   - `stateHash()` → FNV-1a of the canonical state (as in the golden vectors).
-3. `loadEngine("v3")` in `src/engines/index.ts` returns it; add a test that replays the
-   `battles` golden vectors of `shared/battle_spec_v3/golden_vectors.json` through the adapter
-   (inputs at their ticks, timers disabled) and compares winner/tick/HP/event hash.
-4. Set `realtime_battle_engine = "v3"` for dev in Terraform (prod already defaults to v3) and deploy.
+What was done (all four steps):
+1. ✅ `server/realtime/package.json` depends on `"@doodle-battle/battle-engine-v3":
+   "file:../../shared/battle_engine_v3_ts"`. Install / build it first
+   (`cd shared/battle_engine_v3_ts && npm ci`, its `prepare` compiles `dist/`). The Dockerfile
+   does the same, then replaces the npm link by a copy of the compiled engine so the runtime image
+   is self-contained; `Dockerfile.dockerignore` allows the engine's package files and `src/`. CI
+   (`realtime-ci.yml`, `realtime-deploy.yml`) builds the engine first and its path filters include
+   `shared/battle_engine_v3_ts/**` and `shared/battle_spec_v3/**`.
+2. ✅ `src/engines/v3Engine.ts` (`V3Engine`, engine id `v3.0`):
+   - `ratedFighter(source, 50)` → `ratedFighterFromSnapshot(doc.engine, doc.level)`: v3
+     `ratedSetup` at the real level (own growth, Lv50 stat sync, moves unlocked at the real level:
+     2 / 3 at Lv10 / 4 at Lv50). Only `schema: 2` snapshots (written by the v2 `registerCharacter`)
+     are accepted; anything else → `UnsupportedFighterError` → `NOT_FOUND`.
+   - `createBattle(a, b, {seed})` → `RealtimeBattle` (decision timer disabled: the server owns the
+     5 s timer and passes the おまかせ choice as an input).
+   - `step`, `isReady`, `canUse`, `chooseMove(side, tier)` (side's AI stream only), `view`,
+     `stateHash()` (FNV-1a of the canonical state, 8 hex digits) are pass-throughs.
+   - **Hidden state**: `snapshot.engine.trust` and the late-bloomer form are engine input only.
+     Clients get `attr`, the public move fields (`slot, name, templateId, attr, spCost`), `maxHp`,
+     engine events and side views — none of them names the verdict or the form. Tested in
+     `test/unit/v3Engine.test.ts` and over real WebSockets in `test/integration/v3.test.ts` (every
+     message of PvP and ghost matches with hidden-form characters is checked for any trace of it).
+3. ✅ `loadEngine("v3")` returns `V3Engine`. `test/unit/v3Engine.test.ts` replays all `battles` of
+   `shared/battle_spec_v3/golden_vectors.json` through the adapter (`expected.inputLog` inputs at
+   their ticks, timers disabled) and compares winner, end reason, tick, HP, max HP, event count,
+   **event hash** (timeout picks re-marked `auto: 1`, as the engine's own timer would) and state
+   hash; it also checks `ratedSetups` from v2 snapshot data. Replays of stored matches
+   (`replays/{id}` = seed + inputs) reproduce `finalHash`.
+4. ✅ Terraform: dev `realtime_battle_engine = "v3"` (prod already was). Deploy: see
+   `docs/LEARN_GCP.md` §4.9.
 
 ## 10. Versioning
 

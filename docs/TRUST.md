@@ -119,3 +119,69 @@ removed from the suggestions and not used for the character. Every report is log
 Shown on the first-run consent screen and in おうちのひと (`NoAiTrainingNotice`), in the cloud-judge
 consent text, the store description (■ データの取り扱い, short description), the support page and
 the privacy policy (`#no-ai-training`).
+
+## 8. Server-side trust for v2 registration (`registerCharacter` schema 2)
+
+Owner: Server team. Code: `firebase/functions/src/callables/registerCharacterV2.ts`,
+`src/trust/origin.ts`, `src/trust/canvasCheck.ts`, `src/lib/pngPixels.ts`. The server never trusts
+the device for anything that changes battle strength; everything below is fail-safe for children
+(nothing here refuses a drawing that was accepted before).
+
+### 8.1 Image hash = seed (no stat re-rolls)
+
+The genome's seed (±3 % stat jitter, growth jitter, luck, offline moves) comes from the image hash.
+The device used to send the hash, so a modified app could try hashes until the numbers looked good.
+Now the server **recomputes it**: `seedImageHash` = SHA-256 (hex) of the exact PNG bytes uploaded
+(the cut-out other children see; same value as `imageSha256`). The device's `imageHash` is only
+used to check that the device's own claim (its `stats`) is self-consistent; the stored
+`engine.imageHash` is the server's. The response returns it as `imageHash`.
+
+- **App (Integration team)**: for v2 characters, compute `imageHash = sha256(cut-out PNG bytes)`
+  (the same bytes that are uploaded) so that the stats on the phone and online are identical. Until
+  then the online stats of a registered character can differ by the jitter (a few %) from the
+  phone's. The app may simply adopt the `imageHash` from the response.
+- **Residual risk**: the PNG bytes are still chosen by the device, so a modified app can re-encode
+  or nudge pixels offline and pick the best variant before uploading. That costs real work per try
+  and binds the numbers to the picture everybody sees. A server-side secret (HMAC of the bytes)
+  would remove even that, at the price that the phone could never show the online numbers; not
+  done (open question in docs/BACKEND.md §15).
+
+### 8.2 `source: "canvas"` cannot switch off the server's checks
+
+Drawings made with the in-app tool are sent with `source: "canvas"` and the device skips its
+digital / AI checks for them (§2). A modified app could label any picture `canvas`, so:
+
+1. **Moderation always runs** (`moderateCharacter`), for every source: inappropriate images and
+   `photo_print_or_screen` are refused exactly as for photos.
+2. **Hidden verdict** (`hiddenOrigin`, stored in `engine.trust`, never returned):
+   - photo (or a canvas claim that fails the check below): Claude's decided verdict wins
+     (`ai_generated` → hidden form, `hand_drawn` → normal, even if the device said `digital`);
+     only for `unsure` does the device's own verdict count;
+   - plausible canvas: the device's internal verdict is kept (normally none), because Claude
+     cannot tell flat finger-painted pixels from digital art and would wrongly weaken real kids.
+3. **Canvas plausibility** (`checkCanvasClaim`): the app sends a stroke summary with the
+   registration (`canvas: {v: 1, strokes, points, colors, inkBox}`, all canvas units, from
+   `StrokeDrawing`: non-eraser stroke count, total points, the ARGB palette colours used, and
+   `inkBounds()`), and the server decodes the uploaded cut-out:
+   - colours must be from the 12-colour crayon palette, counts within the canvas caps
+     (≤ 600 strokes, ≤ 4000 points, points ≥ strokes);
+   - the cut-out's size must match the ink box at the same crop as `encodeCutout`
+     (box × scale + 4 px margin per side, ±15 % / ±6 px; the scale is taken from the longer side,
+     so the check does not depend on the working resolution);
+   - a declared colour only counts if it really occurs as solid ink (≥ 8 px or 1 ‰ of the ink at
+     ≥ 60 % of the way from white to the colour, within RGB distance 40), so declaring the whole
+     palette gains nothing;
+   - ≥ 75 % of the opaque pixels must lie near a "colour → white" line of a present colour (crayon
+     grain, the soft brush and anti-aliasing only mix ink with paper) and ≥ 35 % must be solid ink.
+
+   AI pictures, photos and digital paintings have shading, gradients and unrelated colours and fail.
+   A failure is **not** a rejection: the drawing is handled like a photo (Claude's verdict decides).
+
+**Trade-offs.** This is a cheap heuristic, not a proof. It is fooled by a picture posterised to
+the palette with clean edges (which then really looks like a flat crayon drawing), and the colour
+blending of a real canvas export (white balance, resizing, overlapping soft-brush strokes) was only
+modelled with synthetic images in the tests. The thresholds are deliberately lenient and live in
+`CANVAS_CHECK`; when the app sends real canvas registrations, log lines
+`registerCharacterV2 trust {canvas: "ok:<pct>" | "x:<problem>:<pct>"}` show the distribution, and
+the thresholds can be tightened without any app change. A failed check costs a real child at most
+"Claude decides", never a refusal.

@@ -85,7 +85,8 @@ export class TestClient {
       if (m.t === "ev") {
         const me = this.messages.findLast((x) => x.t === "match");
         const mySide = me?.t === "match" ? (me.you === "a" ? 0 : 1) : -1;
-        if (m.events.some((e) => e.type === "act" && e.side === mySide)) this.send({ t: "select", seq: ++seq, slot });
+        // dev engine: `act`; Engine v3: `select` (the move was chosen, queue the next one).
+        if (m.events.some((e) => (e.type === "act" || e.type === "select") && e.side === mySide)) this.send({ t: "select", seq: ++seq, slot });
       }
     };
   }

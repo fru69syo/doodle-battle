@@ -1,14 +1,17 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { judgeDrawingHandler } from "../../src/callables/judgeDrawing";
 import { requireOwnActiveSnapshot, pickGhost } from "../../src/battle/matchmaking";
 import { registerCharacterHandler } from "../../src/callables/registerCharacter";
+import type { RegisterCharacterV2Response } from "../../src/callables/registerCharacterV2";
 import { COL, db } from "../../src/lib/firebase";
 import type { SnapshotDocV2 } from "../../src/model";
 import { DEFAULT_SPEC, Genome, parseFeatures, ratedFighterFromSnapshot } from "../../src/vendor/battle_engine_v3";
-import { errorCode, okJudgement, req, seedUser, useEmulatorEnv } from "../helpers/emulator";
-import { pngBase64 } from "../helpers/png";
+import { errorCode, okJudgement, okVerdict, req, seedUser, useEmulatorEnv } from "../helpers/emulator";
+import { CANVAS_TEST_BOX, canvasLikePng, gradientPng, pngBase64 } from "../helpers/png";
+import { CANVAS_PALETTE } from "../../src/trust/canvasCheck";
 
 const env = useEmulatorEnv();
 const golden = JSON.parse(
@@ -40,7 +43,7 @@ function input(over: Record<string, unknown> = {}): Record<string, unknown> {
   };
 }
 const register = (over: Record<string, unknown> = {}, uid = "kid") =>
-  registerCharacterHandler(req(uid, input(over)));
+  registerCharacterHandler(req(uid, input(over))) as Promise<RegisterCharacterV2Response>;
 
 describe("registerCharacter (v2, engine v3)", () => {
   it("stores a server-computed snapshot the realtime server can field", async () => {
@@ -52,13 +55,21 @@ describe("registerCharacter (v2, engine v3)", () => {
     expect(JSON.stringify(res)).not.toMatch(/bloomer|trust|stats/i);
     const snap = (await db().collection(COL.snapshots).doc(res.snapshotId).get()).data() as SnapshotDocV2;
     expect(snap).toMatchObject({ schema: 2, status: "active", level: 12, attribute: genome.attr });
-    expect(snap.stats).toEqual(genome.statsAt(12));
-    expect(snap.ratedStats).toEqual(genome.statsAt(50));
+    // The seed comes from the uploaded bytes (the device's hash only checked its own numbers).
+    const seeded = new Genome(DEFAULT_SPEC, {
+      features: parseFeatures(g0.features)!,
+      energy10: g0.energy10,
+      skill10: g0.skill10,
+      imageHash: createHash("sha256").update(Buffer.from(pngBase64(), "base64")).digest("hex"),
+    });
+    expect(snap.engine.imageHash).toBe(res.imageHash);
+    expect(snap.stats).toEqual(seeded.statsAt(12));
+    expect(snap.ratedStats).toEqual(seeded.statsAt(50));
     expect(snap.rig).toMatchObject({ v: 1 });
     expect(snap.engine.proposals[0]).toMatchObject({ template: "strike", name: "ねこパンチ" });
     expect(env.ai.moderateCharacter).toHaveBeenCalledWith(expect.any(Buffer), ["ねこまる", "ねこパンチ"]);
     const rated = ratedFighterFromSnapshot(snap.engine, snap.level)!;
-    expect(rated.setup.stats).toEqual(genome.statsAt(50));
+    expect(rated.setup.stats).toEqual(seeded.statsAt(50));
     expect(rated.setup.moves).toHaveLength(3);
     // The v1 turn-based matchmaking never fields v2 snapshots.
     expect(await errorCode(requireOwnActiveSnapshot("kid", res.snapshotId))).toBe("SNAPSHOT_NOT_ACTIVE");
@@ -143,5 +154,91 @@ describe("judgeDrawing (v2: AI move proposals)", () => {
     const res = await judgeDrawingHandler(req("kid", { imageBase64: pngBase64() }));
     expect(res.rejectCode).toBe("IMAGE_AI_GENERATED");
     expect(res).not.toHaveProperty("moves");
+  });
+});
+
+describe("registerCharacter v2 hardening (docs/TRUST.md §8)", () => {
+  const sha = (b64: string) => createHash("sha256").update(Buffer.from(b64, "base64")).digest("hex");
+  const genomeFor = (imageHash: string, origin: string | null = null) =>
+    new Genome(DEFAULT_SPEC, { features: parseFeatures(g0.features)!, energy10: g0.energy10, skill10: g0.skill10, imageHash, origin });
+  const stored = async (id: string) => (await db().collection(COL.snapshots).doc(id).get()).data() as SnapshotDocV2;
+  const claudeSays = (origin: "hand_drawn" | "unsure" | "ai_generated" | "photo_print_or_screen") =>
+    env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({ ...okVerdict(names), origin }));
+  const colors = [CANVAS_PALETTE[0]!, CANVAS_PALETTE[2]!, CANVAS_PALETTE[8]!];
+  const canvasInput = (png: Buffer, over: Record<string, unknown> = {}) => ({
+    source: "canvas",
+    imageBase64: png.toString("base64"),
+    canvas: { v: 1, strokes: 14, points: 560, colors, inkBox: CANVAS_TEST_BOX },
+    ...over,
+  });
+
+  it("derives the seed from the uploaded bytes, not from the device's hash", async () => {
+    await seedUser("kid");
+    const img = pngBase64(300, 300);
+    const a = await register({ imageBase64: img, imageHash: "11".repeat(32), localCharacterId: "x1" });
+    const b = await register({ imageBase64: img, imageHash: "22".repeat(32), localCharacterId: "x2" });
+    if (!a.ok || !b.ok) throw new Error("not registered");
+    expect(a.imageHash).toBe(sha(img));
+    const [sa, sb] = [await stored(a.snapshotId), await stored(b.snapshotId)];
+    // Re-rolling the device hash changes nothing: same picture, same stats.
+    expect(sa.engine.imageHash).toBe(sha(img));
+    expect(sb.engine.imageHash).toBe(sha(img));
+    expect(sa.stats).toEqual(sb.stats);
+    expect(sa.stats).toEqual(genomeFor(sha(img)).statsAt(12));
+    expect(sa.imageSha256).toBe(sha(img));
+  });
+
+  it("a device whose hash is already the upload's sha256 keeps exactly its own numbers", async () => {
+    await seedUser("kid");
+    const img = pngBase64(200, 240);
+    const g = genomeFor(sha(img));
+    const res = await register({ imageBase64: img, imageHash: sha(img), stats: g.statsAt(12) });
+    if (!res.ok) throw new Error("not registered");
+    expect((await stored(res.snapshotId)).stats).toEqual(g.statsAt(12));
+  });
+
+  it("photos: Claude's decided verdict wins over the device's", async () => {
+    await seedUser("kid");
+    claudeSays("hand_drawn");
+    const r1 = await register({ verdict: "digital", localCharacterId: "p1" });
+    claudeSays("unsure");
+    const r2 = await register({ verdict: "digital", localCharacterId: "p2" });
+    claudeSays("ai_generated");
+    const r3 = await register({ localCharacterId: "p3" });
+    if (!r1.ok || !r2.ok || !r3.ok) throw new Error("not registered");
+    expect((await stored(r1.snapshotId)).engine.trust).toBeNull();
+    expect((await stored(r2.snapshotId)).engine.trust).toBe("digital");
+    expect((await stored(r3.snapshotId)).engine.trust).toBe("ai_generated");
+    expect(JSON.stringify([r1, r2, r3])).not.toMatch(/trust|digital|ai_generated|bloom/);
+  });
+
+  it("canvas: a plausible stroke drawing keeps the device verdict even if Claude says AI", async () => {
+    await seedUser("kid");
+    claudeSays("ai_generated");
+    const res = await register(canvasInput(canvasLikePng(colors)));
+    if (!res.ok) throw new Error("not registered");
+    expect((await stored(res.snapshotId)).engine.trust).toBeNull();
+    expect(env.ai.moderateCharacter).toHaveBeenCalledTimes(1); // moderation still ran
+  });
+
+  it("canvas: a claim that does not match the picture is treated like a photo", async () => {
+    await seedUser("kid");
+    claudeSays("ai_generated");
+    const r1 = await register(canvasInput(gradientPng(), { localCharacterId: "k1" }));
+    claudeSays("ai_generated");
+    const r2 = await register(canvasInput(canvasLikePng(colors), { canvas: undefined, localCharacterId: "k2" }));
+    if (!r1.ok || !r2.ok) throw new Error("not registered");
+    expect((await stored(r1.snapshotId)).engine.trust).toBe("ai_generated");
+    expect((await stored(r2.snapshotId)).engine.trust).toBe("ai_generated");
+  });
+
+  it("canvas never skips the photo / inappropriate-image moderation", async () => {
+    await seedUser("kid");
+    claudeSays("photo_print_or_screen");
+    expect(await register(canvasInput(canvasLikePng(colors)))).toEqual({ ok: false, reason: "IMAGE_NOT_DRAWING" });
+    env.ai.moderateCharacter.mockImplementationOnce(async (_p, names) => ({ ...okVerdict(names), imageCategory: "violence" }));
+    expect(await register(canvasInput(canvasLikePng(colors)))).toMatchObject({ ok: false });
+    expect(env.ai.moderateCharacter).toHaveBeenCalledTimes(2);
+    expect(await errorCode(register({ source: "tablet" }))).toBe("INVALID_ARGUMENT");
   });
 });

@@ -37,6 +37,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (production && authMode === "insecure-dev") {
     throw new Error("AUTH_MODE=insecure-dev is not allowed with NODE_ENV=production");
   }
+  if (production && engine === "dev") {
+    // The stand-in is not the game rules: never let it run rated play by accident.
+    throw new Error("BATTLE_ENGINE=dev is not allowed with NODE_ENV=production (use v3)");
+  }
   return {
     port: num(env.PORT, 8080),
     projectId: env.GCP_PROJECT_ID ?? env.GOOGLE_CLOUD_PROJECT,

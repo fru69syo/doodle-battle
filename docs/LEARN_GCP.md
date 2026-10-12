@@ -220,12 +220,14 @@ npx firebase deploy --config ../firebase.json --project doodle-battle-dev --only
 Actions → **Deploy realtime server (manual)** → env を選んで Run。
 テスト → イメージを作って Artifact Registry に push（タグ = コミット）→ Cloud Run に新しいリビジョン → `/healthz` を確認 → だめなら前のリビジョンに自動で戻す、まで自動です。
 
-> いまは Engine v3（Engine チームが作成中）がまだ入っていないので、**dev は仮のエンジン（`BATTLE_ENGINE=dev`）で動きます**。prod は `v3` 以外では起動しない設定にしてあります（仮のルールでレート戦をしないため）。差し替え手順は `docs/REALTIME_PROTOCOL.md` §9。
+> dev も prod も **Engine v3**（`BATTLE_ENGINE=v3`、`shared/battle_engine_v3_ts`。アプリと同じ計算をするエンジン）で動きます。仮のエンジン（`dev`）は手元の開発専用で、Cloud Run（`NODE_ENV=production`）では起動しません（仮のルールでレート戦をしないため）。Terraform も `v3` しか受け付けません。差し替えの記録は `docs/REALTIME_PROTOCOL.md` §9。
+>
+> **切り替えのデプロイ（1 回だけ）**: このブランチを main に入れたら、① infra-apply（dev）で `realtime_battle_engine = "v3"` を反映 → ② Actions → **Deploy realtime server (manual)**（dev）→ ③ §4.10 で `"engine":"v3"` を確認。v1 の登録（`schema` なし）のキャラはオンラインに出られなくなる（`NOT_FOUND` → アプリが登録しなおす）ので、dev の古い `snapshots` は消してかまいません。
 
 ### 4.10 動作を確かめる
 ```bash
 URL=$(cd infra/terraform/envs/dev && terraform output -raw realtime_url)
-curl -s "$URL/healthz"                       # {"ok":true,"draining":false,"engine":"dev",…}
+curl -s "$URL/healthz"                       # {"ok":true,"draining":false,"engine":"v3",…}
 ```
 アプリ（dev ビルド）からオンライン対戦をして、§9 のダッシュボードで「Matches ended」が増えることを確認します。
 
@@ -289,6 +291,7 @@ gcloud / docker / terraform がそのトークンで動く
 - ベースイメージは**ダイジェスト（sha256）で固定**。同じ Dockerfile からいつも同じものができます。月 1 回くらい、新しいダイジェストに上げます。
 - Docker Hub の回数制限を避けるため、Google のミラー `mirror.gcr.io` から取ります。
 - Artifact Registry は「最新 10 個は残す、30 日より古いものは消す」の自動お掃除つき（0.5 GB までは無料）。
+- 対戦のルールは **Engine v3**（`shared/battle_engine_v3_ts`）。サーバーの `package.json` から `file:` で参照し、Dockerfile は ① エンジンを `npm ci`（`prepare` で `dist/` を作る）→ ② サーバーを `npm ci` → ③ ビルド後、リンクをエンジンの本体のコピーに置きかえる、の順に作ります。実行用のイメージには `server/realtime` の外のものは要りません。
 
 ### 5.5 デプロイの安全装置（`realtime-deploy.yml`）
 1. テストが通らなければイメージを作らない
@@ -497,7 +500,8 @@ Firebase コンソール → Firestore。運用でよく見るのは `config/cos
 | `terraform destroy` で Firestore が消えない | prod は削除保護つき（わざと）。dev は保護なし |
 | Identity Platform に切り替わった | Terraform で Auth を管理すると自動で切り替わる（**元に戻せない**）。無料枠（月数万人）を大きく超えなければ費用は変わらない。いやなら `manage_auth = false` にして、Auth は Firebase コンソールで匿名をオン |
 | デプロイ後にアプリが対戦サーバーにつながらない | URL のまちがい（`wss://…/v2`）、App Check（dev ビルドはデバッグトークンを登録）、`REQUIRE_APP_CHECK` |
-| 対戦サーバーが起動しない（prod） | `BATTLE_ENGINE=v3` なのに Engine v3 がまだ入っていない（意図どおり）。REALTIME_PROTOCOL §9 |
+| 対戦サーバーが起動しない | `BATTLE_ENGINE=dev`（仮のエンジン）は Cloud Run では起動しない（意図どおり）。`v3` にする。REALTIME_PROTOCOL §9 |
+| イメージのビルドで `@doodle-battle/battle-engine-v3` が見つからない | Engine v3 は `file:` の依存。Dockerfile は先に `shared/battle_engine_v3_ts` をビルドする。手元では `cd shared/battle_engine_v3_ts && npm ci` を先に |
 | 夜中もインスタンスが 1 台ある | アプリが接続を開きっぱなし。または監視（15 分おき）の直後。請求は「接続中」だけなので、billable instance time のグラフで確認 |
 | Firebase CLI のデプロイで「ルールの権限付与」を聞かれて止まる | 初回は手元から対話モードで（§4.8） |
 | JSON 鍵を作ろうとしてしまう | 不要です。WIF を使います。組織のポリシーで鍵の作成を禁止しておくとさらに安全 |

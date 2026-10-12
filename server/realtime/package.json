@@ -17,10 +17,11 @@
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "start": "node lib/index.js",
-    "dev": "npm run build && BATTLE_ENGINE=dev AUTH_MODE=insecure-dev LOG_PRETTY=1 node lib/index.js",
+    "dev": "npm run build && BATTLE_ENGINE=v3 AUTH_MODE=insecure-dev LOG_PRETTY=1 node lib/index.js",
     "test:firestore": "firebase emulators:exec --config ../../firebase/firebase.json --project demo-doodle-battle --only firestore \"vitest run --project firestore\""
   },
   "dependencies": {
+    "@doodle-battle/battle-engine-v3": "file:../../shared/battle_engine_v3_ts",
     "firebase-admin": "^14.5.0",
     "ws": "^8.22.0",
     "zod": "^4.6.5"

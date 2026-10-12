@@ -1,6 +1,11 @@
 # The build context is the repository root; send only what the Dockerfile copies.
 *
 !shared/cost_mode/
+!shared/battle_engine_v3_ts/package.json
+!shared/battle_engine_v3_ts/package-lock.json
+!shared/battle_engine_v3_ts/tsconfig.json
+!shared/battle_engine_v3_ts/tsconfig.build.json
+!shared/battle_engine_v3_ts/src/
 !server/realtime/package.json
 !server/realtime/package-lock.json
 !server/realtime/tsconfig.json
