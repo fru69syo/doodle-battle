@@ -1,5 +1,5 @@
 /// Server cost mode (`config/costMode`, shared/cost_mode/cost_mode.json,
-/// SPEC §12.7). The kill switch lowers it when the monthly budget runs out;
+/// SPEC §11.3). The kill switch lowers it when the monthly budget runs out;
 /// the app silently adapts. Children never see anything about it.
 library;
 

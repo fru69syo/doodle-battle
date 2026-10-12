@@ -17,7 +17,7 @@ import 'cosmetics.dart';
 import 'element_type.dart';
 import 'rig_blob.dart';
 
-/// How the drawing reached the app (SPEC §12.2).
+/// How the drawing reached the app (SPEC §3).
 enum DrawingSource {
   /// A photo of a drawing on paper.
   photo,

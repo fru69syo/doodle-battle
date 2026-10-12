@@ -52,13 +52,13 @@ enum PolicyPage {
   Uri get uri => Uri.parse('$policySiteBaseUrl$path');
 }
 
-/// In-app purchases (SPEC §12.1: v2.0 ships free, no products). The store
+/// In-app purchases (SPEC §10.2: v2.0 ships free, no products). The store
 /// code is kept but nothing is sold, shown or queried while this is false
 /// (default). Turn on with `--dart-define=IAP_ENABLED=true` once the owner
 /// is allowed to sell again.
 const bool kIapEnabled = bool.fromEnvironment('IAP_ENABLED');
 
-/// Rewarded ads exist only in the Android build (SPEC §12.6: the iPhone
+/// Rewarded ads exist only in the Android build (SPEC §10.2: the iPhone
 /// build has no ads at all). `--dart-define=ADS_ENABLED=false` removes
 /// them from Android too.
 const bool kAdsEnabledOnAndroid = bool.fromEnvironment(

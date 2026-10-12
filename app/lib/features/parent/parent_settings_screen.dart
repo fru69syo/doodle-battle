@@ -89,7 +89,7 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             ),
             const _Section('AR'),
             const ArInstallTile(),
-            // In-app purchases are switched off in v2.0 (SPEC §12.1); the
+            // In-app purchases are switched off in v2.0 (SPEC §10.2); the
             // shop code stays for when they come back.
             if (kIapEnabled) ...[const _Section('ショップ'), const ShopSection()],
             const _Section('データ'),

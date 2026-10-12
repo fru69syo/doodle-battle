@@ -29,7 +29,7 @@ const kOnlineFallbackPicture = 'assets/cpu/cpu_stickman.png';
 
 enum _Step { registering, rejected, online }
 
-/// Online rated battle (SPEC §12.5): registration (server review) →
+/// Online rated battle (SPEC §7.2): registration (server review) →
 /// WebSocket matchmaking (a ghost when nobody is found; the same searching
 /// animation either way) → server-driven ATB battle → result.
 class OnlineBattleScreen extends ConsumerStatefulWidget {

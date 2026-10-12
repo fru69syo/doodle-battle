@@ -11,7 +11,7 @@ import 'display_name_picker.dart';
 import 'online_badges.dart';
 import 'realtime/realtime_client.dart';
 
-/// Online lobby (SPEC §12.5): only when the parent allowed online play and
+/// Online lobby (SPEC §7.2): only when the parent allowed online play and
 /// the server is configured; characters from Lv5. Shows the online name
 /// (preset words only) and the best badge. No chat.
 class OnlineLobbyScreen extends ConsumerWidget {

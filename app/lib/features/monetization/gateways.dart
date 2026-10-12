@@ -85,7 +85,7 @@ abstract interface class StoreGateway {
 }
 
 /// Store used while in-app purchases are switched off (`kIapEnabled`,
-/// SPEC §12.1): never reaches the billing library, sells and owns nothing.
+/// SPEC §10.2): never reaches the billing library, sells and owns nothing.
 class DisabledStoreGateway implements StoreGateway {
   const DisabledStoreGateway();
 

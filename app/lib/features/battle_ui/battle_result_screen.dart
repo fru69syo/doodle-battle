@@ -20,7 +20,7 @@ import '../collection/xp_bar.dart';
 import 'battle_outcome.dart';
 
 /// Platform of this build for the rewarded-ad rule (Android only, SPEC
-/// §12.6). Overridable in tests.
+/// §10.2). Overridable in tests.
 final appPlatformProvider = Provider<AppPlatform>((ref) {
   if (kIsWeb) return AppPlatform.other;
   if (Platform.isAndroid) return AppPlatform.android;

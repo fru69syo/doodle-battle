@@ -76,7 +76,7 @@ final assetBytesProvider = FutureProvider.family<Uint8List, String>(
   (ref, key) async => (await rootBundle.load(key)).buffer.asUint8List(),
 );
 
-/// Rewarded ads exist in this build: Android only (SPEC §12.6, the iPhone
+/// Rewarded ads exist in this build: Android only (SPEC §10.2, the iPhone
 /// build is ad-free) and only while `ADS_ENABLED` is on.
 final adsSupportedProvider = Provider<bool>(
   (ref) => !kIsWeb && Platform.isAndroid && kAdsEnabledOnAndroid,

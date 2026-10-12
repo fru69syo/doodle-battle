@@ -94,7 +94,7 @@ class FighterInfo {
   });
 
   /// Optional (not in protocol v1 yet): lets the child report the
-  /// opponent's character (SPEC §5).
+  /// opponent's character (SPEC §9.4).
   final String? snapshotId;
 
   final String displayName;

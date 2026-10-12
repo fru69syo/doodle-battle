@@ -71,7 +71,7 @@ class ConsentToggles extends StatelessWidget {
           enabled: !noAdsPass,
           set: (v) => onChanged(value.copyWith(ads: v)),
         ),
-      // In-app purchases are switched off in v2.0 (SPEC §12.1).
+      // In-app purchases are switched off in v2.0 (SPEC §10.2).
       if (kIapEnabled)
         _tile(
           key: 'purchases',

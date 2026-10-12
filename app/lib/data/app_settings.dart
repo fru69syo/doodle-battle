@@ -140,7 +140,7 @@ class AppSettings {
   final Set<String> entitlements;
 
   /// Products that count right now: none while in-app purchases are
-  /// switched off ([kIapEnabled], SPEC §12.1).
+  /// switched off ([kIapEnabled], SPEC §10.2).
   Set<String> get ownedProducts => kIapEnabled ? entitlements : const {};
 
   /// Consent last written to the server successfully (null = never; then
