@@ -8,7 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../domain/battle/battle.dart';
+import '../../../domain/cosmetics.dart';
 import '../../../domain/element_type.dart';
 
 /// One effect to play (set by `applyBattleEvent` on ぞくせいわざ / ひっさつ).
@@ -19,24 +19,20 @@ class MoveEffectCue {
     required this.tick,
   });
 
-  /// Attacker.
-  final Side side;
-  final BattleAction move;
+  /// Attacker (0 or 1).
+  final int side;
+  final DrawnMove move;
 
   /// Increments for every new cue (re-triggers the animation).
   final int tick;
 }
-
-/// Moves that play a flying effect.
-bool movePlaysEffect(BattleAction a) =>
-    a == BattleAction.element || a == BattleAction.special;
 
 /// Which picture an effect uses: the drawn one when there is one.
 enum EffectSprite { custom, fallback }
 
 EffectSprite effectSpriteFor(
   MoveEffectCue cue,
-  Map<Side, Map<BattleAction, Uint8List>> drawn,
+  Map<int, Map<DrawnMove, Uint8List>> drawn,
 ) => drawn[cue.side]?[cue.move] != null
     ? EffectSprite.custom
     : EffectSprite.fallback;
@@ -67,8 +63,8 @@ EffectSprite effectSpriteFor(
   );
 }
 
-IconData defaultEffectIcon(ElementType e, BattleAction move) =>
-    move == BattleAction.special
+IconData defaultEffectIcon(ElementType e, DrawnMove move) =>
+    move == DrawnMove.special
     ? Icons.star
     : switch (e) {
         ElementType.fire => Icons.local_fire_department,
@@ -93,9 +89,9 @@ class MoveEffectLayer extends StatefulWidget {
   });
 
   final MoveEffectCue? cue;
-  final Offset? Function(Side side) centerOf;
-  final ElementType Function(Side side) elementOf;
-  final Map<Side, Map<BattleAction, Uint8List>> drawn;
+  final Offset? Function(int side) centerOf;
+  final ElementType Function(int side) elementOf;
+  final Map<int, Map<DrawnMove, Uint8List>> drawn;
   final double size;
   final Duration duration;
 
@@ -130,7 +126,7 @@ class _MoveEffectLayerState extends State<MoveEffectLayer>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final from = widget.centerOf(cue.side);
-      final to = widget.centerOf(cue.side.other);
+      final to = widget.centerOf(1 - cue.side);
       if (from == null || to == null) return;
       setState(() {
         _playing = cue;
@@ -168,7 +164,7 @@ class _MoveEffectLayerState extends State<MoveEffectLayer>
             defaultEffectIcon(element, cue.move),
             key: const Key('move-effect-default'),
             size: widget.size * 0.8,
-            color: cue.move == BattleAction.special
+            color: cue.move == DrawnMove.special
                 ? AppColors.gold
                 : AppColors.element(element),
             shadows: const [Shadow(color: Colors.white, blurRadius: 8)],

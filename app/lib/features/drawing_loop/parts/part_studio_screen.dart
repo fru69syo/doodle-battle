@@ -10,7 +10,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/kid_dialogs.dart';
 import '../../../data/app_state.dart';
 import '../../../data/drawing_loop_storage.dart';
-import '../../../domain/character.dart';
+import '../../../domain/character_v2.dart';
+import '../../../domain/character_v2_view.dart';
 import '../../../domain/cosmetics.dart';
 import '../display_image.dart';
 import '../loop_capture.dart';
@@ -51,7 +52,7 @@ class _PartStudioScreenState extends ConsumerState<PartStudioScreen> {
   int? _selected;
   Uint8List? _cutout;
 
-  Character? get _character =>
+  CharacterV2? get _character =>
       ref.read(characterByIdProvider(widget.characterId));
 
   @override

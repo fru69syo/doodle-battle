@@ -9,8 +9,8 @@ import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
 import '../../data/backend/backend_models.dart' show AiSuggestionKind;
 import '../../data/character_repository.dart';
-import '../../domain/character.dart';
 import '../../domain/cosmetics.dart';
+import '../../domain/character_v2_view.dart';
 import '../drawing_loop/drawing_loop.dart';
 import '../drawing_loop/loop_labels.dart' show showOdaiStampMessage;
 import '../drawing_loop/odai/stamp_card.dart' show StampKind;
@@ -35,21 +35,25 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
   /// AI suggestions the child reported: never shown or used again.
   final _reported = <String>{};
 
-  String? _unlessReported(String? s) =>
-      s == null || _reported.contains(s) ? null : s;
-
   /// Names and move names the cloud AI suggested for this drawing.
   List<(AiSuggestionKind, String)> _aiSuggestions(PendingBirth birth) {
     final cloud = birth.cloud;
     if (cloud == null) return const [];
     return [
       for (final n in cloud.suggestedNames) (AiSuggestionKind.name, n),
-      if (cloud.elementMoveName != null)
-        (AiSuggestionKind.elementMove, cloud.elementMoveName!),
-      if (cloud.specialMoveName != null)
-        (AiSuggestionKind.specialMove, cloud.specialMoveName!),
+      for (final (slot, name) in _aiMoveNames(birth))
+        (
+          slot == 3 ? AiSuggestionKind.specialMove : AiSuggestionKind.elementMove,
+          name,
+        ),
     ].where((s) => !_reported.contains(s.$2)).toList();
   }
+
+  /// (slot, name) of the AI move proposals.
+  static List<(int, String)> _aiMoveNames(PendingBirth birth) => [
+    for (final (i, m) in (birth.cloud?.moves ?? const []).indexed)
+      if (m?['name'] case final String n when n.isNotEmpty) (i, n),
+  ];
 
   Future<void> _reportAi(PendingBirth birth) async {
     final done = await showAiReportSheet(context, ref, _aiSuggestions(birth));
@@ -83,24 +87,25 @@ class _NamingScreenState extends ConsumerState<NamingScreen> {
     final r = birth.result;
     // Drawn for today's おだい → cosmetic badge (docs/LOOP.md §1).
     final odai = ref.read(activeOdaiProvider);
-    final c = Character(
-      id: id,
-      name: canonicalName(_controller.text),
-      imagePath: repo.imagePathFor(id),
-      imageHash: r.imageHash,
-      element: r.element,
-      baseStats: r.baseStats,
-      energy: r.energy,
-      skill: r.skill,
-      features: r.features,
-      createdAt: ref.read(clockProvider)(),
-      subject: birth.cloud?.subject,
-      elementMoveName: _unlessReported(birth.cloud?.elementMoveName),
-      specialMoveName: _unlessReported(birth.cloud?.specialMoveName),
-      cosmetics: odai == null
-          ? CharacterCosmetics.none
-          : CharacterCosmetics(odai: odai),
-    );
+    final filter = ref.read(ngFilterProvider).value;
+    final c = birth
+        .character(
+          id: id,
+          name: canonicalName(_controller.text),
+          imagePath: repo.imagePathFor(id),
+          createdAt: ref.read(clockProvider)(),
+          // Reported AI move names are never used (offline move instead).
+          skipMoveSlots: {
+            for (final (slot, name) in _aiMoveNames(birth))
+              if (_reported.contains(name)) slot,
+          },
+          ngCheck: filter == null ? null : (t) => !filter.isClean(t),
+        )
+        .copyWith(
+          cosmetics: odai == null
+              ? CharacterCosmetics.none
+              : CharacterCosmetics(odai: odai),
+        );
     try {
       await ref.read(charactersProvider.notifier).add(c, r.cutoutPng);
     } on CollectionFullException {

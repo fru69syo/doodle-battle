@@ -5,9 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/character_picture.dart';
-import '../../core/widgets/element_badge.dart';
+import '../../core/widgets/attr_badge.dart';
 import '../../data/app_state.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 
 /// 「ずかん」: grid of the child's characters.
 class CollectionScreen extends ConsumerWidget {
@@ -53,7 +54,7 @@ class CollectionScreen extends ConsumerWidget {
 
 class _CharacterCard extends StatelessWidget {
   const _CharacterCard(this.c);
-  final Character c;
+  final CharacterV2 c;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -93,7 +94,7 @@ class _CharacterCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  ElementBadge(c.element),
+                  AttrBadge(c.attribute()),
                 ],
               ),
             ),

@@ -65,7 +65,7 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             ConsentToggles(
               value: settings.consents,
               serverAvailable: backend.isAvailable,
-              noAdsPass: settings.entitlements.contains(Product.noAdsPass.id),
+              noAdsPass: settings.ownedProducts.contains(Product.noAdsPass.id),
               crashReportsAvailable: ref
                   .watch(crashReporterProvider)
                   .isAvailable,

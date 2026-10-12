@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
+import '../../domain/battle_v3/battle_v3.dart';
+import '../../domain/character_v2.dart';
 
 /// 「つぎの レベルまで」 bar.
 class XpBar extends StatelessWidget {
-  const XpBar({super.key, required this.spec, required this.character});
+  const XpBar({super.key, required this.character, this.spec = const V3Spec()});
 
-  final BattleSpec spec;
-  final Character character;
+  final CharacterV2 character;
+  final V3Spec spec;
 
   @override
   Widget build(BuildContext context) {
-    final maxed = character.level >= spec.growth.maxLevel;
+    final maxed = character.level >= spec.maxLevel;
     final need = xpToNext(spec, character.level);
     final fraction = maxed ? 1.0 : character.xp / need;
     return Column(

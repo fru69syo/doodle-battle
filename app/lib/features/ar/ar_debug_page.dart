@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/element_type.dart';
-import '../../domain/stats.dart';
+import '../../domain/battle_v3/battle_v3.dart';
 import 'ar_effects.dart';
 import 'ar_support.dart';
 import 'ar_view_screen.dart';
@@ -39,20 +40,19 @@ class _ArDebugPageState extends State<ArDebugPage> {
     });
   }
 
-  Future<Character> _sampleCharacter() async {
+  Future<CharacterV2> _sampleCharacter() async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/ar_debug_sample.png');
     await file.writeAsBytes(buildSampleCutoutPng(), flush: true);
-    return Character(
+    return CharacterV2(
       id: 'debug-ar',
       name: 'らくがきくん',
       imagePath: file.path,
       imageHash: 'debug0000000000000000',
-      element: _element,
-      baseStats: const Stats(hp: 50, atk: 40, def: 30, spd: 30),
-      energy: 70,
-      skill: 20,
-      features: const {},
+      legacyElement: _element,
+      energy10: 700,
+      skill10: 200,
+      features: const FeatureVector({}),
       createdAt: DateTime(2026, 1, 1),
       level: _level,
     );

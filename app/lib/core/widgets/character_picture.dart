@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_state.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../features/drawing_loop/display_image.dart';
 import '../../features/monetization/card_frames.dart';
 import '../../features/monetization/monetization_service.dart';
@@ -20,7 +21,7 @@ class CharacterPicture extends ConsumerWidget {
     this.bytes,
   });
 
-  final Character character;
+  final CharacterV2 character;
   final double size;
 
   /// Explicit image bytes (e.g. online opponent); otherwise bundled asset
@@ -52,7 +53,7 @@ class CharacterPicture extends ConsumerWidget {
         ref
             .watch(settingsProvider)
             .value
-            ?.entitlements
+            ?.ownedProducts
             .contains(Product.framePack.id) ??
         false;
     if (frame != null && owned) {

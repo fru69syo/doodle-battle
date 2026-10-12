@@ -15,8 +15,8 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/app_state.dart';
 import '../../data/drawing_loop_storage.dart';
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/cosmetics.dart';
 import 'parts/composite.dart';
 
@@ -35,7 +35,7 @@ final compositeRunnerProvider = Provider<CompositeRunner>(
 typedef DisplayImageKey = (String id, String signature);
 
 /// Signature of the parts and evolution stage of [c] ('' without parts).
-String displaySignature(Character c) {
+String displaySignature(CharacterV2 c) {
   if (c.cosmetics.parts.isEmpty) return '';
   final json = jsonEncode({
     'v': 1,
@@ -46,7 +46,7 @@ String displaySignature(Character c) {
   return sha1.convert(utf8.encode(json)).toString().substring(0, 16);
 }
 
-DisplayImageKey displayKeyOf(Character c) => (c.id, displaySignature(c));
+DisplayImageKey displayKeyOf(CharacterV2 c) => (c.id, displaySignature(c));
 
 /// Asset name of the cached composite with [signature].
 String displayAssetName(String signature) => 'display_$signature';
@@ -60,7 +60,7 @@ class DisplayImageService {
   /// PNG to show for [c]: the base drawing when it has no parts, otherwise
   /// the cached composite (rendered and cached on first use, e.g. after the
   /// character evolves). Null when the base drawing is missing.
-  Future<Uint8List?> displayImageFor(Character c) async {
+  Future<Uint8List?> displayImageFor(CharacterV2 c) async {
     final base = await _ref.read(characterRepositoryProvider).readImage(c.id);
     if (base == null) return null;
     final sig = displaySignature(c);
@@ -108,7 +108,7 @@ class DisplayImageService {
   }
 
   /// Drawn effect PNG of [move], or null (→ default effect).
-  Future<Uint8List?> effectImageFor(Character c, DrawnMove move) async {
+  Future<Uint8List?> effectImageFor(CharacterV2 c, DrawnMove move) async {
     final asset = c.cosmetics.effects[move];
     return asset == null ? null : _store.readAsset(c.id, asset);
   }
@@ -135,14 +135,8 @@ final loopAssetProvider = FutureProvider.autoDispose
           ref.read(drawingLoopStorageProvider).readAsset(key.$1, key.$2),
     );
 
-/// Battle move → the effect drawn for it.
-BattleAction battleActionOf(DrawnMove m) => switch (m) {
-  DrawnMove.element => BattleAction.element,
-  DrawnMove.special => BattleAction.special,
-};
-
-/// Drawn effects of [c] that have loaded, by battle move (watch in build).
-Map<BattleAction, Uint8List> watchMoveEffects(WidgetRef ref, Character c) => {
+/// Drawn effects of [c] that have loaded (watch in build).
+Map<DrawnMove, Uint8List> watchMoveEffects(WidgetRef ref, CharacterV2 c) => {
   for (final e in c.cosmetics.effects.entries)
-    battleActionOf(e.key): ?ref.watch(loopAssetProvider((c.id, e.value))).value,
+    e.key: ?ref.watch(loopAssetProvider((c.id, e.value))).value,
 };

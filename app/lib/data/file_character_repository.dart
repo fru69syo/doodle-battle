@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../domain/character.dart';
+import '../domain/character_v2.dart';
 import 'before_photo.dart';
 import 'character_repository.dart';
 import 'json_file.dart';
@@ -31,15 +31,20 @@ class FileCharacterRepository implements CharacterRepository {
   String imagePathFor(String id) => _png(id).path;
 
   @override
-  Future<List<Character>> loadAll() async {
+  Future<List<CharacterV2>> loadAll() async {
     if (!await _dir.exists()) return [];
-    final out = <Character>[];
+    final out = <CharacterV2>[];
     await for (final entity in _dir.list()) {
       if (entity is! File || !entity.path.endsWith('.json')) continue;
       final json = await readJsonFile(entity);
       if (json == null) continue;
       try {
-        out.add(Character.fromJson(json));
+        final c = CharacterV2.fromJson(json);
+        // v1 file (no `schema`): store the migrated v2 record once.
+        if (json['schema'] != CharacterV2.schema) {
+          await writeJsonFile(entity, c.toJson());
+        }
+        out.add(c);
       } on Object {
         // Skip unreadable entries rather than losing the whole collection.
       }
@@ -54,7 +59,7 @@ class FileCharacterRepository implements CharacterRepository {
 
   @override
   Future<void> add(
-    Character character,
+    CharacterV2 character,
     Uint8List cutoutPng, {
     required int limit,
   }) async {
@@ -67,7 +72,7 @@ class FileCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> update(Character character) async {
+  Future<void> update(CharacterV2 character) async {
     _checkId(character.id);
     if (!await _json(character.id).exists()) {
       throw StateError('unknown character ${character.id}');

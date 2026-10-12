@@ -4,8 +4,9 @@ library;
 
 import 'dart:typed_data';
 
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
+import '../../domain/battle_v3/battle_v3.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/element_type.dart';
 import '../../domain/stats.dart';
 
@@ -72,7 +73,7 @@ class CardContent {
   final EvolutionStage stage;
   final Map<StatKind, int> stars;
 
-  /// たいあたり, ぞくせいわざ, まもる, ひっさつ names.
+  /// The four move slots (locked ones as 「？？？」).
   final List<String> moves;
 
   /// うまれた ひ (when the drawing became a character).
@@ -83,33 +84,39 @@ class CardContent {
   final CardBackground background;
 }
 
-/// Builds a card for [c]. [moveLabel] gives a move's display name (the app
-/// passes `characterMoveLabel`).
-CardContent cardContentFor(
-  BattleSpec spec,
-  Character c, {
-  required Uint8List? image,
-  required String Function(Character c, BattleAction a) moveLabel,
-  CardBackground background = CardBackground.plain,
-}) => CardContent(
-  name: c.name,
-  level: c.level,
-  element: c.element,
-  stage: stageAtLevel(spec, c.level),
-  stars: cardStars(currentStats(spec, c)),
-  moves: [
-    for (final a in const [
-      BattleAction.tackle,
-      BattleAction.element,
-      BattleAction.guard,
-      BattleAction.special,
-    ])
-      moveLabel(c, a),
-  ],
-  date: c.createdAt.toLocal(),
-  image: image,
-  background: background,
+/// The ten v2 stats folded into the card's four families (たいりょく =
+/// HP+VIT, こうげき = STR+INT, ぼうぎょ = DEF+RES, すばやさ = AGI+DEX). Only
+/// the shape matters: stars are relative to the best family.
+Stats cardStatsOf(List<int> v) => Stats(
+  hp: v[Stat.hp.index] + v[Stat.vit.index],
+  atk: v[Stat.str.index] + v[Stat.intl.index],
+  def: v[Stat.def.index] + v[Stat.res.index],
+  spd: v[Stat.agi.index] + v[Stat.dex.index],
 );
+
+/// Builds a card for [c]: unlocked move names, locked slots as 「？？？」.
+CardContent cardContentFor(
+  CharacterV2 c, {
+  required Uint8List? image,
+  CardBackground background = CardBackground.plain,
+}) {
+  final moves = c.allMoves();
+  final open = c.unlockedSlotCount();
+  return CardContent(
+    name: c.name,
+    level: c.level,
+    element: c.element,
+    stage: c.stage,
+    stars: cardStars(cardStatsOf(c.stats())),
+    moves: [
+      for (var i = 0; i < 4; i++)
+        i < open ? moveDisplayName(moves[i]) : '？？？',
+    ],
+    date: c.createdAt.toLocal(),
+    image: image,
+    background: background,
+  );
+}
 
 String cardStageLabel(EvolutionStage s) => switch (s) {
   EvolutionStage.normal => '',

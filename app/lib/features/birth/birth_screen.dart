@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/element_badge.dart';
-import '../../domain/battle/battle.dart';
-import '../battle_ui/move_labels.dart';
+import '../../core/widgets/attr_badge.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../drawing_analysis/feature_words.dart';
 import 'pending_birth.dart';
 
@@ -145,13 +145,16 @@ class _Reveal extends StatelessWidget {
   }
 }
 
+/// Preview per birth (the reveal rebuilds every frame).
+final _preview = Expando<CharacterV2>();
+
 class _Details extends StatelessWidget {
   const _Details({required this.birth});
   final PendingBirth birth;
 
   @override
   Widget build(BuildContext context) {
-    final r = birth.result;
+    final c = _preview[birth] ??= birth.character();
     final cloud = birth.cloud;
     return Padding(
       padding: const EdgeInsets.only(top: 12),
@@ -162,7 +165,7 @@ class _Details extends StatelessWidget {
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              ElementBadge(r.element, big: true),
+              AttrBadge(c.attribute(), big: true),
               if (cloud?.subject != null)
                 Chip(label: Text('${cloud!.subject} の キャラ')),
             ],
@@ -177,20 +180,12 @@ class _Details extends StatelessWidget {
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              for (final a in [
-                BattleAction.tackle,
-                BattleAction.element,
-                BattleAction.guard,
-                BattleAction.special,
-              ])
+              for (final (i, m) in c.unlockedMoves.indexed)
                 Chip(
+                  key: Key('birth-move-$i'),
+                  avatar: Icon(attrIcon(m.attr), color: attrColor(m.attr)),
                   label: Text(
-                    moveLabel(
-                      a,
-                      element: r.element,
-                      elementMoveName: cloud?.elementMoveName,
-                      specialMoveName: cloud?.specialMoveName,
-                    ),
+                    moveDisplayName(m),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,

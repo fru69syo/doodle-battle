@@ -7,9 +7,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
 import '../../data/drawing_loop_storage.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/cosmetics.dart';
-import '../battle_ui/move_labels.dart';
 import 'display_image.dart';
 import 'effects/move_effect_layer.dart';
 import 'loop_labels.dart';
@@ -18,7 +18,7 @@ import 'loop_labels.dart';
 /// part slots (Lv5 / 10 / 20) and the two drawable move effects.
 class DrawingLoopSection extends ConsumerWidget {
   const DrawingLoopSection({super.key, required this.character});
-  final Character character;
+  final CharacterV2 character;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -154,7 +154,7 @@ class _SlotBox extends StatelessWidget {
 
 class _PartSlot extends ConsumerWidget {
   const _PartSlot({required this.c, required this.part});
-  final Character c;
+  final CharacterV2 c;
   final CharacterPart part;
 
   @override
@@ -179,7 +179,7 @@ class _PartSlot extends ConsumerWidget {
 
 class _AddSlot extends StatelessWidget {
   const _AddSlot({required this.c, required this.slot});
-  final Character c;
+  final CharacterV2 c;
   final int slot;
 
   @override
@@ -220,7 +220,7 @@ class _LockedSlot extends StatelessWidget {
 
 class _EffectTile extends ConsumerWidget {
   const _EffectTile({required this.c, required this.move});
-  final Character c;
+  final CharacterV2 c;
   final DrawnMove move;
 
   @override
@@ -229,7 +229,6 @@ class _EffectTile extends ConsumerWidget {
     final png = asset == null
         ? null
         : ref.watch(loopAssetProvider((c.id, asset))).value;
-    final action = battleActionOf(move);
     return Column(
       children: [
         _SlotBox(
@@ -241,7 +240,7 @@ class _EffectTile extends ConsumerWidget {
                 child: png != null
                     ? Image.memory(png, fit: BoxFit.contain)
                     : Icon(
-                        defaultEffectIcon(c.element, action),
+                        defaultEffectIcon(c.element, move),
                         size: 44,
                         color: move == DrawnMove.special
                             ? AppColors.gold
@@ -249,7 +248,7 @@ class _EffectTile extends ConsumerWidget {
                       ),
               ),
               Text(
-                characterMoveLabel(c, action),
+                drawnMoveLabel(c, move),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 13),

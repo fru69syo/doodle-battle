@@ -11,7 +11,22 @@ class GameProgress {
     this.adBoostDate,
     this.adBoostsToday = 0,
     this.displayName,
+    this.stageStars = const {},
+    this.omakase = false,
+    this.onlineBadge,
   });
+
+  /// Best stars (1–3) per single-player stage (1..100) that was won.
+  final Map<int, int> stageStars;
+
+  /// おまかせ always on in single-player (small children).
+  final bool omakase;
+
+  /// Best online badge id ever shown by the server (`egg` … `legend`).
+  final String? onlineBadge;
+
+  /// Stars of [stage] (0 = not cleared).
+  int starsOf(int stage) => stageStars[stage] ?? 0;
 
   /// Highest CPU stage won (0 = none). Stage `clearedStage + 1` is playable.
   final int clearedStage;
@@ -56,6 +71,9 @@ class GameProgress {
     String? adBoostDate,
     int? adBoostsToday,
     ChosenDisplayName? displayName,
+    Map<int, int>? stageStars,
+    bool? omakase,
+    String? onlineBadge,
   }) => GameProgress(
     clearedStage: clearedStage ?? this.clearedStage,
     appliedMatchIds: appliedMatchIds ?? this.appliedMatchIds,
@@ -65,6 +83,9 @@ class GameProgress {
     adBoostDate: adBoostDate ?? this.adBoostDate,
     adBoostsToday: adBoostsToday ?? this.adBoostsToday,
     displayName: displayName ?? this.displayName,
+    stageStars: stageStars ?? this.stageStars,
+    omakase: omakase ?? this.omakase,
+    onlineBadge: onlineBadge ?? this.onlineBadge,
   );
 
   /// Records [matchId]; keeps only the newest [maxAppliedMatchIds].
@@ -85,6 +106,9 @@ class GameProgress {
     'adBoostDate': adBoostDate,
     'adBoostsToday': adBoostsToday,
     'displayName': displayName?.toJson(),
+    'stageStars': {for (final e in stageStars.entries) '${e.key}': e.value},
+    'omakase': omakase,
+    'onlineBadge': onlineBadge,
   };
 
   factory GameProgress.fromJson(Map<String, Object?> j) => GameProgress(
@@ -105,6 +129,13 @@ class GameProgress {
             (j['displayName']! as Map).cast<String, Object?>(),
           )
         : null,
+    stageStars: {
+      for (final e in ((j['stageStars'] as Map?) ?? const {}).entries)
+        if (int.tryParse('${e.key}') case final k? when e.value is int)
+          k: (e.value as int).clamp(1, 3),
+    },
+    omakase: j['omakase'] == true,
+    onlineBadge: j['onlineBadge'] as String?,
   );
 }
 

@@ -4,10 +4,11 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
-import '../../domain/battle/battle.dart';
+import '../../domain/cost_mode.dart';
 import '../app_settings.dart';
 import 'backend_api.dart';
 
@@ -126,10 +127,15 @@ class FirebaseBackendApi implements BackendApi {
   }
 
   @override
-  Future<CloudJudgement> judgeDrawing(Uint8List cutoutPng) async =>
-      CloudJudgement.fromJson(
-        await _call('judgeDrawing', {'imageBase64': base64Encode(cutoutPng)}),
-      );
+  Future<CloudJudgement> judgeDrawing(
+    Uint8List cutoutPng, {
+    V2DrawingInput? v2,
+  }) async => CloudJudgement.fromJson(
+    await _call('judgeDrawing', {
+      'imageBase64': base64Encode(cutoutPng),
+      if (v2 != null) 'v2': v2.toJson(),
+    }),
+  );
 
   @override
   Future<RegisterOutcome> registerCharacter(
@@ -139,72 +145,48 @@ class FirebaseBackendApi implements BackendApi {
   );
 
   @override
-  Future<QueueStatus> joinQueue(String snapshotId) async =>
-      QueueStatus.fromJson(
-        await _call('joinQueue', {'characterId': snapshotId}),
-      );
-
-  @override
-  Future<void> leaveQueue() async {
-    if (_auth.currentUser == null) return;
-    await _call('leaveQueue', {});
-  }
-
-  @override
-  Stream<MatchSnapshot> watchMatch(String matchId) async* {
-    final uid = await _ensureSignedIn();
-    yield* _firestore
-        .collection('matches')
-        .doc(matchId)
-        .snapshots()
-        .where((s) => s.exists)
-        .map(
-          (s) => MatchSnapshot.fromJson(
-            s.id,
-            _deepCastFirestore(s.data()!),
-            myUid: uid,
-          ),
-        );
-  }
-
-  /// Firestore maps may contain Timestamps; convert to millis for parsing.
-  static Map<String, Object?> _deepCastFirestore(Map<String, dynamic> data) {
-    Object? conv(Object? v) => switch (v) {
-      Timestamp t => t.millisecondsSinceEpoch,
-      Map m => {for (final e in m.entries) '${e.key}': conv(e.value)},
-      List l => [for (final x in l) conv(x)],
-      _ => v,
-    };
-    return conv(data)! as Map<String, Object?>;
-  }
-
-  @override
-  Future<List<BattleEvent>> turnEvents(String matchId, int turn) async {
+  Future<RealtimeAuth> realtimeAuth() async {
     await _ensureSignedIn();
     try {
-      final snap = await _firestore
-          .collection('matches')
-          .doc(matchId)
-          .collection('turns')
-          .doc('$turn')
-          .get();
-      return parseTurnEvents(snap.data()?['events']);
+      // Fresh token for every connection (never cached across restarts).
+      final id = await _auth.currentUser!.getIdToken(true);
+      String? appCheck;
+      try {
+        appCheck = await FirebaseAppCheck.instance.getToken();
+      } on Object {
+        appCheck = null; // the server refuses when App Check is required
+      }
+      return RealtimeAuth(idToken: id!, appCheckToken: appCheck);
     } on Object catch (e) {
       throw BackendException(BackendCodes.network, '$e');
     }
   }
 
-  @override
-  Future<void> submitAction(String matchId, int turn, BattleAction action) =>
-      _call('submitAction', {
-        'matchId': matchId,
-        'turn': turn,
-        'action': action.name,
-      });
+  CostMode? _costMode;
+  DateTime? _costModeAt;
 
   @override
-  Future<PollResult> pollMatch(String matchId) async =>
-      PollResult.fromJson(await _call('pollMatch', {'matchId': matchId}));
+  Future<CostMode> costMode() async {
+    final at = _costModeAt;
+    if (at != null && DateTime.now().difference(at).inSeconds < 60) {
+      return _costMode!;
+    }
+    var mode = CostMode.normal;
+    try {
+      await _ensureSignedIn();
+      final snap = await _firestore
+          .collection('config')
+          .doc('costMode')
+          .get()
+          .timeout(const Duration(seconds: 5));
+      mode = CostMode.parse(snap.data()?['mode']);
+    } on Object {
+      mode = _costMode ?? CostMode.normal;
+    }
+    _costMode = mode;
+    _costModeAt = DateTime.now();
+    return mode;
+  }
 
   @override
   Future<ChosenDisplayName> setDisplayName(

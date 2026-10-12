@@ -1,6 +1,8 @@
 /// Parent settings and consents (SPEC §7), stored on device.
 library;
 
+import '../core/config/app_config.dart';
+
 /// Bump when the privacy policy changes; the app then asks the parent to
 /// consent again (sent to the server as `consent.policyVersion`).
 const int currentPolicyVersion = 1;
@@ -136,6 +138,10 @@ class AppSettings {
 
   /// Cached purchase entitlements (product ids) so limits work offline.
   final Set<String> entitlements;
+
+  /// Products that count right now: none while in-app purchases are
+  /// switched off ([kIapEnabled], SPEC §12.1).
+  Set<String> get ownedProducts => kIapEnabled ? entitlements : const {};
 
   /// Consent last written to the server successfully (null = never; then
   /// no server account exists for this install).

@@ -1,4 +1,5 @@
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/element_type.dart';
 
 /// Visual effects shown around a character in AR, derived from its
@@ -15,7 +16,7 @@ class ArEffects {
     this.rainbowAura = false,
   });
 
-  factory ArEffects.forCharacter(Character character) =>
+  factory ArEffects.forCharacter(CharacterV2 character) =>
       ArEffects.forStage(character.stage, character.element);
 
   factory ArEffects.forStage(EvolutionStage stage, ElementType element) {
