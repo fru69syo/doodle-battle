@@ -25,7 +25,7 @@ describe("decodePngPixels", () => {
   });
 });
 
-describe("canvas plausibility (docs/TRUST.md §7)", () => {
+describe("canvas plausibility (docs/TRUST.md §8)", () => {
   it("accepts a stroke-rendered drawing in the declared palette colours", () => {
     const r = checkCanvasClaim(summary(), canvasLikePng(colors));
     expect(r).toMatchObject({ plausible: true, problem: null });

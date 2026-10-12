@@ -20,7 +20,7 @@ function paeth(a: number, b: number, c: number): number {
 }
 
 /**
- * Minimal PNG pixel decoder for the server-side plausibility checks (docs/TRUST.md §7):
+ * Minimal PNG pixel decoder for the server-side plausibility checks (docs/TRUST.md §8):
  * 8-bit greyscale / RGB / grey+alpha / RGBA, non-interlaced (what the app's cut-out encoder
  * writes). Returns null for anything else or for a malformed file: callers treat "cannot decode"
  * as "not plausible" (fail-safe), never as an error for the child. `maxPixels` bounds the work

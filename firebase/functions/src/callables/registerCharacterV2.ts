@@ -74,7 +74,7 @@ const ngCheck = (x: string) => !isClean(x);
 /**
  * The engine seed hash of a registered character: SHA-256 (hex) of the exact PNG bytes the
  * device uploaded, i.e. of the picture other children see. The device's own hash is never
- * trusted, so stats cannot be "re-rolled" by sending made-up hashes (docs/TRUST.md §7).
+ * trusted, so stats cannot be "re-rolled" by sending made-up hashes (docs/TRUST.md §8).
  */
 export function seedImageHash(png: Buffer): string {
   return createHash("sha256").update(png).digest("hex");

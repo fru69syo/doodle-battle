@@ -149,7 +149,7 @@ b.snapshot(); b.restore(json); b.stateHash();                  // サーバー�
 ## 8. 未決定・お願い
 
 1. **整合（Integration）**: UI はまだ v1 エンジン。v3 に切り替えるときは `CharacterV2.fromJson`（v1 の移行）と `admitReportV2`、`judgeDrawing` の `v2` 入力、`registerCharacter` の `schema: 2` を使う
-2. **GCP**: `engines/v3Engine.ts` は `RealtimeBattle` と `ratedFighterFromSnapshot` をつなぐだけ。`snapshots` の `engine.trust` は隠し要素の材料なので、クライアントに送らないこと（Firestore のルールでは持ち主しか読めない）
-3. 技の名前を後から AI に作らせる `generateMove`（Lv10・Lv50、隠し要素の作り直し後の名前）は未実装。今はテンプレートの名前
-4. 画像ハッシュは端末が送る値を信じている（jitter ±3 % のために画像を作り直すのは割に合わないが、改ざん対策としては弱い）
+2. **GCP**: `engines/v3Engine.ts` は `RealtimeBattle` と `ratedFighterFromSnapshot` をつなぐだけ。`snapshots` の `engine.trust` は隠し要素の材料なので、クライアントに送らないこと → **対応済み**（Server チーム。REALTIME_PROTOCOL §9。v2 のスナップショットは Firestore のルールで持ち主にも読ませない）
+3. 技の名前を後から AI に作らせる `generateMove`（Lv10・Lv50、隠し要素の作り直し後の名前）→ **対応済み**（BACKEND.md §5 `generateMove`。失敗したらテンプレートの技）
+4. 画像ハッシュは端末が送る値を信じている → **対応済み**: サーバーがアップロードされた PNG の SHA-256 から作り直す（TRUST.md §8。アプリも `imageHash = sha256(切り抜き PNG)` にそろえると、端末とオンラインの能力が一致する）
 5. 実際の子どもの絵での属性の割合・kid の分布は未確認（GAME_DESIGN_V2 Q1）。CPU の絵は合成なので、ステージ表は実機の絵が増えたら `tune-stages` をやり直す

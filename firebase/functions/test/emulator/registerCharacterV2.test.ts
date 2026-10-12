@@ -157,7 +157,7 @@ describe("judgeDrawing (v2: AI move proposals)", () => {
   });
 });
 
-describe("registerCharacter v2 hardening (docs/TRUST.md §7)", () => {
+describe("registerCharacter v2 hardening (docs/TRUST.md §8)", () => {
   const sha = (b64: string) => createHash("sha256").update(Buffer.from(b64, "base64")).digest("hex");
   const genomeFor = (imageHash: string, origin: string | null = null) =>
     new Genome(DEFAULT_SPEC, { features: parseFeatures(g0.features)!, energy10: g0.energy10, skill10: g0.skill10, imageHash, origin });

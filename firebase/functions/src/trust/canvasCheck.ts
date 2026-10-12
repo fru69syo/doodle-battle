@@ -1,6 +1,6 @@
 /**
  * Plausibility check for drawings the app says were made with the in-app drawing tool
- * (`source: "canvas"`, docs/TRUST.md §7).
+ * (`source: "canvas"`, docs/TRUST.md §8).
  *
  * The device skips its digital / AI checks for canvas drawings (their flat pixels would read as
  * "digital"), so a tampered client could label any picture `canvas`. The server therefore only
@@ -19,7 +19,7 @@
  * Failing is never an error for the child: the drawing is simply treated like a photo (the
  * server's own AI verdict decides the hidden form). This is a cheap heuristic, not proof: a
  * determined attacker can posterise a picture to the palette (which also makes it look like a
- * flat crayon drawing). See docs/TRUST.md §7 for the trade-off.
+ * flat crayon drawing). See docs/TRUST.md §8 for the trade-off.
  */
 import { z } from "zod";
 import { decodePngPixels } from "../lib/pngPixels";
@@ -35,7 +35,7 @@ export const CANVAS_H = 1250;
 export const MAX_STROKES = 600;
 export const MAX_POINTS = 4000;
 
-/** Tunables (documented in docs/TRUST.md §7). */
+/** Tunables (documented in docs/TRUST.md §8). */
 export const CANVAS_CHECK = {
   /** Alpha at or above this counts as ink. */
   opaqueAlpha: 128,

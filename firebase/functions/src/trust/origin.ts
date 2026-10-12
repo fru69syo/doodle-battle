@@ -1,6 +1,6 @@
 /**
  * Which trust verdict feeds the hidden late-bloomer form of a v2 character (GAME_DESIGN_V2 §1,
- * docs/TRUST.md §7). The verdict is internal: it is stored in `snapshots/{id}.engine.trust` and
+ * docs/TRUST.md §8). The verdict is internal: it is stored in `snapshots/{id}.engine.trust` and
  * never returned to any client.
  *
  * - photo (or a `canvas` claim that is not plausible): the server's Claude verdict wins when it

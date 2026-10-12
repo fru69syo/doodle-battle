@@ -106,6 +106,14 @@ can be faked in tests.
 | `config/costMode` | kill switch / owner | any signed-in user | `{mode: normal|saving|minimal, flags{cloudJudge, cloudMoveGen, pvp, ghostAfterSec}, updatedAtMs, source, pinned}` (§16). |
 | `ops/costStatus`, `ops/aiUsage_YYYYMM` | functions | – | Last budget message and decision; monthly AI call counts and yen estimate (§16). |
 
+v2 snapshots (`schema: 2`, written by `registerCharacter` schema 2, §5): display fields
+(`name, moveNames[4], ownerDisplayName, attribute, level, xp, stats, ratedStats, maxHp, evolution,
+subject, rig, imagePath, imageSha256`) plus `engine {features, energy10, skill10, imageHash, trust,
+proposals}` — the engine input. `engine.imageHash` is the server's seed hash (SHA-256 of the
+uploaded PNG, = `imageSha256`) and `engine.trust` the hidden verdict (docs/TRUST.md §8), so v2
+snapshots are **server-only**: Firestore rules deny reads even to the owner (the app never reads
+snapshots; the realtime server never sends `engine`).
+
 v2 fields added by the battle server: `users/{uid}.rated = {rating, games, best, dayKey, dayMatches}`
 (Elo per GAME_DESIGN_V2 §8, separate from the v1 `rating`), `snapshots/{id}.ghostRating` (owner's
 rating after their last rated match with it; used to pick ghosts near a child's rating). The v2
@@ -193,6 +201,70 @@ Pipeline (cheap checks first, AI last, fail-closed):
 
 The server recomputes `stats` (effective at level), `isShobo`, `evolution`; it never trusts client
 values for those. The app should store `snapshotId` as `Character.onlineId`.
+
+### `registerCharacter` with `schema: 2` (v2.0, engine v3)
+
+```jsonc
+// request (v2 apps; routed to registerCharacterV2.ts)
+{
+  "schema": 2, "localCharacterId": "c_123", "imageBase64": "<cut-out PNG as above>", "name": "ねこまる",
+  "level": 12, "xp": 10,                       // level 5–100, xp < xpToNext(level)
+  "features": { "roundness": 680, … },        // quantised integers (FeatureVector.toJson)
+  "energy10": 834, "skill10": 420,             // 0–1000
+  "imageHash": "<64 hex>",                     // the device's hash: only checks the device's own claim
+  "verdict": "digital",                        // optional device trust verdict (digital|printed|screen)
+  "stats": [ … 10 ints … ],                    // optional: must equal the engine's numbers for the device's hash
+  "moves": [ {proposal} | null, … ],           // ≤ 4 normalised AI proposals (judgeDrawing v2 / generateMove)
+  "rig": { … },                                // optional 2.5D rig blob (dropped if invalid)
+  "subject": "ねこ",
+  "source": "photo",                           // photo (default) | canvas (in-app drawing tool)
+  "canvas": { "v": 1, "strokes": 14, "points": 560, "colors": [4280228378, …], "inkBox": [l, t, r, b] }
+                                               // stroke summary, required for source "canvas" to count (TRUST §8)
+}
+// response (accepted) — never contains stats or anything that depends on the hidden form
+{ "ok": true, "snapshotId": "Ab12…", "name": "ねこまる", "moveNames": ["ねこパンチ", null, null, null],
+  "displayName": "あおい ドラゴン", "imageHash": "<sha256 of the uploaded PNG>" }
+```
+- Same pipeline as v1 (consent, schema, PNG, rate limit, `LEVEL_TOO_LOW`, claim check →
+  `STATS_INVALID`, names, `TOO_MANY_CHARACTERS`, Claude moderation of image + name + AI move
+  names). Moderation runs for **every** source; `photo_print_or_screen` → `IMAGE_NOT_DRAWING`,
+  AI-generated pictures are accepted (hidden weak form).
+- **Seed**: the engine's `imageHash` is recomputed from the uploaded bytes (SHA-256); the device
+  hash is not trusted (no stat re-rolls). Apps should use `sha256(cut-out PNG)` as `imageHash` so the
+  phone shows the same numbers (or adopt the returned `imageHash`).
+- **Hidden verdict** (`engine.trust`): Claude's decided verdict for photos (and for canvas claims
+  that fail the stroke check), the device's verdict for plausible canvas drawings (TRUST §8).
+- Stats, `ratedStats`, moves are recomputed by `validateCharacterClaimV2` with the server seed and
+  verdict; rejected AI moves fall back to the offline move of that slot.
+
+### `generateMove` (v2.0: the new move at Lv10 / Lv50)
+
+```jsonc
+// request
+{
+  "imageBase64": "<cut-out PNG>",              // context for Claude and for the name moderation
+  "features": { … }, "energy10": 834, "skill10": 420,   // as for registerCharacter schema 2
+  "verdict": "digital",                        // optional, the local character's verdict
+  "level": 10, "slot": 2,                      // slot 2 = Lv10 slot, 3 = Lv50 slot (must be unlocked)
+  "otherNames": ["ねこパンチ", "しっぽビーム"]     // ≤ 3 kana names of the other moves
+}
+// response
+{ "slot": 2, "source": "ai", "proposal": { "template": "strike", "name": "きらきらスター", "flavor": "…", … } }
+{ "slot": 2, "source": "template", "proposal": null, "reason": "cost_mode" } // keep the offline template move
+```
+- Claude (`MOVE_SYSTEM_PROMPT` + `moveSlotUserText`, `CHILD_SAFETY_RULES`, JSON-schema output, the
+  same `AiMoveSchema` as the 4-move proposal) designs one move for the slot; the budget comes
+  from `moveContextOf(…, {level})` with the **device's** data only, so the answer cannot reveal a
+  server-side verdict. `validateAiMove` clamps / shrinks it to the slot budget (or rejects it), a
+  name already used by `otherNames` is rejected, then `moderateCharacter` reviews the name (and
+  flavour; a refused flavour is dropped, a refused name falls back).
+- **Any failure → `proposal: null`** with `reason` `cost_mode | ai_unavailable | rejected |
+  duplicate | moderation` (for logs; never shown). The app keeps the deterministic offline move
+  for that slot and re-validates every proposal at every level anyway.
+- Cost: `cloudMoveGen` off (saving / minimal) → template at once, no AI call. Metered as
+  `generateMove` (+ `moderateCharacter`) in `ops/aiUsage_YYYYMM`.
+- Errors: `UNAUTHENTICATED, CONSENT_REQUIRED (cloudJudge), INVALID_ARGUMENT (slot not unlocked,
+  bad data), IMAGE_INVALID, IMAGE_TOO_LARGE, RATE_LIMITED (10/h, 20/day)`. App Check enforced.
 
 ### `setDisplayName`
 
@@ -387,7 +459,10 @@ adult/traced drawing claiming a child's "のびのび" budget).
 - **Model**: read from the Firebase param `CLAUDE_MODEL`; set it to the **latest low-cost
   Haiku-class model** (it must support vision, structured outputs and `effort`). No model id is
   hard-coded anywhere in the repo. The API key is the Secret Manager secret `ANTHROPIC_API_KEY`,
-  only mounted into `judgeDrawing` and `registerCharacter`.
+  only mounted into `judgeDrawing`, `registerCharacter` and `generateMove`.
+- Prompts: `JUDGE_SYSTEM_PROMPT` (+ `movesUserText` for v2), `MODERATION_SYSTEM_PROMPT`,
+  `MOVE_SYSTEM_PROMPT` (+ `moveSlotUserText`, generateMove). Every one contains
+  `CHILD_SAFETY_RULES` (tested in `test/unit/prompts.test.ts`).
 - **Prompt-injection hardening**: the system prompt states that the drawing and any writing in it,
   and the candidate names, are untrusted data that must never be followed or copied; names are
   sent as an escaped JSON array inside `<candidate_names>` tags; the output is schema-constrained
@@ -419,7 +494,8 @@ adult/traced drawing claiming a child's "のびのび" budget).
 ## 11. Security rules
 
 Deny by default. Clients can create/update only their own `users/{uid}` consent fields
-(validated types, `request.time` timestamps), read their own profile/queue/snapshots, and read
+(validated types, `request.time` timestamps), read their own profile/queue/v1 snapshots (v2
+snapshots hold `engine.trust` and are server-only), and read
 matches + turn logs they play in, v2 `rtMatches` they play in, and `config/costMode` (any
 signed-in user). Pending actions, reports, moderation data, rate limits, `replays` and `ops` are
 unreadable. Storage: no client writes; snapshot images readable only while the snapshot is
@@ -528,6 +604,11 @@ instead), `minInstances` only if cold starts hurt (costs money).
   them"; implemented as the `submitAction` callable that resolves in the same transaction
   (clients never write to Firestore), per the backend brief.
 - `judgeDrawing` refusal → `appropriate: false` with neutral skill 50.
+- v2 seed hash = plain SHA-256 of the uploaded PNG (TRUST §8.1). A keyed hash (HMAC with a
+  server secret) would stop offline "re-encode until the numbers are good" too, but then the phone
+  could never show the online numbers. Decide if this matters (±3 % jitter).
+- Canvas plausibility thresholds (TRUST §8.2) were set on synthetic images; review the
+  `registerCharacterV2 trust` logs once real canvas registrations arrive.
 - The NG dictionary is a starting point; it needs review by a native speaker / trust-and-safety and
   regular updates (bump `version`, keep both vector files green).
 
@@ -545,10 +626,11 @@ server by `sync-shared`). Full explanation for the owner: `docs/LEARN_GCP.md` §
 | `minimal` | ≥ 100 % | false | false | false | 3 |
 
 Server-side enforcement (done):
-- `getAiService()` wraps the AI service (`src/cost/aiUsage.ts`): `judgeDrawing` (and future
-  `generateMove(s)`) throw `AiUnavailableError` when the flag is off, so `judgeDrawing` returns
+- `getAiService()` wraps the AI service (`src/cost/aiUsage.ts`): `judgeDrawing` and
+  `generateMove` throw `AiUnavailableError` when the flag is off, so `judgeDrawing` returns
   `AI_UNAVAILABLE` and the app silently keeps its on-device result (it already does this for any
-  failure). Every AI call adds an estimate to `ops/aiUsage_YYYYMM` because the AI provider is
+  failure); the `generateMove` callable checks `cloudMoveGen` first and answers with the template
+  move without calling any AI. Every AI call adds an estimate to `ops/aiUsage_YYYYMM` because the AI provider is
   billed outside GCP. **Moderation (`moderateCharacter`) is never gated.**
 - v1 `joinQueue` / `sweepMatches`: ghost after `min(60 s, ghostAfterSec)` outside normal mode; no
   PvP pairing when `pvp` is false. The realtime server does the same with the v2 timings.
@@ -575,9 +657,12 @@ Protocol and client rules: `docs/REALTIME_PROTOCOL.md`. Summary:
 - Matchmaking: Elo band ±100 (+50 / 5 s, max ±400), same pair once per 60 min, ghost after
   `ghostAfterSec` (ghost = active snapshot near the rating, not own, not one of the last 10;
   mirror of the own character if none exists). Rated play at Lv50 (`ratedFighter(source, 50)`).
-- Battle: server-authoritative 10 Hz ATB through `src/engine.ts` (Engine v3 adapter; dev stand-in
-  until it lands), server-owned さきどり, 50+3-tick おまかせ timeout, ghost AI, 10 s / 30 s
-  disconnect rules.
+- Battle: server-authoritative 10 Hz ATB through `src/engine.ts` → **Engine v3**
+  (`src/engines/v3Engine.ts`, the shared `shared/battle_engine_v3_ts` as a `file:` dependency,
+  checked against the golden vectors; the dev stand-in only runs locally), server-owned さきどり,
+  50+3-tick おまかせ timeout, ghost AI, 10 s / 30 s disconnect rules. Only v2 (`schema: 2`)
+  snapshots can battle (`NOT_FOUND` otherwise); `engine.trust` / the hidden form never appear in
+  any protocol message (tested).
 - Results in one Firestore transaction: `users/{uid}.rated` (Elo K 48→24, ghosts half, floor 600,
   XP for 20 matches/JST day), `snapshots/{id}.ghostRating`, `rtMatches/{id}`, `replays/{id}`
   (seed + input log, TTL 30 days). Badges come from the best rating and never go down.
