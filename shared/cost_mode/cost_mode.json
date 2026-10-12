@@ -14,7 +14,8 @@
   },
   "aiEstimateYenPerCall": {
     "judgeDrawing": 0.15,
-    "moderateCharacter": 0.2
+    "moderateCharacter": 0.2,
+    "generateMove": 0.15
   },
   "notes": [
     "Moderation (registerCharacter) is never switched off: it is a safety feature and fails closed.",

@@ -47,7 +47,13 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: server/realtime/package-lock.json
+          cache-dependency-path: |
+            server/realtime/package-lock.json
+            shared/battle_engine_v3_ts/package-lock.json
+      # Engine v3 is a file: dependency; install (and build, via `prepare`) it first.
+      - name: Build Engine v3 (shared/battle_engine_v3_ts)
+        run: npm ci
+        working-directory: shared/battle_engine_v3_ts
       - run: npm ci
       - run: npm run lint
       - run: npm test

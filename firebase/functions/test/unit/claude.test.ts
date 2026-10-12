@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import { ClaudeAiService, type MessagesClient } from "../../src/ai/claude";
 import { AiRefusalError, AiUnavailableError, originRejectCode } from "../../src/ai/types";
-import { JUDGE_SYSTEM_PROMPT, MODERATION_SYSTEM_PROMPT, moderationUserText } from "../../src/ai/prompts";
+import { JUDGE_SYSTEM_PROMPT, MODERATION_SYSTEM_PROMPT, MOVE_SYSTEM_PROMPT, moderationUserText, moveSlotUserText } from "../../src/ai/prompts";
 import { makePng } from "../helpers/png";
 
 const MODEL = "test-model-from-param";
@@ -165,5 +165,53 @@ describe("origin (AI-generated / not hand-drawn, SPEC §11.1)", () => {
       expect(p).toMatch(/wrongly refusing a real child's drawing is the worst/);
       expect(p).toMatch(/background was removed/);
     }
+  });
+});
+
+describe("ClaudeAiService.generateMove", () => {
+  const move = {
+    template: "blast",
+    attribute: "none",
+    name: "きらきらビーム",
+    flavor: "ひかりの ビーム",
+    vfx: "beam",
+    colour: "yellow",
+    atkFormula: "INT80_DEX20",
+    power: 120,
+    hits: 1,
+    accuracy: 95,
+    critBonus: 5,
+    spCost: 20,
+    castTicks: 5,
+    cooldownTicks: 40,
+    healPct: null,
+    stat: null,
+    stages: null,
+    durationTicks: null,
+    chance: null,
+    shieldPct: null,
+    secondary: null,
+  };
+
+  it("sends the picture, the slot prompt and a JSON schema; returns the raw proposal", async () => {
+    const { client, parse } = fakeClient(message(move));
+    const ctx = { attribute: "gu", slot: 3, budget: 150, otherNames: ["ぱんち"] };
+    const out = await new ClaudeAiService({ client, model: MODEL }).generateMove(png, ctx);
+    expect(out).toEqual(move);
+    const req = parse.mock.calls[0]![0] as Record<string, any>;
+    expect(req.model).toBe(MODEL);
+    expect(req.system).toBe(MOVE_SYSTEM_PROMPT);
+    expect(req.messages[0].content[0]).toMatchObject({ type: "image", source: { media_type: "image/png" } });
+    expect(req.messages[0].content[1].text).toBe(moveSlotUserText("gu", 3, 150, ["ぱんち"]));
+    expect(req.output_config.format.type).toBe("json_schema");
+    expect(req.output_config.format.schema.properties).toHaveProperty("template");
+  });
+
+  it("maps refusals and truncation like the other calls", async () => {
+    const ctx = { attribute: "gu", slot: 2, budget: 120, otherNames: [] };
+    const refused = fakeClient(message(null, "refusal"));
+    await expect(new ClaudeAiService({ client: refused.client, model: MODEL }).generateMove(png, ctx)).rejects.toBeInstanceOf(AiRefusalError);
+    const cut = fakeClient(message(null, "max_tokens"));
+    await expect(new ClaudeAiService({ client: cut.client, model: MODEL }).generateMove(png, ctx)).rejects.toBeInstanceOf(AiUnavailableError);
   });
 });

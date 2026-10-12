@@ -6,6 +6,7 @@ import "./config";
 
 export { judgeDrawing } from "./callables/judgeDrawing";
 export { registerCharacter } from "./callables/registerCharacter";
+export { generateMove } from "./callables/generateMove";
 export { setDisplayName } from "./callables/setDisplayName";
 export { joinQueue, leaveQueue } from "./callables/matchmaking";
 export { submitAction, pollMatch } from "./callables/battle";

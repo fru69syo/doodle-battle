@@ -7,7 +7,7 @@
  */
 import { randomBytes, randomInt } from "node:crypto";
 import type { CostModeSource } from "./costMode";
-import type { BattleEngine, FighterSetup, Side } from "./engine";
+import { UnsupportedFighterError, type BattleEngine, type FighterSetup, type Side } from "./engine";
 import type { Logger } from "./log";
 import { DEFAULT_TIMING, Match, type MatchSide, type MatchTiming, type Send } from "./match";
 import { Matchmaker, type QueueEntry } from "./matchmaker";
@@ -149,7 +149,14 @@ export class Hub {
     if (snap?.status !== "active") throw new HubError("NOT_FOUND", "snapshot not found or not active");
     if (snap.ownerUid !== uid) throw new HubError("NOT_OWNER", "not your character");
     if (snap.level < RATED_UNLOCK_LEVEL) throw new HubError("LEVEL_TOO_LOW", `rated play unlocks at Lv${RATED_UNLOCK_LEVEL}`);
-    const setup = this.d.engine.ratedFighter(snap, RATED_SYNC_LEVEL);
+    let setup: FighterSetup;
+    try {
+      setup = this.d.engine.ratedFighter(snap, RATED_SYNC_LEVEL);
+    } catch (err) {
+      // e.g. a v1 snapshot under Engine v3: the app registers the character again.
+      if (err instanceof UnsupportedFighterError) throw new HubError("NOT_FOUND", err.message);
+      throw err;
+    }
     if (this.conns.get(uid)?.id !== conn.id || this.matchOf.has(uid)) return; // left while loading
     const profile = this.profiles.get(uid);
     this.mm.add({ uid, rating: profile?.rated.rating ?? initialRated().rating, joinedAtMs: this.now(), payload: { conn, snapshot: snap, setup } });

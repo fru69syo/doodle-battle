@@ -84,9 +84,26 @@ export interface ModerationVerdict {
   skillEstimate: number;
 }
 
+/** What the AI needs to design one move for one slot (generateMove). */
+export interface MoveSlotContext {
+  /** The character's attribute: gu / choki / pa. */
+  attribute: string;
+  /** 0-based slot index (2 = the Lv10 slot, 3 = the Lv50 slot). */
+  slot: number;
+  /** Budget points of this slot (already × the move factor). */
+  budget: number;
+  /** Kana names of the character's other moves (validated by the caller). */
+  otherNames: readonly string[];
+}
+
 export interface AiService {
   judgeDrawing(png: Buffer, opts?: JudgeOptions): Promise<DrawingJudgement>;
   moderateCharacter(png: Buffer, candidateNames: readonly string[]): Promise<ModerationVerdict>;
+  /**
+   * One raw move proposal for one slot (untrusted: validated by the engine v3
+   * validator and moderated by the caller). Cost-gated (`cloudMoveGen`).
+   */
+  generateMove(png: Buffer, ctx: MoveSlotContext): Promise<Record<string, unknown>>;
 }
 
 /** The AI could not produce a usable answer (network, quota, bad output). */

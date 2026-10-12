@@ -7,6 +7,7 @@ on:
     paths:
       - "server/realtime/**"
       - "shared/cost_mode/**"
+      - "shared/battle_engine_v3_ts/**"
       - "shared/battle_spec_v3/**"
       - "firebase/firebase.json"
       - ".github/workflows/realtime-ci.yml"
@@ -15,6 +16,7 @@ on:
     paths:
       - "server/realtime/**"
       - "shared/cost_mode/**"
+      - "shared/battle_engine_v3_ts/**"
       - "shared/battle_spec_v3/**"
       - "firebase/firebase.json"
       - ".github/workflows/realtime-ci.yml"
@@ -47,7 +49,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: server/realtime/package-lock.json
+          cache-dependency-path: |
+            server/realtime/package-lock.json
+            shared/battle_engine_v3_ts/package-lock.json
+      # Engine v3 is a file: dependency; install (and build, via `prepare`) it first.
+      - name: Build Engine v3 (shared/battle_engine_v3_ts)
+        run: npm ci
+        working-directory: shared/battle_engine_v3_ts
       - run: npm ci
       - run: npm run lint
       - run: npm test
@@ -67,6 +75,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             server/realtime/package-lock.json
+            shared/battle_engine_v3_ts/package-lock.json
             firebase/functions/package-lock.json
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -82,6 +91,9 @@ jobs:
       - name: Install firebase CLI (functions devDependencies)
         run: npm ci
         working-directory: firebase/functions
+      - name: Build Engine v3 (shared/battle_engine_v3_ts)
+        run: npm ci
+        working-directory: shared/battle_engine_v3_ts
       - name: Install server dependencies
         run: npm ci
         working-directory: server/realtime

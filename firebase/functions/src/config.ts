@@ -56,6 +56,11 @@ export const RATE_LIMITS = {
     { key: "register_h", limit: 10, windowMs: 3_600_000 },
     { key: "register_d", limit: 30, windowMs: 86_400_000 },
   ],
+  /** Lv10 / Lv50 move generation: a few per character, so generous but bounded. */
+  generateMove: [
+    { key: "genmove_h", limit: 10, windowMs: 3_600_000 },
+    { key: "genmove_d", limit: 20, windowMs: 86_400_000 },
+  ],
   reportCharacter: [{ key: "report_d", limit: 20, windowMs: 86_400_000 }],
   reportAiSuggestion: [{ key: "aireport_d", limit: 20, windowMs: 86_400_000 }],
   setDisplayName: [{ key: "dname_d", limit: 20, windowMs: 86_400_000 }],

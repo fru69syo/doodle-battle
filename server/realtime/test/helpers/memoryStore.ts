@@ -41,6 +41,23 @@ export class MemoryStore implements Store {
     });
   }
 
+  /**
+   * A v2 (schema 2) snapshot as written by registerCharacter for Engine v3. `engine` is the
+   * engine input (server-only); `trust` is the hidden verdict that must never reach clients.
+   */
+  addV2Snapshot(id: string, ownerUid: string, engine: Record<string, unknown>, opts: { level?: number; status?: string; ghostRating?: number | null } = {}): void {
+    this.snapshots.set(id, {
+      snapshotId: id,
+      ownerUid,
+      status: opts.status ?? "active",
+      level: opts.level ?? 20,
+      ownerDisplayName: `${ownerUid}-name`,
+      ghostRating: opts.ghostRating ?? null,
+      display: { characterName: `${id}-chara`, imagePath: `snapshotImages/${id}/image.png` },
+      data: { schema: 2, name: `${id}-chara`, level: opts.level ?? 20, engine },
+    });
+  }
+
   loadPlayer(uid: string): Promise<PlayerProfile | null> {
     const u = this.users.get(uid);
     return Promise.resolve(u ? { uid, consentOnline: u.consentOnline, displayName: u.displayName, rated: { ...(u.rated ?? initialRated()) } } : null);
