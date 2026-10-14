@@ -1,4 +1,4 @@
-# Policy / support site (site/) -> GitHub Pages. See docs/COMPLIANCE.md §5 and RELEASE.md §1.10.
+# Policy / support site (site/) -> GitHub Pages. See docs/COMPLIANCE.md §5 and RELEASE.md §1.13.
 #
 # Pages on a PRIVATE repository needs a paid GitHub plan. Without one, publish the rendered
 # site from a separate PUBLIC repository instead (docs/COMPLIANCE.md §5.2); this workflow

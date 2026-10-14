@@ -10,6 +10,10 @@
 #   --expect-version-name S   fail unless versionName == S
 #   --require-real-admob      fail when the AdMob APPLICATION_ID is Google's test App ID
 #                             (release.yml; Play uploads must use the real AdMob app)
+#   --iap                     the build sells in-app products (built with
+#                             --dart-define=IAP_ENABLED=true): allow the BILLING permission.
+#                             Without it (v2.0: free, SPEC §10.2) BILLING must be absent and the
+#                             repo's IAP flag must default to off.
 #
 # Input:
 #   .aab  manifest read with bundletool (scripts/bundletool.sh downloads it if needed)
@@ -27,6 +31,9 @@
 #     APPLICATION_ID (test id only a warning unless --require-real-admob); the AD_ID / Privacy
 #     Sandbox permissions are on the deny list above (docs/COMPLIANCE.md)
 #   - Crashlytics present without firebase_crashlytics_collection_enabled=false (opt-in only)
+#   - in-app purchases (unless --iap): the com.android.vending.BILLING permission in the
+#     manifest (the release build removes it while IAP_ENABLED is off, build.gradle.kts), or
+#     app/lib/core/config/app_config.dart letting IAP_ENABLED default to true
 #   - with --require-upload-key: debug-signed artifact
 #
 # The allowlist is deliberately short. To add a permission, add it here *and* update
@@ -42,6 +49,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 input=""
 require_upload_key=0
 require_real_admob=0
+allow_iap=0
 expect_code=""
 expect_name=""
 while [[ $# -gt 0 ]]; do
@@ -50,14 +58,15 @@ while [[ $# -gt 0 ]]; do
     --require-real-admob) require_real_admob=1 ;;
     --expect-version-code) expect_code="$2"; shift ;;
     --expect-version-name) expect_name="$2"; shift ;;
-    -h|--help) sed -n '2,36p' "$0"; exit 0 ;;
+    --iap) allow_iap=1 ;;
+    -h|--help) sed -n '2,42p' "$0"; exit 0 ;;
     -*) echo "unknown option: $1" >&2; exit 2 ;;
     *) input="$1" ;;
   esac
   shift
 done
 if [[ -z "$input" || ! -f "$input" ]]; then
-  echo "usage: $0 <app-release.aab|.apk|AndroidManifest.xml> [--require-upload-key] [--expect-version-code N] [--expect-version-name S]" >&2
+  echo "usage: $0 <app-release.aab|.apk|AndroidManifest.xml> [--require-upload-key] [--require-real-admob] [--iap] [--expect-version-code N] [--expect-version-name S]" >&2
   exit 2
 fi
 
@@ -97,14 +106,18 @@ elif [[ "$input" == *.apk ]]; then
   fi
 fi
 
+repo="$(cd "$here/.." && pwd)"
+app_config="$repo/app/lib/core/config/app_config.dart"
 python3 -I - "$manifest" "$EXPECTED_PACKAGE" "$MIN_TARGET_SDK" "$EXPECTED_MIN_SDK" \
-  "$require_upload_key" "$signer" "$expect_code" "$expect_name" "$require_real_admob" <<'PY'
+  "$require_upload_key" "$signer" "$expect_code" "$expect_name" "$require_real_admob" \
+  "$allow_iap" "$app_config" <<'PY'
+import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 
 (manifest, expected_pkg, min_target, expected_min, require_key, signer,
- expect_code, expect_name, require_real_admob) = sys.argv[1:10]
-import re
+ expect_code, expect_name, require_real_admob, allow_iap, app_config) = sys.argv[1:12]
 A = "{http://schemas.android.com/apk/res/android}"
 
 # --- Permission policy ----------------------------------------------------------
@@ -116,8 +129,10 @@ ALLOWLIST = {
     "android.permission.WAKE_LOCK": "WorkManager / Firebase internals (normal permission)",
     "android.permission.RECEIVE_BOOT_COMPLETED": "WorkManager rescheduling (pulled in by Play services libs)",
     "android.permission.FOREGROUND_SERVICE": "WorkManager SystemForegroundService (no service of ours runs)",
-    "com.android.vending.BILLING": "Google Play Billing (parent-gated purchases)",
 }
+BILLING = "com.android.vending.BILLING"
+if allow_iap == "1":
+    ALLOWLIST[BILLING] = "Google Play Billing (parent-gated purchases; built with IAP_ENABLED=true)"
 # Allowed only with android:maxSdkVersion <= 28 (photo saving on Android 7-9).
 LEGACY_STORAGE = {
     "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -162,8 +177,71 @@ DENY_REASONS = {
         "install referrer = attribution tracking (pulled in by Firebase Analytics, which SPEC §7 forbids)",
     "com.google.android.c2dm.permission.RECEIVE": "push messaging (FCM) is not used in v1",
 }
+if allow_iap != "1":
+    DENY_REASONS[BILLING] = (
+        "in-app purchases are off in v2.0 (SPEC §10.2; Play may label the app "
+        "'contains in-app purchases'). The release build removes it unless built with "
+        "--dart-define=IAP_ENABLED=true (build.gradle.kts, src/noIap); pass --iap for such builds")
 
 errors, warnings, info = [], [], []
+
+# The IAP flag must default to off in the source the release is built from (SPEC §10.2).
+# `bool.fromEnvironment('IAP_ENABLED')` without a defaultValue (false) is the only accepted form.
+if os.path.isfile(app_config):
+    src = open(app_config, encoding="utf-8").read()
+    m = re.search(r"kIapEnabled\s*=\s*bool\.fromEnvironment\(\s*'IAP_ENABLED'\s*(,[^)]*)?\)", src)
+    if not m:
+        errors.append("app_config.dart: kIapEnabled must be bool.fromEnvironment('IAP_ENABLED')")
+    elif m.group(1) and "true" in m.group(1):
+        (warnings if allow_iap == "1" else errors).append(
+            "app_config.dart: IAP_ENABLED defaults to true (v2.0 ships with purchases off)")
+    else:
+        info.append("IAP_ENABLED defaults to off (app_config.dart)")
+
+# Source checks for what the manifest cannot show (run from a checkout; skipped otherwise).
+repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(app_config)))))
+admob = os.path.join(repo, "app/lib/features/monetization/admob_gateway.dart")
+if os.path.isfile(admob):
+    # Families policy / COMPLIANCE C2: every ad request is child-directed, rated G, not personalised.
+    src = open(admob, encoding="utf-8").read()
+    missing = [n for n in ("AgeRestrictedTreatment.child", "TagForChildDirectedTreatment.yes",
+                           "TagForUnderAgeOfConsent.yes", "MaxAdContentRating.g",
+                           "nonPersonalizedAds: true", "disableMediationInitialization")
+               if n not in src]
+    for n in missing:
+        errors.append(f"admob_gateway.dart: '{n}' missing (child-directed ad requests, "
+                      "docs/COMPLIANCE.md C2)")
+    if not missing:
+        info.append("AdMob requests: child-directed, G, non-personalised (admob_gateway.dart)")
+providers = os.path.join(repo, "app/lib/core/providers.dart")
+if os.path.isfile(providers):
+    # SPEC §10.2: rewarded ads exist only on Android (the iPhone build is ad-free).
+    if not re.search(r"adsSupportedProvider\s*=\s*Provider<bool>\([^;]*Platform\.isAndroid",
+                     open(providers, encoding="utf-8").read()):
+        errors.append("providers.dart: adsSupportedProvider must require Platform.isAndroid "
+                      "(iPhone build has no ads, SPEC §10.2)")
+    else:
+        info.append("ads only on Android (providers.dart adsSupportedProvider)")
+# SPEC §11.1: the Claude model id is a deploy-time parameter (CLAUDE_MODEL), never in the repo.
+model_id = re.compile(r"claude-(?:opus|sonnet|haiku|instant|[0-9])[-a-z0-9.@]*", re.I)
+model_errors = len(errors)
+for sub in ("app/lib", "firebase/functions/src", "server/realtime/src", "shared",
+            ".github/workflows", "infra/terraform"):
+    top = os.path.join(repo, sub)
+    for dirpath, dirnames, files in os.walk(top):
+        dirnames[:] = [d for d in dirnames if d not in ("node_modules", "build", "lib-cjs", ".terraform")]
+        for name in files:
+            path = os.path.join(dirpath, name)
+            try:
+                text = open(path, encoding="utf-8").read()
+            except (UnicodeDecodeError, OSError):
+                continue
+            m = model_id.search(text)
+            if m:
+                errors.append(f"{os.path.relpath(path, repo)}: Claude model id '{m.group()}' in the "
+                              "repo (set CLAUDE_MODEL at deploy time, SPEC §11.1)")
+if os.path.isdir(os.path.join(repo, "app/lib")) and len(errors) == model_errors:
+    info.append("no Claude model id in the sources (CLAUDE_MODEL is set at deploy time)")
 
 root = ET.parse(manifest).getroot()
 pkg = root.get("package", "")

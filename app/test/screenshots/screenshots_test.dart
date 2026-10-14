@@ -5,12 +5,17 @@
 // (`00_paper_photo.jpg`), so Before (paper) and After (character) match.
 // store/tools/compose_screenshots.py turns a selection into the listing.
 //
+// Store rule (SPEC §3.5, docs/STORE_LISTING.md §3): no screenshot shows a
+// character in the hidden form, nor anything that rates a drawing — every
+// character below is a kid drawing (checked in setUpAll).
+//
 // Not part of the normal test run (tag `screenshots` is skipped by
 // dart_test.yaml). Regenerate with `tool/screenshots.sh`.
 @Tags(['screenshots'])
 library;
 
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:doodle_battle/data/app_settings.dart';
@@ -25,6 +30,8 @@ import 'package:doodle_battle/features/card_print/card_output.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 import 'package:doodle_battle/features/drawing_loop/odai/daily_odai.dart';
 import 'package:doodle_battle/features/drawing_loop/odai/stamp_card.dart';
+import 'package:doodle_battle/features/draw_canvas/draw_canvas_screen.dart';
+import 'package:doodle_battle/features/draw_canvas/stroke_drawing.dart';
 import 'package:doodle_battle/features/video_export/before_photo_extractor.dart';
 import 'package:doodle_battle/features/video_export/video_export_providers.dart';
 import 'package:flutter/material.dart';
@@ -52,7 +59,7 @@ late Uint8List _paperPhoto; // ... on a table (Before)
 late BeforePhoto _before;
 late DrawingAnalysisResult _blob;
 late DrawingAnalysisResult _marker;
-late DrawingAnalysisResult _artist; // polished line art (internally weak)
+late DrawingAnalysisResult _green;
 
 Future<void> _loadFonts() async {
   Future<ByteData> asset(String key) => rootBundle.load(key);
@@ -102,7 +109,7 @@ CharacterV2 _char(
       ],
     );
 
-/// The child's collection: levels 12 / 7 / 3 (polished line art) / 1.
+/// The child's collection: levels 12 / 7 / 6 / 1, all kid drawings.
 List<CharacterV2> _collection() => [
   _char(
     'c_1',
@@ -116,24 +123,30 @@ List<CharacterV2> _collection() => [
     subject: 'ドラゴン',
   ),
   _char('c_2', 'ぷにまる', _blob, level: 7, xp: 40),
-  _char('c_3', 'ふくろうくん', _artist, level: 3, xp: 30),
+  _char('c_3', 'もりもり', _green, level: 6, xp: 30),
   _char('c_4', 'にこにこ', _marker, level: 1),
 ];
 
 Map<String, Uint8List> _images() => {
   'c_1': _scribble.cutoutPng,
   'c_2': _blob.cutoutPng,
-  'c_3': _artist.cutoutPng,
+  'c_3': _green.cutoutPng,
   'c_4': _marker.cutoutPng,
 };
 
 const _progress = GameProgress(
-  clearedStage: 9,
+  clearedStage: 23, // worlds 1–3 open (stage select: 100 stages in 10 worlds)
+  stageStars: {
+    1: 3, 2: 3, 3: 3, 4: 2, 5: 3, 6: 3, 7: 2, 8: 3, 9: 3, 10: 2, //
+    11: 3, 12: 2, 13: 3, 14: 3, 15: 1, 16: 3, 17: 2, 18: 3, 19: 3, 20: 2,
+    21: 3, 22: 2, 23: 1,
+  },
   displayName: ChosenDisplayName(
     adjectiveId: 'a05',
     nounId: 'n01',
     text: 'げんきな ドラゴン',
   ),
+  onlineBadge: 'bear', // rated play: くま (the number is never shown)
 );
 
 AppSettings _settings({
@@ -234,11 +247,11 @@ Future<void> _centre(
   await tester.pumpAndSettle();
 }
 
-/// Highest unlocked stage whose CPU [c]'s attribute beats.
+/// Highest stage of world 1 whose CPU [c]'s attribute beats.
 int _advantageStage(CharacterV2 c) {
   final beats = c.attribute().beats;
   for (final st in stageTable().reversed) {
-    if (st.stage > _progress.clearedStage + 1) continue;
+    if (st.stage > 10) continue;
     if (testRoster.byId[st.cpuId]?.genome().attr == beats) return st.stage;
   }
   return 1;
@@ -259,9 +272,14 @@ void main() {
       ..writeAsBytesSync(_paperPhoto);
     _blob = _analyse(colourBlob(Crayon.sky, seed: 5));
     _marker = _analyse(kidMarker(seed: 4));
-    _artist = _analyse(skilledLineArt());
-    expect(_artist.isShobo, isTrue, reason: 'line art is internally weak');
-    expect(_scribble.isShobo, isFalse);
+    _green = _analyse(colourBlob(Crayon.green, seed: 9));
+    for (final c in _collection()) {
+      expect(
+        c.genome().isBloomer,
+        isFalse,
+        reason: '${c.name}: store screenshots never show the hidden form',
+      );
+    }
   });
 
   _shotTest('01 parent setup / consent', (tester) async {
@@ -297,6 +315,50 @@ void main() {
     await _shot(tester, '05_birth_traits');
   });
 
+  _shotTest('03b drawing tool (アプリで かく)', (tester) async {
+    await _pump(tester);
+    await _tap(tester, find.byKey(const Key('home-draw')));
+    await _tap(tester, find.byKey(const Key('draw-in-app')));
+    final st = tester.state<DrawCanvasScreenState>(
+      find.byType(DrawCanvasScreen),
+    );
+    for (final s in _canvasMonster().strokes) {
+      st.controller.setColor(s.color);
+      st.controller.setTool(s.tool);
+      st.controller.begin(s.xy[0], s.xy[1]);
+      for (var i = 2; i < s.xy.length; i += 2) {
+        st.controller.extend(s.xy[i], s.xy[i + 1]);
+      }
+      st.controller.end();
+    }
+    // Leave the crayon and a colour picked, as a child would.
+    st.controller.setColor(kCanvasColors[3]);
+    st.controller.setTool(DrawTool.crayon);
+    await tester.pumpAndSettle();
+    await _shot(tester, '03b_draw_canvas');
+  });
+
+  _shotTest('08c joint editor (うごく ところを なおす)', (tester) async {
+    await _pump(tester);
+    await _tap(tester, find.byKey(const Key('home-zukan')));
+    await _tap(tester, find.byKey(const Key('zukan-card-c_1')));
+    final joints = find.byKey(const Key('detail-joints'));
+    await tester.scrollUntilVisible(
+      joints,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(joints);
+    await settleReal(tester);
+    expect(find.byKey(const Key('joint-preview')), findsOneWidget);
+    // The preview loops forever: let it run into a pose, no settling.
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await _shot(tester, '08c_joint_editor', settle: false);
+  });
+
   _shotTest('06 naming with an NG word', (tester) async {
     await _pump(
       tester,
@@ -324,21 +386,28 @@ void main() {
     await _shot(tester, '08b_character_detail_loop');
   });
 
-  _shotTest('09 stages / 10 battle / 11 result / 12 ad notice', (tester) async {
-    final hero = _collection().first;
-    final stage = _advantageStage(hero);
+  _shotTest('09 worlds / stages', (tester) async {
     await _pump(tester);
     await _tap(tester, find.byKey(const Key('home-battle')));
     await _tap(tester, find.byKey(const Key('select-c_1')));
     await _shot(tester, '09_world_select');
-    await _tap(tester, find.byKey(const Key('world-1')));
+    await _tap(tester, find.byKey(const Key('world-3')));
     await _centre(
       tester,
       find.byKey(Key('stage-${_progress.clearedStage + 1}')),
       alignment: 0.7,
     );
     await _shot(tester, '09b_stage_select');
+  });
 
+  _shotTest('10 battle / 11 result / 12 ad notice', (tester) async {
+    final hero = _collection().first;
+    final stage = _advantageStage(hero);
+    await _pump(tester);
+    await _tap(tester, find.byKey(const Key('home-battle')));
+    await _tap(tester, find.byKey(const Key('select-c_1')));
+    await _tap(tester, find.byKey(const Key('world-1')));
+    await _centre(tester, find.byKey(Key('stage-$stage')));
     await tapNoSettle(tester, find.byKey(Key('stage-$stage')));
     await settleReal(tester, rounds: 10);
     // Mid-fight on the 2.5D stage, with a move picked ahead (さきどり).
@@ -469,3 +538,70 @@ void main() {
 
 /// A moment inside the video's end card (docs/VIDEO.md: the last 2.8 s).
 const _videoEndCardMs = 12600;
+
+/// A round kid monster drawn with the in-app tools (canvas units, 1000×1250):
+/// crayon outline and colouring, pen face, brush horns, crayon arms and legs.
+StrokeDrawing _canvasMonster() {
+  final r = math.Random(3);
+  double j() => (r.nextDouble() - 0.5) * 8;
+  Stroke line(DrawTool t, int colour, List<(double, double)> pts) {
+    final s = Stroke(t, kCanvasColors[colour], null);
+    for (var i = 0; i < pts.length - 1; i++) {
+      for (var k = 0; k < 10; k++) {
+        final u = k / 10;
+        s.add(
+          pts[i].$1 + (pts[i + 1].$1 - pts[i].$1) * u + j(),
+          pts[i].$2 + (pts[i + 1].$2 - pts[i].$2) * u + j(),
+        );
+      }
+    }
+    s.add(pts.last.$1, pts.last.$2);
+    return s;
+  }
+
+  List<(double, double)> ring(double cx, double cy, double rx, double ry) => [
+    for (var i = 0; i <= 28; i++)
+      (
+        cx + rx * math.cos(i / 28 * 2 * math.pi),
+        cy + ry * math.sin(i / 28 * 2 * math.pi),
+      ),
+  ];
+
+  // Zig-zag colouring inside an ellipse, like a child filling it in.
+  List<(double, double)> fill(double cx, double cy, double rx, double ry) => [
+    for (var y = -ry * 0.8; y <= ry * 0.8; y += 34)
+      for (final side in [-1, 1])
+        (
+          cx + side * rx * 0.85 * math.sqrt(1 - (y / ry) * (y / ry)),
+          cy + y + (side > 0 ? 17 : 0),
+        ),
+  ];
+
+  return StrokeDrawing(
+    strokes: [
+      line(DrawTool.brush, 3, fill(500, 620, 260, 280)),
+      line(DrawTool.crayon, 2, ring(500, 620, 270, 290)),
+      // horns
+      line(DrawTool.brush, 9, [(360, 380), (330, 230), (430, 345)]),
+      line(DrawTool.brush, 9, [(640, 380), (670, 230), (570, 345)]),
+      // eyes and mouth
+      line(DrawTool.marker, 0, ring(420, 560, 38, 44)),
+      line(DrawTool.marker, 0, ring(580, 560, 38, 44)),
+      line(DrawTool.brush, 0, ring(428, 572, 10, 12)),
+      line(DrawTool.brush, 0, ring(572, 572, 10, 12)),
+      line(DrawTool.marker, 0, [
+        for (var i = 0; i <= 12; i++)
+          (420 + i * 13.3, 700 + 50 * math.sin(i / 12 * math.pi)),
+      ]),
+      line(DrawTool.crayon, 10, ring(350, 660, 34, 20)),
+      line(DrawTool.crayon, 10, ring(650, 660, 34, 20)),
+      // arms and legs
+      line(DrawTool.crayon, 8, [(245, 600), (140, 520), (90, 430)]),
+      line(DrawTool.crayon, 8, [(755, 600), (860, 520), (910, 430)]),
+      line(DrawTool.crayon, 6, [(410, 890), (390, 1060), (330, 1080)]),
+      line(DrawTool.crayon, 6, [(590, 890), (610, 1060), (670, 1080)]),
+      // a little sun
+      line(DrawTool.brush, 4, ring(860, 150, 50, 50)),
+    ],
+  );
+}

@@ -1,5 +1,5 @@
 # Manual deploy of Cloud Functions and/or Firestore + Storage rules (+ indexes, TTL). Never runs
-# on push. See docs/RELEASE.md §1.7 and docs/BACKEND.md §14.
+# on push. See docs/RELEASE.md §1.9 and docs/BACKEND.md §14.
 #
 # Authentication: Workload Identity Federation (no JSON key). The GitHub environment
 # `firebase-<env>` holds the variables GCP_PROJECT_ID, GCP_WIF_PROVIDER, GCP_FIREBASE_DEPLOY_SA

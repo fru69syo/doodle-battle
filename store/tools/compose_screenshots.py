@@ -11,7 +11,8 @@ Output: store/metadata/ja-JP/images/phoneScreenshots/NN_<name>.png  (1080x1920, 
 Each listing image is the unmodified app screen, scaled down, under a short caption.
 Shot 1 puts the photographed paper drawing next to the birth screen of the same
 drawing (Before/After). The parent-safety shot lists only things the app really does
-(docs/STORE_LISTING.md §2, QA_CHECKLIST). No other app is named anywhere.
+(docs/STORE_LISTING.md §2, QA_CHECKLIST). No other app is named anywhere, and no shot
+shows the hidden form or anything that rates a drawing (SPEC §3.5).
 
 Usage (from repo root, after app/tool/screenshots.sh):
   python3 store/tools/compose_screenshots.py
@@ -46,26 +47,35 @@ TEAL = (0, 150, 136)
 RED = (229, 57, 53)
 
 # (output name, raw screen, caption lines, band colour)
+# v2.0 order (docs/STORE_LISTING.md §3): what makes the app different first.
+# Never a screen that shows the hidden form or rates a drawing (the raw shots
+# only contain kid drawings, screenshots_test.dart checks it).
 LISTING = [
-    ("01_before_after", "05_birth_traits", ["かみに かいた えが", "キャラに なる！"], ORANGE),
-    ("02_battle", "10_battle", ["4つの わざで", "バトル！"], BLUE),
-    ("03_parents", "15_parent_settings", ["おうちの かたへ", "あんしんの しくみ"], TEAL),
-    ("04_family", "19_family_battle", ["かぞくで", "たいせん できる"], PINK),
-    ("05_video", "22_video_export", ["うごく どうがに", "できる"], PURPLE),
-    ("06_card", "20_card_print", ["カードに して", "いんさつ"], RED),
-    ("07_odai", "21_odai_calendar", ["まいにちの おだいで", "おえかき"], GREEN),
-    ("08_grow", "08_character_detail", ["そだてて", "しんか！"], ORANGE),
-    ("09_capture", "04_capture_guide", ["とりかたの コツも", "おしえるよ"], BLUE),
-    ("10_zukan", "07_zukan", ["ずかんに", "あつめよう"], PINK),
+    ("01_before_after", "05_birth_traits", ["かいた えが", "うごく キャラに！"], ORANGE),
+    ("02_battle", "10_battle", ["わざを えらぶだけ！", "リアルタイム バトル"], BLUE),
+    ("03_draw", "03b_draw_canvas", ["アプリの なかでも", "おえかき できる"], GREEN),
+    ("04_joints", "08c_joint_editor", ["うごく ところを", "じぶんで なおせる"], PURPLE),
+    ("05_stages", "09b_stage_select", ["ぜんぶで", "100 ステージ！"], RED),
+    ("06_online", "13_online_lobby", ["バッジが そだつ", "オンライン たいせん"], BLUE),
+    ("07_family", "19_family_battle", ["かぞくで", "たいせん できる"], PINK),
+    ("08_parents", "15_parent_settings", ["おうちの かたへ", "あんしんの しくみ"], TEAL),
+    ("09_video", "22_video_export", ["うごく どうがに", "できる"], PURPLE),
+    ("10_card", "20_card_print", ["カードに して", "いんさつ"], RED),
+    ("11_odai", "21_odai_calendar", ["まいにちの おだいで", "おえかき"], GREEN),
+    ("12_grow", "08_character_detail", ["そだてて", "しんか！"], ORANGE),
+    ("13_capture", "04_capture_guide", ["とりかたの コツも", "おしえるよ"], BLUE),
+    ("14_zukan", "07_zukan", ["ずかんに", "あつめよう"], PINK),
 ]
 
-# Shown on 03_parents. Each line is backed by the implementation (QA_CHECKLIST).
+# Shown on 08_parents. Each line is backed by the implementation (QA_CHECKLIST
+# §13.3) and by the v2.0 spec (SPEC §7.2, §10). No "paper drawings only" any
+# more: v2.0 accepts every picture that is not a photo or unsafe.
 SAFETY = [
     "チャットなし・ガチャなし",
-    "設定と購入は 保護者の確認の先",
-    "広告・課金・オンラインは 初期設定でオフ",
+    "無料・アプリ内課金なし",
+    "設定と外部リンクは 保護者の確認の先",
+    "広告・オンラインは 初期設定でオフ",
     "絵は AI の学習に使いません",
-    "紙に手で描いた絵だけ（AI画像は取り込めません）",
 ]
 
 
@@ -155,7 +165,7 @@ def before_after(lines, color, rng) -> Image.Image:
     ay = 1120
     g.crayon_line(img, [(110 + i * 14, ay + math.sin(i / 3) * 8) for i in range(17)], g.ORANGE_DARK, 24, rng)
     g.crayon_line(img, [(300, ay - 45), (352, ay), (300, ay + 45)], g.ORANGE_DARK, 24, rng)
-    label(img, "クレヨンや ペンで かいて、とるだけ", (W / 2, 1820), size=44)
+    label(img, "かみに かいて とるだけ。アプリでも かけるよ", (W / 2, 1820), size=42)
     return img
 
 
@@ -217,7 +227,7 @@ def main() -> None:
         rng = random.Random(g.SEED + 100 + i)
         if name == "01_before_after":
             img = before_after(lines, color, rng)
-        elif name == "03_parents":
+        elif name == "08_parents":
             img = parents(lines, color, rng)
         else:
             img = standard(name, raw_name, lines, color, rng)

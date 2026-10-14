@@ -207,7 +207,7 @@ npx firebase functions:secrets:set ANTHROPIC_API_KEY --project doodle-battle-dev
 Anthropic Console 側で**月の利用上限**も必ず設定します。AI の費用は GCP の請求に入らないので、GCP の予算では止まりません（§6.5）。
 
 ### 4.8 Firebase（Functions・ルール）をデプロイ（15 分）
-**初回だけは手元から**（確認のプロンプトがあるため。RELEASE.md §1.7）:
+**初回だけは手元から**（確認のプロンプトがあるため。RELEASE.md §1.9）:
 ```bash
 cd firebase/functions
 printf 'CLAUDE_MODEL=%s\n' '<最新の Haiku 系モデル ID>' > .env.doodle-battle-dev   # git には入らない
@@ -232,7 +232,7 @@ curl -s "$URL/healthz"                       # {"ok":true,"draining":false,"engi
 アプリ（dev ビルド）からオンライン対戦をして、§9 のダッシュボードで「Matches ended」が増えることを確認します。
 
 ### 4.11 App Check を本番にする（公開後 1〜2 週間）
-1. Play Console で Play Integrity と Cloud プロジェクトをリンクし、`android_sha256_hashes`（アプリ署名鍵とアップロード鍵）を `terraform.tfvars` に書いて apply（RELEASE.md §1.5）。iOS は `ios_team_id` も。
+1. Play Console で Play Integrity と Cloud プロジェクトをリンクし、`android_sha256_hashes`（アプリ署名鍵とアップロード鍵）を `terraform.tfvars` に書いて apply（RELEASE.md §1.3・§1.5・§1.8）。iOS は `ios_team_id` も。
 2. Firebase コンソール → App Check の指標で「確認済み」がほぼ 100% になるのを待つ。
 3. `app_check_enforcement = "ENFORCED"` にして apply。Functions と対戦サーバーは最初から確認しています。
 
