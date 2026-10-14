@@ -30,6 +30,9 @@ class StagePainter extends CustomPainter {
     this.quality = StageQuality.high,
   });
 
+  /// Per side drawing size ([StageDirector.size]; bosses are bigger).
+  List<double> get sizes => director.size;
+
   final StageDirector director;
   final List<PuppetSprite> sprites;
   final StageBackground background;
@@ -41,8 +44,8 @@ class StagePainter extends CustomPainter {
 
   StageTheme get theme => background.theme;
 
-  /// World height of a character (units).
-  static const charHeight = 1.25;
+  /// World height of a character of size 1 (units).
+  static const charHeight = StageDirector.charHeight;
 
   static const _props = <(double, double, int)>[
     // x, z, prop slot (index into the theme's prop list)
@@ -274,11 +277,15 @@ class StagePainter extends CustomPainter {
 
   void _fighter(Canvas c, Size s, StageCamera cam, StageFighter f) {
     final sprite = sprites[f.side];
-    final (sx, sy, k) = cam.project(f.x, f.z, s.width, s.height);
+    final (sx, sy, k0) = cam.project(f.x, f.z, s.width, s.height);
+    // Everything about the character scales with its size (boss 1.3);
+    // the ground position (sx, sy) and the lift stay in world units.
+    final size = sizes[f.side];
+    final k = k0 * size;
     final scale = k * charHeight / math.max(1, sprite.height);
     final mirror = sprite.prepare(f.anim, f.animT, f.dir);
     final pose = sprite.pose;
-    final liftPx = f.lift * k - pose.dy * sprite.data.rig.height * scale;
+    final liftPx = f.lift * k0 - pose.dy * sprite.data.rig.height * scale;
     // Shadow: shrinks as the character leaves the ground.
     final up = (liftPx / (k * charHeight)).clamp(0.0, 1.0);
     final sw = sprite.width * scale * 0.62 * (1 - 0.5 * up) * pose.sx;
@@ -286,7 +293,7 @@ class StagePainter extends CustomPainter {
       Rect.fromCenter(center: Offset(sx, sy), width: sw, height: sw * 0.22),
       Paint()..color = Color.fromRGBO(30, 50, 20, 0.28 * (1 - 0.5 * up)),
     );
-    final feet = Offset(sx, sy - f.lift * k);
+    final feet = Offset(sx, sy - f.lift * k0);
     final top = feet.translate(0, -k * charHeight * 0.55);
     // Auras behind the character.
     if (looks[f.side].legend) {

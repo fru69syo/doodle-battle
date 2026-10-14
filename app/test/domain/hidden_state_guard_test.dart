@@ -19,7 +19,9 @@ final _hiddenWords = RegExp(
 
 void main() {
   test('UI, data and core code never read the hidden state', () {
-    final pattern = RegExp(r'isBloomer|rebornAt|preForm|\.kid\b');
+    final pattern = RegExp(
+      r'isBloomer|rebornAt|preForm|\.kid\b|\.rebirth\b|moveSet',
+    );
     final allowed = {
       'lib/features/drawing_analysis/v2_admission.dart',
       // Debug-only 2.5D demo battle (randomised demo fighters).

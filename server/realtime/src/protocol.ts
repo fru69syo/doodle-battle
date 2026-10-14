@@ -1,12 +1,17 @@
 /**
- * WebSocket protocol v1 (docs/REALTIME_PROTOCOL.md is the human-readable version; keep both in
- * sync). JSON text frames, one message per frame, discriminated by `t`.
+ * WebSocket protocol v1, revision 2 (docs/REALTIME_PROTOCOL.md is the human-readable version;
+ * keep both in sync). JSON text frames, one message per frame, discriminated by `t`.
+ *
+ * `proto` (major) changes only for breaking changes. `rev` (sent in `welcome`) counts additive
+ * revisions: rev 2 added `omakase`, `FighterInfo.snapshotId` and the `deadline` event.
  */
 import { z } from "zod";
 import type { BadgeId } from "./rating";
 import type { BattleEvent, MovePublic, SideView } from "./engine";
 
 export const PROTOCOL_VERSION = 1;
+/** Additive revision of protocol v1 (welcome.rev). 1 = the original v1, 2 = omakase + deadline + snapshotId. */
+export const PROTOCOL_REVISION = 2;
 export const PATH = "/v2";
 
 /** Max size of the first message (tokens are ~1–2 KB each) and of every later message. */
@@ -37,8 +42,10 @@ export const Select = z
   })
   .strict();
 export const Ping = z.object({ t: z.literal("ping") }).strict();
+/** The child's おまかせ switch (rev 2): while on, the server's AI picks for that side. */
+export const Omakase = z.object({ t: z.literal("omakase"), on: z.boolean() }).strict();
 
-export const ClientMessage = z.discriminatedUnion("t", [Queue, Cancel, Select, Ping]);
+export const ClientMessage = z.discriminatedUnion("t", [Queue, Cancel, Select, Ping, Omakase]);
 export type HelloMsg = z.infer<typeof Hello>;
 export type ClientMsg = z.infer<typeof ClientMessage>;
 
@@ -61,6 +68,11 @@ export type ErrorCode =
   | "INTERNAL";
 
 export interface FighterInfo {
+  /**
+   * The registered character (snapshots/{id}) — the public id the app passes to
+   * `reportCharacter` (SPEC §9.4). For a mirror ghost it is the child's own snapshot.
+   */
+  snapshotId: string;
   /** Opponent's display name (preset words) or the player's own. Never a uid. */
   displayName: string;
   characterName: string;
@@ -76,7 +88,7 @@ export interface FighterInfo {
 }
 
 export type ServerMsg =
-  | { t: "welcome"; proto: number; serverTimeMs: number; inMatch: boolean }
+  | { t: "welcome"; proto: number; rev: number; serverTimeMs: number; inMatch: boolean }
   | { t: "queued"; snapshotId: string }
   | { t: "cancelled" }
   | {
@@ -99,6 +111,7 @@ export type ServerMsg =
       reason: "ko" | "timeout" | "forfeit" | "aborted";
       you: { outcome: "win" | "lose" | "none"; xp: number; badge: BadgeId; badgeUp: boolean };
     }
+  | { t: "omakase"; on: boolean }
   | { t: "pong"; serverTimeMs: number }
   | { t: "error"; code: ErrorCode; message?: string }
   | { t: "bye"; reason: "replaced" | "shutdown" | "idle" | "lifetime" | "protocol"; reconnect: boolean };

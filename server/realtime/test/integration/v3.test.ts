@@ -64,9 +64,19 @@ afterEach(async () => {
   env = null;
 });
 
+const FIGHTER_KEYS = ["attr", "badge", "characterName", "displayName", "imagePath", "isGhost", "level", "maxHp", "moves", "rig", "snapshotId"];
+
 function expectNothingHidden(messages: readonly ServerMsg[]): void {
   const leaks = messages.filter((m) => HIDDEN.test(JSON.stringify(m)));
   expect(leaks).toEqual([]);
+  // FighterInfo carries only the public fields; `snapshotId` is the plain document id.
+  for (const m of messages) {
+    if (m.t !== "match") continue;
+    for (const f of [m.a, m.b]) {
+      expect(Object.keys(f).filter((k) => !FIGHTER_KEYS.includes(k))).toEqual([]);
+      expect(f.snapshotId).toMatch(/^[A-Za-z0-9_-]+$/);
+    }
+  }
 }
 
 describe("realtime server with Engine v3 (integration)", () => {
@@ -84,6 +94,10 @@ describe("realtime server with Engine v3 (integration)", () => {
     expect(me.moves).toHaveLength(4); // Lv60: four moves
     expect(foe.moves).toHaveLength(3); // Lv30: three moves
     expect(me.level).toBe(50);
+    // Each side carries its public snapshot id (reports, SPEC §9.4), the same for both apps.
+    expect([me.snapshotId, foe.snapshotId]).toEqual(["snapA", "snapB"]);
+    const mB = await bob.waitFor("match");
+    expect([mB.a.snapshotId, mB.b.snapshotId].sort()).toEqual(["snapA", "snapB"]);
 
     const endA = await alice.waitFor("end", undefined, 30_000);
     const endB = await bob.waitFor("end", undefined, 30_000);
@@ -134,8 +148,41 @@ describe("realtime server with Engine v3 (integration)", () => {
     alice.send({ t: "queue", snapshotId: "snapA" });
     const m = await alice.waitFor("match");
     expect((m.you === "a" ? m.b : m.a).isGhost).toBe(true);
+    expect((m.you === "a" ? m.b : m.a).snapshotId).toBe("ghostH");
     await alice.waitFor("end", undefined, 30_000);
     expectNothingHidden(alice.messages);
+  });
+
+  it("おまかせ switch: the server plays for the child (no timeout picks); deadline events are exact", async () => {
+    const e = await start();
+    const alice = await client(e, "alice");
+    const bob = await client(e, "bob");
+    bob.autoplay(0);
+    alice.onMessage = (m, c) => {
+      if (m.t === "match") c.send({ t: "omakase", on: true });
+    };
+    alice.send({ t: "queue", snapshotId: "snapA" });
+    bob.send({ t: "queue", snapshotId: "snapB" });
+    const mA = await alice.waitFor("match");
+    expect(await alice.waitFor("omakase")).toEqual({ t: "omakase", on: true });
+    await alice.waitFor("end", undefined, 30_000);
+    const mySide = mA.you === "a" ? 0 : 1;
+    const evs = alice.messages.flatMap((m) => (m.t === "ev" ? m.events : []));
+    expect(evs.some((x) => x.type === "autoPick" && x.side === mySide)).toBe(false);
+    expect(evs.some((x) => x.type === "select" && x.side === mySide)).toBe(true);
+    const rep = e.store.replays.get(mA.matchId);
+    if (!rep) throw new Error("no replay");
+    const mine = rep.inputs.filter((x) => x.side === mySide);
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.every((x) => x.src === "omakase")).toBe(true);
+    // Every ready of a child is followed (same tick) by its deadline; bob's picks come before it.
+    const deadlines = evs.filter((x) => x.type === "deadline");
+    expect(deadlines.length).toBeGreaterThan(0);
+    for (const d of deadlines) expect(d.at).toBe(d.tick + 52);
+    expect(bob.messages.some((m) => m.t === "omakase")).toBe(false);
+    const valid = serverMessageValidator();
+    expect([...alice.messages, ...bob.messages].filter((m) => !valid(m))).toEqual([]);
+    expectNothingHidden([...alice.messages, ...bob.messages]);
   });
 
   it("answers NOT_FOUND for a v1 snapshot (the app registers it again)", async () => {

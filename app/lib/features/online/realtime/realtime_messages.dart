@@ -1,12 +1,17 @@
-/// Messages of the realtime battle protocol v1 (docs/REALTIME_PROTOCOL.md,
-/// `server/realtime/protocol.schema.json`). JSON text frames, one object per
-/// frame, discriminated by `t`. Unknown fields and event types are ignored
-/// (§10: additive changes keep `proto: 1`).
+/// Messages of the realtime battle protocol v1, revision 2
+/// (docs/REALTIME_PROTOCOL.md, `server/realtime/protocol.schema.json`). JSON
+/// text frames, one object per frame, discriminated by `t`. Unknown fields
+/// and event types are ignored (§10: additive changes keep `proto: 1` and
+/// raise `welcome.rev`).
 library;
 
 import 'dart:convert';
 
 const int kRealtimeProto = 1;
+
+/// The protocol revision this app speaks: `omakase`, the `deadline` event
+/// and `FighterInfo.snapshotId` need a server with `welcome.rev >= 2`.
+const int kRealtimeRevision = 2;
 
 // --- client → server ------------------------------------------------------------
 
@@ -31,6 +36,9 @@ String selectMsg(int seq, int slot) =>
     jsonEncode({'t': 'select', 'seq': seq, 'slot': slot});
 
 String pingMsg() => jsonEncode({'t': 'ping'});
+
+/// The child's おまかせ switch (rev 2): while on, the server picks.
+String omakaseMsg(bool on) => jsonEncode({'t': 'omakase', 'on': on});
 
 // --- server → client ------------------------------------------------------------
 
@@ -93,8 +101,9 @@ class FighterInfo {
     this.snapshotId,
   });
 
-  /// Optional (not in protocol v1 yet): lets the child report the
-  /// opponent's character (SPEC §9.4).
+  /// The registered character (`snapshots/{id}`, rev 2): what the report
+  /// button sends to `reportCharacter` (SPEC §9.4). Null from a rev 1 server.
+  /// A mirror ghost carries the child's own id.
   final String? snapshotId;
 
   final String displayName;
@@ -170,7 +179,10 @@ sealed class ServerMsg {
     if (raw is! Map) return null;
     final j = raw.cast<String, Object?>();
     return switch (j['t']) {
-      'welcome' => WelcomeMsg(inMatch: j['inMatch'] == true),
+      'welcome' => WelcomeMsg(
+        inMatch: j['inMatch'] == true,
+        rev: _int(j['rev'], 1),
+      ),
       'queued' => const QueuedMsg(),
       'cancelled' => const CancelledMsg(),
       'match' => MatchMsg(
@@ -215,6 +227,7 @@ sealed class ServerMsg {
         badge: _map(j['you'])['badge'] as String?,
         badgeUp: _map(j['you'])['badgeUp'] == true,
       ),
+      'omakase' => OmakaseAckMsg(on: j['on'] == true),
       'pong' => const PongMsg(),
       'error' => ErrorMsg(_str(j['code'], 'INTERNAL')),
       'bye' => ByeMsg(
@@ -227,8 +240,11 @@ sealed class ServerMsg {
 }
 
 class WelcomeMsg extends ServerMsg {
-  const WelcomeMsg({required this.inMatch});
+  const WelcomeMsg({required this.inMatch, this.rev = 1});
   final bool inMatch;
+
+  /// Additive protocol revision of the server (1 when absent).
+  final int rev;
 }
 
 class QueuedMsg extends ServerMsg {
@@ -303,6 +319,12 @@ class EndMsg extends ServerMsg {
   final int xp;
   final String? badge;
   final bool badgeUp;
+}
+
+/// Private answer to `omakase` (rev 2).
+class OmakaseAckMsg extends ServerMsg {
+  const OmakaseAckMsg({required this.on});
+  final bool on;
 }
 
 class PongMsg extends ServerMsg {

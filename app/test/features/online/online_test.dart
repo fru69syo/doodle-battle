@@ -89,6 +89,7 @@ void main() {
       });
       expect(jsonDecode(queueMsg('Abc')), {'t': 'queue', 'snapshotId': 'Abc'});
       expect(jsonDecode(selectMsg(3, 1)), {'t': 'select', 'seq': 3, 'slot': 1});
+      expect(jsonDecode(omakaseMsg(true)), {'t': 'omakase', 'on': true});
       // Every later message stays far below the 512 byte limit.
       expect(utf8.encode(selectMsg(999999, 3)).length, lessThan(512));
     });
@@ -98,6 +99,20 @@ void main() {
       expect(m.you, 1);
       expect(m.fighters[1].isGhost, isTrue);
       expect(m.fighters[0].moves.first.name, 'ねこまるパンチ');
+      // rev 2: each side's public snapshot id (reports); absent from rev 1.
+      expect(m.fighters.map((f) => f.snapshotId), ['snap_1', 'snap_foe']);
+      final old = ServerMsg.parse(jsonEncode(matchMsg(foeId: null)))!;
+      expect((old as MatchMsg).fighters[1].snapshotId, isNull);
+      final w = ServerMsg.parse(
+        '{"t":"welcome","proto":1,"rev":2,"serverTimeMs":1,"inMatch":false}',
+      );
+      expect((w! as WelcomeMsg).rev, 2);
+      final w1 = ServerMsg.parse(
+        '{"t":"welcome","proto":1,"serverTimeMs":1,"inMatch":false}',
+      );
+      expect((w1! as WelcomeMsg).rev, 1);
+      final ack = ServerMsg.parse('{"t":"omakase","on":true}');
+      expect((ack! as OmakaseAckMsg).on, isTrue);
       final e = ServerMsg.parse(jsonEncode(endMsg()))! as EndMsg;
       expect(
         (e.outcome, e.xp, e.badge, e.badgeUp),
@@ -156,6 +171,61 @@ void main() {
       expect(action.hits.single.effectiveness, StageEffectiveness.strong);
       expect(feed.fighter(0).ready, isTrue);
       expect(feed.fighter(1).maxHp, 900);
+    });
+
+    test('the 5 s ring follows the server deadline in real time', () {
+      var now = Duration.zero;
+      final feed = OnlineFeed(
+        ServerMsg.parse(jsonEncode(matchMsg(you: 'b')))! as MatchMsg,
+        clock: () => now,
+      );
+      var acted = 0;
+      feed.onMyAction = () => acted++;
+      expect((feed.waiting, feed.choiceLeft), (false, null));
+      feed.addEvents(
+        const EvMsg(
+          seq: 1,
+          tick: 40,
+          events: [
+            {'tick': 40, 'type': 'ready', 'side': 1},
+            {'tick': 40, 'type': 'deadline', 'side': 1, 'at': 92},
+            // The foe's deadline is not the child's.
+            {'tick': 40, 'type': 'deadline', 'side': 0, 'at': 80},
+          ],
+        ),
+      );
+      expect(feed.waiting, isTrue);
+      expect(feed.decisionSeconds, closeTo(5.2, 1e-9));
+      expect(feed.choiceLeft, closeTo(5.2, 1e-9));
+      now = const Duration(milliseconds: 1500); // no message for 1.5 s
+      expect(feed.choiceLeft, closeTo(3.7, 1e-9));
+      // A snap a little behind the local estimate does not move the ring up.
+      feed.addSnap(
+        SnapMsg(
+          tick: 54,
+          sides: [
+            SideView.fromJson(sideView()),
+            SideView.fromJson(sideView(ready: true, gauge: 10000)),
+          ],
+        ),
+      );
+      expect(feed.choiceLeft, closeTo(3.7, 1e-9));
+      now = const Duration(seconds: 9);
+      expect(feed.choiceLeft, 0);
+      // `deadline` is a timing cue, never a stage event.
+      expect(feed.advance(1).whereType<StageReady>().single.side, 0);
+      feed.addEvents(
+        const EvMsg(
+          seq: 2,
+          tick: 92,
+          events: [
+            {'tick': 92, 'type': 'autoPick', 'side': 1, 'slot': 0},
+            {'tick': 92, 'type': 'select', 'side': 1, 'slot': 0, 'auto': 0},
+          ],
+        ),
+      );
+      expect((feed.waiting, feed.choiceLeft), (false, null));
+      expect(acted, 2);
     });
 
     test('the child is always side 0 on the stage (you = b)', () {
@@ -254,6 +324,61 @@ void main() {
       expect(seen, [1, 2, 3]);
       await s.close();
     });
+
+    test(
+      'おまかせ goes to a rev 2 server and is re-sent after every match',
+      () async {
+        final server = FakeRealtimeServer();
+        final s = session(server);
+        await s.start();
+        server
+          ..push({
+            't': 'welcome',
+            'proto': 1,
+            'rev': 2,
+            'serverTimeMs': 1,
+            'inMatch': false,
+          })
+          ..push(matchMsg());
+        await pumpEventQueue();
+        s.setOmakase(true);
+        expect(server.sent.last, {'t': 'omakase', 'on': true});
+        // Reconnect: the switch is restored on the resumed match.
+        await server.last.drop();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        server
+          ..push({
+            't': 'welcome',
+            'proto': 1,
+            'rev': 2,
+            'serverTimeMs': 1,
+            'inMatch': true,
+          })
+          ..push(matchMsg(resumed: true));
+        await pumpEventQueue();
+        expect(server.sent.last, {'t': 'omakase', 'on': true});
+        s.setOmakase(false);
+        expect(server.sent.last, {'t': 'omakase', 'on': false});
+        await s.close();
+
+        // A rev 1 server does not know the message: nothing is sent.
+        final old = FakeRealtimeServer();
+        final s1 = session(old);
+        await s1.start();
+        old
+          ..push({
+            't': 'welcome',
+            'proto': 1,
+            'serverTimeMs': 1,
+            'inMatch': false,
+          })
+          ..push(matchMsg());
+        await pumpEventQueue();
+        s1.setOmakase(true);
+        expect(old.sentTypes, isNot(contains('omakase')));
+        await s1.close();
+      },
+    );
 
     test(
       'NOT_FOUND ends the session with its code; give-up offers solo',
@@ -433,6 +558,130 @@ void main() {
       await unmount(tester);
     },
   );
+
+  testWidgets(
+    'rev 2: おまかせ is decided by the server, exact ring, report held until end',
+    (tester) async {
+      final server = FakeRealtimeServer();
+      final backend = FakeBackend();
+      await pumpApp(
+        tester,
+        backend: backend,
+        settings: setupDone.copyWith(consents: _online),
+        progress: const GameProgress(onlineLevels: {'c_1': 6}),
+        characters: [testCharacter(level: 6, onlineId: 'snap_1')],
+        overrides: [
+          realtimeConnectorProvider.overrideWithValue(server.connect),
+        ],
+      );
+      await tapVisible(tester, find.byKey(const Key('home-online')));
+      await tester.tap(find.byKey(const Key('select-c_1')));
+      await settle(tester, frames: 3);
+      server.push({
+        't': 'welcome',
+        'proto': 1,
+        'rev': 2,
+        'serverTimeMs': 1,
+        'inMatch': false,
+      });
+      await settle(tester, frames: 2);
+      server
+        ..push({'t': 'queued', 'snapshotId': 'snap_1'})
+        ..push(matchMsg());
+      await settle(tester, frames: 30);
+      expect(find.byType(MovePad), findsOneWidget);
+
+      // おまかせ on: only the switch goes to the server; the app picks nothing.
+      await tester.tap(find.byKey(const Key('omakase')));
+      await tester.pump();
+      expect(server.sent.last, {'t': 'omakase', 'on': true});
+      server
+        ..push({'t': 'omakase', 'on': true})
+        ..push(
+          ev(1, 10, const [
+            {'tick': 10, 'type': 'ready', 'side': 0},
+            {'tick': 10, 'type': 'deadline', 'side': 0, 'at': 62},
+          ]),
+        );
+      await settle(tester, frames: 4);
+      expect(find.byType(DecisionTimerRing), findsNothing);
+      expect(server.sentTypes.where((t) => t == 'select'), isEmpty);
+
+      // Off: manual control again, the ring counts down from the deadline.
+      await tester.tap(find.byKey(const Key('omakase')));
+      await tester.pump();
+      expect(server.sent.last, {'t': 'omakase', 'on': false});
+      server.push(
+        ev(2, 30, const [
+          {'tick': 20, 'type': 'select', 'side': 0, 'slot': 0, 'auto': 0},
+          {'tick': 30, 'type': 'ready', 'side': 0},
+          {'tick': 30, 'type': 'deadline', 'side': 0, 'at': 82},
+        ]),
+      );
+      await settle(tester, frames: 2);
+      final ring = tester.widget<DecisionTimerRing>(
+        find.byType(DecisionTimerRing),
+      );
+      expect(ring.secondsLeft, inInclusiveRange(4.0, 5.2));
+      await tester.tap(find.byKey(const Key('move-1')));
+      await tester.pump();
+      expect(server.sent.last, {'t': 'select', 'seq': 1, 'slot': 1});
+
+      // Report the opponent: thanked at once, sent after the server's end.
+      await tester.tap(find.byKey(const Key('online-report')));
+      await settle(tester, frames: 4);
+      await tester.tap(find.byKey(const Key('report-bad_picture')));
+      await settle(tester, frames: 4);
+      expect(find.textContaining('ありがとう'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('kid-message-ok')));
+      await settle(tester, frames: 2);
+      expect(backend.reports, isEmpty);
+      server
+        ..push(
+          ev(3, 40, const [
+            {'tick': 40, 'type': 'select', 'side': 0, 'slot': 1, 'auto': 0},
+            {'tick': 40, 'type': 'faint', 'side': 1},
+            {'tick': 40, 'type': 'end', 'winner': 0, 'reason': 'ko'},
+          ]),
+        )
+        ..push(endMsg());
+      await settle(tester, frames: 2);
+      expect(backend.reports, [('snap_foe', ReportReason.badPicture)]);
+      await playBattle(tester);
+      expect(backend.reports, hasLength(1));
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('no report button against the mirror (own character)', (
+    tester,
+  ) async {
+    final server = FakeRealtimeServer();
+    await pumpApp(
+      tester,
+      backend: FakeBackend(),
+      settings: setupDone.copyWith(consents: _online),
+      progress: const GameProgress(onlineLevels: {'c_1': 6}),
+      characters: [testCharacter(level: 6, onlineId: 'snap_1')],
+      overrides: [realtimeConnectorProvider.overrideWithValue(server.connect)],
+    );
+    await tapVisible(tester, find.byKey(const Key('home-online')));
+    await tester.tap(find.byKey(const Key('select-c_1')));
+    await settle(tester, frames: 3);
+    server
+      ..push({
+        't': 'welcome',
+        'proto': 1,
+        'rev': 2,
+        'serverTimeMs': 1,
+        'inMatch': false,
+      })
+      ..push(matchMsg(foeId: 'snap_1'));
+    await settle(tester, frames: 30);
+    expect(find.byType(MovePad), findsOneWidget);
+    expect(find.byKey(const Key('online-report')), findsNothing);
+    await unmount(tester);
+  });
 
   testWidgets('a v1 snapshot the server does not know: silent re-register', (
     tester,

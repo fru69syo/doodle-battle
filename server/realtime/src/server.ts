@@ -208,6 +208,9 @@ export class RealtimeServer {
         case "select":
           this.d.hub.select(me, conn, msg.seq, msg.slot);
           break;
+        case "omakase":
+          this.d.hub.omakase(me, conn, msg.on);
+          break;
         case "ping":
           send({ t: "pong", serverTimeMs: Date.now() });
           break;

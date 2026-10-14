@@ -2,6 +2,12 @@
 /// §5): server events are buffered and played back ~200 ms behind the
 /// newest server tick, translated with the same [translate] as local
 /// battles. The child's character is always side 0 on the stage.
+///
+/// It also owns the child's decision state in real time (not delayed): the
+/// server's `deadline` event (protocol rev 2) gives the exact tick of the 5 s
+/// timeout pick, and the current server tick is extrapolated from the newest
+/// message with the local clock, so the 5 s ring is not guessed from 2 Hz
+/// snapshots.
 library;
 
 import '../../../domain/battle_v3/battle_v3.dart';
@@ -23,6 +29,11 @@ Move displayMove(PublicMove m) {
   );
 }
 
+Duration Function() _stopwatchClock() {
+  final sw = Stopwatch()..start();
+  return () => sw.elapsed;
+}
+
 String _defaultVfx(String template) => switch (template) {
   'strike' => 'punch',
   'combo' => 'slash',
@@ -38,8 +49,9 @@ String _defaultVfx(String template) => switch (template) {
 };
 
 class OnlineFeed implements StageFeed {
-  OnlineFeed(this.match, {this.delayTicks = 2})
+  OnlineFeed(this.match, {this.delayTicks = 2, Duration Function()? clock})
     : _swap = match.you == 1,
+      _now = clock ?? _stopwatchClock(),
       moves = [
         for (final s in match.you == 1 ? const [1, 0] : const [0, 1])
           [for (final m in match.fighters[s].moves) displayMove(m)],
@@ -63,6 +75,58 @@ class OnlineFeed implements StageFeed {
   int _snapTick = 0;
   final _status = [<String>{}, <String>{}];
 
+  final Duration Function() _now;
+
+  /// Called when the child's move went out (its `select` / `autoPick`
+  /// arrived from the server), in real time.
+  void Function()? onMyAction;
+
+  // Decision state of the child's side (real time, from the server).
+  int? _deadlineAt;
+  int? _readyTick;
+
+  // Server tick estimate: the newest tick seen and when it arrived.
+  int _anchorTick = 0;
+  Duration _anchorAt = Duration.zero;
+  bool _anchored = false;
+
+  /// The server tick now, extrapolated from the newest message.
+  double get serverTick {
+    if (!_anchored) return 0;
+    final dt = (_now() - _anchorAt).inMicroseconds / 1e6;
+    return _anchorTick + dt * match.tickHz;
+  }
+
+  void _seen(int tick) {
+    final est = serverTick;
+    // Follow the server forward; resync when the local clock ran ahead.
+    if (!_anchored || tick > est || est - tick > 5) {
+      _anchorTick = tick;
+      _anchorAt = _now();
+      _anchored = true;
+    }
+  }
+
+  /// The child's gauge is full and the server waits for a move (from the
+  /// `deadline` event until the move goes out).
+  bool get waiting => _deadlineAt != null;
+
+  /// Seconds left before the server's おまかせ picks (null while not waiting).
+  double? get choiceLeft {
+    final at = _deadlineAt;
+    if (at == null) return null;
+    return ((at - serverTick) / match.tickHz).clamp(0.0, decisionSeconds);
+  }
+
+  /// Length of the whole choice window (the ring's full circle).
+  double get decisionSeconds {
+    final at = _deadlineAt, from = _readyTick;
+    if (at != null && from != null && at > from) {
+      return (at - from) / match.tickHz;
+    }
+    return (match.decisionTicks + 3) / match.tickHz;
+  }
+
   int _side(Object? s) {
     final i = s is num ? s.toInt() : 0;
     return _swap ? 1 - i : i;
@@ -70,10 +134,24 @@ class OnlineFeed implements StageFeed {
 
   /// Server events of one `ev` message.
   void addEvents(EvMsg m) {
+    _seen(m.tick);
     for (final raw in m.events) {
       final type = raw['type'];
       if (type is! String) continue;
       final tick = raw['tick'] is num ? (raw['tick']! as num).toInt() : m.tick;
+      final mine = raw['side'] == match.you;
+      if (type == 'deadline') {
+        // Server-only timing cue: not a stage event.
+        if (mine && raw['at'] is num) {
+          _deadlineAt = (raw['at']! as num).toInt();
+          _readyTick = tick;
+        }
+        continue;
+      }
+      if (mine && (type == 'select' || type == 'autoPick')) {
+        _deadlineAt = null;
+        onMyAction?.call();
+      }
       final data = <String, Object>{};
       for (final e in raw.entries) {
         if (e.key == 'tick' || e.key == 'type') continue;
@@ -100,12 +178,14 @@ class OnlineFeed implements StageFeed {
     _views[_swap ? 0 : 1] = m.sides[1];
     _snapTick = m.tick;
     if (m.tick > _newest) _newest = m.tick;
+    _seen(m.tick);
   }
 
   /// The match ended: make sure the stage shows the K.O. (a forfeit has no
   /// engine `end` event).
   void finish(int? winner) {
     _flush = true;
+    _deadlineAt = null;
     if (_ended || winner == null || _buffer.any((e) => e.type == 'end')) {
       return;
     }

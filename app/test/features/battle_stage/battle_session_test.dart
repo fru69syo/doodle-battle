@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
   bool auto = true,
   bool bloomer = false,
   int level = 12,
+  List<double> sizes = const [1, 1],
 }) {
   final sides = [
     DemoSide(
@@ -34,6 +35,7 @@ import 'package:flutter_test/flutter_test.dart';
   c.attach(
     [for (final s in sides) buildPuppetSync(s.puppet())],
     [for (final s in sides) s.look],
+    sizes: sizes,
   );
   return (c, feed);
 }
@@ -72,6 +74,48 @@ void main() {
     // The adapter turned the engine log into stage events.
     expect(s.log.whereType<StageAction>(), isNotEmpty);
     expect(s.log.whereType<StageEnd>().single.winner, feed.engine.winner);
+  });
+
+  test('a bigger boss stays in the shot, head below the panels', () {
+    final (s, feed) = stage(sizes: const [1, kBossSize]);
+    final (n, nFeed) = stage();
+    final d = s.director!;
+    const w = 393.0, h = 851.0;
+    const dt = 1 / 30;
+    var frames = 0, inView = 0;
+    var bossFx = 0.0, normalFx = 0.0;
+    while (!s.over && frames < 30 * 200) {
+      s.advance(dt);
+      n.advance(dt);
+      frames++;
+      var ok = true;
+      for (final f in d.fighters) {
+        final (x, y, k) = d.camera.project(f.x, f.z, w, h);
+        final size = d.size[f.side];
+        final half = d.halfWidth[f.side] * k;
+        final top = y - StageDirector.charHeight * size * k;
+        if (x - half < 0 || x + half > w || y > h || top < h * 0.12) {
+          ok = false;
+        }
+      }
+      if (ok) inView++;
+      for (final e in d.fx.where((e) => e.kind == 'number' && e.side == 1)) {
+        bossFx = e.y;
+      }
+      for (final e in n.director!.fx.where(
+        (e) => e.kind == 'number' && e.side == 1,
+      )) {
+        normalFx = e.y;
+      }
+    }
+    expect(s.over, isTrue);
+    expect(inView / frames, greaterThan(0.97));
+    // Damage numbers float over the boss's (higher) head.
+    expect(normalFx, greaterThan(0));
+    expect(bossFx, closeTo(normalFx * kBossSize, 1e-9));
+    // Visual only: the same battle as with normal sizes.
+    expect(feed.engine.winner, nFeed.engine.winner);
+    expect(d.halfWidth[1], greaterThan(n.director!.halfWidth[1]));
   });
 
   test('actions carry hits, crits and effectiveness from the engine', () {

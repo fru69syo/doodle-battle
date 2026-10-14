@@ -104,6 +104,7 @@ class StageDirector {
     int seed = 1,
     this.fxScale = const [1, 1],
     this.halfWidth = const [0.4, 0.4],
+    this.size = const [1, 1],
   }) : _rng = math.Random(seed),
        fighters = [StageFighter(0, -1.2, 0.5), StageFighter(1, 1.2, 1.9)] {
     fighters[0].dir = 1;
@@ -118,8 +119,20 @@ class StageDirector {
   final List<double> fxScale;
 
   /// Per side half width of the drawing (world units): wide animals and
-  /// cars need more room to be hit without overlapping.
+  /// cars need more room to be hit without overlapping. Already multiplied
+  /// by [size].
   final List<double> halfWidth;
+
+  /// Per side drawing size (1 = [charHeight] tall; bosses 1.3). Visual
+  /// only: effects over a bigger character sit higher, the camera keeps its
+  /// head in the shot.
+  final List<double> size;
+
+  /// World height of a character of size 1 (units).
+  static const charHeight = 1.25;
+
+  /// Height [y] (world units, for a size-1 character) over side [side].
+  double _y(int side, double y) => y * size[side];
   final List<StageFighter> fighters;
   final math.Random _rng;
   final camera = StageCamera();
@@ -161,7 +174,7 @@ class StageDirector {
             'number',
             f.x,
             f.z,
-            y: 1.1,
+            y: _y(target, 1.1),
             value: amount,
             colour: 'purple',
             duration: 0.8,
@@ -218,7 +231,7 @@ class StageDirector {
           'ko',
           l.x,
           l.z,
-          y: 1.0,
+          y: _y(l.side, 1.0),
           text: 'K.O.',
           duration: 1.6,
           side: l.side,
@@ -393,7 +406,7 @@ class StageDirector {
           m.vfx,
           f.x + f.dir * 0.35,
           f.z,
-          y: 0.65,
+          y: _y(a.side, 0.65),
           tx: o.x,
           tz: o.z,
           colour: m.colour,
@@ -411,7 +424,7 @@ class StageDirector {
           m.vfx,
           f.x,
           f.z,
-          y: 0.6,
+          y: _y(a.side, 0.6),
           colour: m.colour,
           duration: 0.9,
           side: a.side,
@@ -435,7 +448,7 @@ class StageDirector {
             'miss',
             tf.x,
             tf.z,
-            y: 1.3,
+            y: _y(h.target, 1.3),
             text: 'はずれ',
             duration: 0.8,
             side: h.target,
@@ -449,7 +462,7 @@ class StageDirector {
           'number',
           tf.x,
           tf.z,
-          y: 1.15,
+          y: _y(h.target, 1.15),
           value: h.amount!,
           colour: h.crit
               ? 'orange'
@@ -464,7 +477,7 @@ class StageDirector {
           m.kind == StageMoveKind.physical ? m.vfx : 'burst',
           tf.x - f.dir * 0.15,
           tf.z,
-          y: 0.55,
+          y: _y(h.target, 0.55),
           colour: m.colour,
           duration: m.kind == StageMoveKind.physical ? 0.45 : 0.4,
           side: a.side,
@@ -480,7 +493,7 @@ class StageDirector {
               'crit',
               tf.x,
               tf.z,
-              y: 1.5,
+              y: _y(h.target, 1.5),
               text: 'かいしん！',
               duration: 0.9,
               side: h.target,
@@ -494,7 +507,7 @@ class StageDirector {
               h.effectiveness == StageEffectiveness.strong ? 'strong' : 'weak',
               tf.x,
               tf.z,
-              y: h.crit ? 1.85 : 1.55,
+              y: _y(h.target, h.crit ? 1.85 : 1.55),
               text: eff,
               duration: 1.0,
               side: h.target,
@@ -525,7 +538,7 @@ class StageDirector {
                 'heal',
                 fighters[side].x,
                 fighters[side].z,
-                y: 1.15,
+                y: _y(side, 1.15),
                 value: amount,
                 colour: 'green',
                 duration: 0.9,
@@ -538,7 +551,7 @@ class StageDirector {
                 'status',
                 fighters[target].x,
                 fighters[target].z,
-                y: 1.45,
+                y: _y(target, 1.45),
                 text: status == StageStatusKind.poison ? 'ねばねば！' : 'ビリビリ！',
                 duration: 1.0,
                 side: target,
@@ -550,7 +563,7 @@ class StageDirector {
                 up ? 'up' : 'down',
                 fighters[side].x,
                 fighters[side].z,
-                y: 1.4,
+                y: _y(side, 1.4),
                 text: up ? 'パワーアップ！' : 'よわくなった',
                 duration: 1.0,
                 side: side,
@@ -562,7 +575,7 @@ class StageDirector {
                 'status',
                 fighters[side].x,
                 fighters[side].z,
-                y: 1.45,
+                y: _y(side, 1.45),
                 text: 'まもり！',
                 duration: 1.0,
                 side: side,
@@ -595,6 +608,28 @@ class StageDirector {
   }
 
   // --- camera --------------------------------------------------------------
+
+  /// Top of the shot kept free for the status panels (fraction of height).
+  static const headroom = 0.2;
+
+  double _tiltFor(StageCamera probe) {
+    var feetY = 0.0;
+    for (final f in fighters) {
+      feetY += probe.project(f.x, f.z, viewW, viewH).$2 - probe.tilt;
+    }
+    return 0.64 * viewH - feetY / 2;
+  }
+
+  bool _headsFit(StageCamera probe, double tilt) {
+    for (final f in fighters) {
+      if (f.mode == FighterMode.down) continue;
+      final (_, sy, k) = probe.project(f.x, f.z, viewW, viewH);
+      final head =
+          sy - probe.tilt + tilt - k * charHeight * size[f.side] * 1.05;
+      if (head < viewH * headroom) return false;
+    }
+    return true;
+  }
 
   void _frame({double dt = 0, bool snap = false}) {
     final a = fighters[0], b = fighters[1];
@@ -633,14 +668,15 @@ class StageDirector {
       if (ok) break;
       probe.zoom *= 0.94;
     }
-    zoom = probe.zoom;
     // Vertical framing: the fighters' feet around 64 % of the screen
-    // height (between the HP panels and the move buttons).
-    var feetY = 0.0;
-    for (final f in fighters) {
-      feetY += probe.project(f.x, f.z, viewW, viewH).$2 - probe.tilt;
+    // height (between the HP panels and the move buttons). A big (boss)
+    // fighter's head must stay below the panels: zoom out a little more.
+    var tilt = _tiltFor(probe);
+    for (var i = 0; i < 8 && !_headsFit(probe, tilt); i++) {
+      probe.zoom *= 0.95;
+      tilt = _tiltFor(probe);
     }
-    final tilt = 0.64 * viewH - feetY / 2;
+    zoom = probe.zoom;
     final k = snap ? 1.0 : math.min(1.0, dt * 4);
     camera.tilt += (tilt - camera.tilt) * k;
     camera.x += (tx - camera.x) * k;

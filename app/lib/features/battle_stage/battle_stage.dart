@@ -53,15 +53,23 @@ class BattleStageController extends ChangeNotifier {
   /// Average CPU time of [advance] (µs), for the debug label.
   double frameUs = 0;
 
-  /// Called by [BattleStage] once the puppets are built.
-  void attach(List<PuppetMesh> meshes, List<PuppetLook> looks) {
+  /// Called by [BattleStage] once the puppets are built. [sizes]: per side
+  /// drawing size (1 = normal, [kBossSize] for a world's boss); visual only.
+  void attach(
+    List<PuppetMesh> meshes,
+    List<PuppetLook> looks, {
+    List<double> sizes = const [1, 1],
+  }) {
     _director = StageDirector(
       contexts: [
         for (final m in meshes) AnimContext(m.rig, limited: m.simplified),
       ],
       seed: seed,
-      halfWidth: [for (final m in meshes) halfWidthOf(m)],
+      halfWidth: [
+        for (final (i, m) in meshes.indexed) halfWidthOf(m) * sizes[i],
+      ],
       fxScale: [for (final l in looks) l.fxScale],
+      size: sizes,
     )..shakeScale = reducedMotion ? 0 : 1;
     for (var i = 0; i < 2; i++) {
       _director!.fighters[i].shownHp = feed.fighter(i).maxHp.toDouble();
@@ -98,6 +106,10 @@ class BattleStageController extends ChangeNotifier {
   bool get over => winner != null;
 }
 
+/// Drawing size of a world's boss (stage 10) on the stage: bigger on
+/// screen only — stats, hit boxes of the engine and moves are unchanged.
+const double kBossSize = 1.3;
+
 /// Half the drawing's width in world units when it stands
 /// [StagePainter.charHeight] tall.
 double halfWidthOf(PuppetMesh c) {
@@ -121,6 +133,7 @@ class BattleStage extends ConsumerStatefulWidget {
     super.key,
     required this.controller,
     required this.fighters,
+    this.sizes = const [1, 1],
     this.drawnEffects = const {},
     this.quality,
     this.autoStart = true,
@@ -131,6 +144,10 @@ class BattleStage extends ConsumerStatefulWidget {
 
   /// Player (0) and opponent (1) puppets (picture, rig, look).
   final List<PuppetSpec> fighters;
+
+  /// Per side drawing size (1 = normal; [kBossSize] for bosses). Visual
+  /// only; the camera frames the bigger drawing.
+  final List<double> sizes;
 
   /// Drawn move effects by side (docs/LOOP.md), decoded.
   final Map<int, ui.Image> drawnEffects;
@@ -203,7 +220,9 @@ class BattleStageState extends ConsumerState<BattleStage>
         }
         return;
       }
-      widget.controller.attach(meshes, [for (final s in specs) s.look]);
+      widget.controller.attach(meshes, [
+        for (final s in specs) s.look,
+      ], sizes: widget.sizes);
       setState(() => sprites = made);
       if (widget.autoStart) _ticker = createTicker(_onTick)..start();
     } on Object catch (e) {

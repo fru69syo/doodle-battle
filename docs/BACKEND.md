@@ -245,7 +245,7 @@ values for those. The app should store `snapshotId` as `Character.onlineId`.
   "imageBase64": "<cut-out PNG>",              // context for Claude and for the name moderation
   "features": { … }, "energy10": 834, "skill10": 420,   // as for registerCharacter schema 2
   "verdict": "digital",                        // optional, the local character's verdict
-  "level": 10, "slot": 2,                      // slot 2 = Lv10 slot, 3 = Lv50 slot (must be unlocked)
+  "level": 10, "slot": 2,                      // any slot unlocked at `level` (2 = Lv10 slot, 3 = Lv50 slot)
   "otherNames": ["ねこパンチ", "しっぽビーム"]     // ≤ 3 kana names of the other moves
 }
 // response
@@ -263,6 +263,16 @@ values for those. The app should store `snapshotId` as `Character.onlineId`.
   for that slot and re-validates every proposal at every level anyway.
 - Cost: `cloudMoveGen` off (saving / minimal) → template at once, no AI call. Metered as
   `generateMove` (+ `moderateCharacter`) in `ops/aiUsage_YYYYMM`.
+- **Renaming at the Lv50 evolution (hidden late bloomer, SPEC §3.5 / §5.4; decided 2026-10-14).**
+  The rule is the same for every character: **any slot unlocked at `level`** may be asked for,
+  so at Lv50 slots 0–3 are all valid for everybody. The server never learns, and cannot tell
+  from the request, why a slot is asked for; the answer depends only on what the device sent
+  (budgets from `moveContextOf` with the device's own verdict at that level), so it reveals
+  nothing. The app asks only for the new slot 3 at a normal Lv50 evolution; after the hidden
+  Lv50 rebuild it asks for slot 3 first (so the result screen updates as fast as usual) and then
+  0, 1, 2 in the background, all only when cloud naming is allowed (`consent.cloudJudge` and
+  `cloudMoveGen`); otherwise the rebuilt template names stay, silently. Nothing in the UI differs
+  (`app/lib/features/battle_ui/new_moves.dart`). Rate limit 10/h, 20/day covers the 4 calls.
 - Errors: `UNAUTHENTICATED, CONSENT_REQUIRED (cloudJudge), INVALID_ARGUMENT (slot not unlocked,
   bad data), IMAGE_INVALID, IMAGE_TOO_LARGE, RATE_LIMITED (10/h, 20/day)`. App Check enforced.
 
@@ -321,10 +331,16 @@ waiting for the opponent) call `pollMatch`.
 // reasonCode: bad_picture | bad_name | real_person | personal_info | copied_character | other
 → { "ok": true, "alreadyReported": false }
 ```
-Only characters met in the reporter's last 50 matches can be reported (`NOT_SEEN_IN_MATCH`), not
+Only characters met in the reporter's last 50 matches — v1 `matches` and v2 realtime `rtMatches`
+(index `playerUids` + `endedAtMs desc`) — can be reported (`NOT_SEEN_IN_MATCH`), not
 your own (`CANNOT_REPORT_SELF`), 20/day. One report per reporter and snapshot. After **3 distinct
 reporters** the snapshot becomes `hidden` (unmatchable, image unreadable); every reported snapshot
 gets a `moderationQueue` entry for a human.
+
+Online (v2): the app gets the opponent's id from the realtime protocol (`FighterInfo.snapshotId`,
+REALTIME_PROTOCOL rev 2; ghosts too, never for the mirror ghost = own character). `rtMatches/{id}`
+is written when the match is settled, so a report made during the battle is held by the app
+and sent once the server's `end` arrived (the result is already persisted then).
 
 ### `reportAiSuggestion` (Google Play AI-generated content policy)
 

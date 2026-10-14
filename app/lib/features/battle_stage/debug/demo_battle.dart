@@ -81,9 +81,13 @@ class DemoBattleScreen extends StatefulWidget {
     this.theme = StageTheme.meadow,
     this.quality,
     this.autoStart = true,
+    this.cpuSize = 1,
   });
 
   final DemoSide player, cpu;
+
+  /// The CPU's drawing size (`kBossSize` previews a world's boss).
+  final double cpuSize;
   final int seed;
   final StageTheme theme;
   final StageQuality? quality;
@@ -120,6 +124,7 @@ class DemoBattleScreenState extends State<DemoBattleScreen> {
           BattleStage(
             controller: controller,
             fighters: [for (final s in sides) s.puppet()],
+            sizes: [1, widget.cpuSize],
             quality: widget.quality,
             autoStart: widget.autoStart,
           ),

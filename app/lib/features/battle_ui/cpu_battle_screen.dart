@@ -237,6 +237,8 @@ class _CpuBattleViewState extends ConsumerState<CpuBattleView> {
             name: widget.cpuName,
             level: widget.stage.cpuLevel,
             puppet: widget.cpuPuppet,
+            // A world's boss (stage 10) is drawn bigger; visual only.
+            size: widget.stage.boss ? kBossSize : 1,
           ),
         ],
         top: (_) => Align(

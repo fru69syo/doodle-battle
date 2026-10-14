@@ -50,8 +50,13 @@ void main() {
     expect(p.newSlots, [3]);
     expect(p.evolutions, ['densetsu']);
     expect(p.rebirth, isTrue);
+    expect(p.namingSlots, [3, 0, 1, 2]); // the rebuilt set: all names
     p = applyXp(s, level: 49, xp: 0, gained: xpToNext(s, 49));
     expect(p.rebirth, isFalse);
+    expect(p.namingSlots, [3]);
+    expect(applyXp(s, level: 9, xp: 0, gained: xpToNext(s, 9)).namingSlots, [
+      2,
+    ]);
     p = applyXp(s, level: 99, xp: 0, gained: 1 << 30);
     expect((p.level, p.xp), (100, 0));
     expect(unlockedSlots(s, 1), 2);

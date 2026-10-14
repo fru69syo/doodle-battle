@@ -11,7 +11,7 @@ import { UnsupportedFighterError, type BattleEngine, type FighterSetup, type Sid
 import type { Logger } from "./log";
 import { DEFAULT_TIMING, Match, type MatchSide, type MatchTiming, type Send } from "./match";
 import { Matchmaker, type QueueEntry } from "./matchmaker";
-import type { ErrorCode, FighterInfo, ServerMsg } from "./protocol";
+import { PROTOCOL_REVISION, PROTOCOL_VERSION, type ErrorCode, type FighterInfo, type ServerMsg } from "./protocol";
 import { badgeFor, RATED_SYNC_LEVEL, RATED_UNLOCK_LEVEL, initialRated, type RatedState } from "./rating";
 import { settle, type MatchSummary, type Settlement } from "./results";
 import type { PlayerProfile, SnapshotRecord, Store } from "./store";
@@ -108,7 +108,7 @@ export class Hub {
       old.close(4409, "replaced");
     }
     const matchId = this.matchOf.get(uid);
-    conn.send({ t: "welcome", proto: 1, serverTimeMs: this.now(), inMatch: matchId !== undefined });
+    conn.send({ t: "welcome", proto: PROTOCOL_VERSION, rev: PROTOCOL_REVISION, serverTimeMs: this.now(), inMatch: matchId !== undefined });
     const match = matchId ? this.matches.get(matchId) : undefined;
     const side = match?.sideOf(uid);
     if (match && side !== null && side !== undefined) {
@@ -178,6 +178,18 @@ export class Hub {
       return;
     }
     conn.send(m.select(side, seq, slot));
+  }
+
+  /** The child's おまかせ switch (protocol rev 2). */
+  omakase(uid: string, conn: Conn, on: boolean): void {
+    const id = this.matchOf.get(uid);
+    const m = id ? this.matches.get(id) : undefined;
+    const side = m?.sideOf(uid);
+    if (!m || side === null || side === undefined) {
+      conn.send({ t: "error", code: "NOT_IN_MATCH" });
+      return;
+    }
+    conn.send(m.setOmakase(side, on));
   }
 
   // --- the 10 Hz heartbeat ------------------------------------------------------------------------
@@ -250,8 +262,10 @@ export class Hub {
     };
   }
 
-  private info(src: SnapshotRecord | { display: SnapshotRecord["display"] }, setup: FighterSetup, displayName: string, badge: FighterInfo["badge"], isGhost: boolean): FighterInfo {
+  private info(src: Pick<SnapshotRecord, "snapshotId" | "display">, setup: FighterSetup, displayName: string, badge: FighterInfo["badge"], isGhost: boolean): FighterInfo {
     return {
+      // The public document id (reports, SPEC §9.4). Never anything derived from engine data.
+      snapshotId: src.snapshotId,
       displayName,
       characterName: src.display.characterName,
       imagePath: src.display.imagePath,

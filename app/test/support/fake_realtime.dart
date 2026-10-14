@@ -69,7 +69,9 @@ Map<String, Object?> fighterInfo(
   String displayName = 'あおい ドラゴン',
   bool ghost = false,
   int maxHp = 900,
+  String? snapshotId,
 }) => {
+  'snapshotId': ?snapshotId,
   'displayName': displayName,
   'characterName': name,
   'imagePath': 'snapshotImages/$name/image.png',
@@ -96,14 +98,24 @@ Map<String, Object?> fighterInfo(
   'isGhost': ghost,
 };
 
-Map<String, Object?> matchMsg({String you = 'a', bool resumed = false}) => {
+/// A match: `a` = the child's ねこまる (`snap_1`), `b` = a ghost
+/// ([foeId]; pass `snap_1` for a mirror ghost, null for a rev 1 server).
+Map<String, Object?> matchMsg({
+  String you = 'a',
+  bool resumed = false,
+  String? foeId = 'snap_foe',
+}) => {
   't': 'match',
   'matchId': 'm1',
   'you': you,
   'tickHz': 10,
   'decisionTicks': 50,
-  'a': fighterInfo('ねこまる', displayName: 'げんきな うさぎ'),
-  'b': fighterInfo('さかなくん', ghost: true),
+  'a': fighterInfo(
+    'ねこまる',
+    displayName: 'げんきな うさぎ',
+    snapshotId: foeId == null ? null : 'snap_1',
+  ),
+  'b': fighterInfo('さかなくん', ghost: true, snapshotId: foeId),
   'resumed': resumed,
 };
 
