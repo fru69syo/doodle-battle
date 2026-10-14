@@ -9,9 +9,12 @@ import '../../domain/character_v2.dart';
 import '../../domain/character_v2_view.dart';
 
 /// Asks the cloud (`generateMove`) for the move unlocked at Lv10 (slot 2)
-/// or Lv50 (slot 3). Only with the parent's cloud-judging consent and when
-/// the cost mode allows it; any failure keeps the template move silently
-/// (the child already sees a move with a template name).
+/// or Lv50 (slot 3), and for whatever other slots the level-up lists
+/// (`LevelProgress.namingSlots`; the server accepts any unlocked slot for
+/// every character, docs/BACKEND.md §5). Only with the parent's
+/// cloud-judging consent and when the cost mode allows it; any failure
+/// keeps the template move silently (the child already sees a move with a
+/// template name). Slots are asked one after the other, in the given order.
 class NewMoveNamer {
   NewMoveNamer(this._ref);
   final Ref _ref;
@@ -21,7 +24,7 @@ class NewMoveNamer {
   Future<void> nameNewSlots(CharacterV2 c, List<int> slots) async {
     final wanted = [
       for (final s in slots)
-        if (s >= 2 && s <= 3) s,
+        if (s >= 0 && s < c.unlockedSlotCount()) s,
     ];
     if (wanted.isEmpty) return;
     try {

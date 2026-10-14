@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/app_state.dart';
+import '../../data/backend/backend_api.dart';
 import '../../domain/character_v2.dart';
 import '../battle_stage/battle_stage.dart';
 import '../battle_stage/stage_overlay.dart';
@@ -55,8 +56,11 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
   // Controls state.
   int? _pending;
   bool _omakase = false;
-  bool _wasReady = false;
-  final _readyClock = Stopwatch();
+
+  // A report made during the battle waits for the server's `end`: the
+  // match record it is checked against is written when the match is settled.
+  (String, ReportReason)? _heldReport;
+  bool _reported = false;
 
   @override
   void initState() {
@@ -66,6 +70,7 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
 
   @override
   void dispose() {
+    _sendHeldReport();
     _controller?.dispose();
     _session?.dispose();
     super.dispose();
@@ -137,7 +142,11 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
 
   void _onMatch(MatchMsg m) {
     if (_feed != null && _feed!.match.matchId == m.matchId) return; // resumed
-    _feed = OnlineFeed(m);
+    _feed = OnlineFeed(m)
+      ..onMyAction = () {
+        // The move went out (さきどり used, or the server's おまかせ).
+        if (mounted && _pending != null) setState(() => _pending = null);
+      };
     unawaited(_buildStage(m));
   }
 
@@ -179,21 +188,7 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
     return ref.read(assetBytesProvider(kOnlineFallbackPicture).future);
   }
 
-  void _onSnap(SnapMsg m) {
-    final feed = _feed;
-    if (feed == null) return;
-    feed.addSnap(m);
-    final v = feed.view(0);
-    if (v == null) return;
-    if (_wasReady && !v.ready) _pending = null; // the move went out
-    if (v.ready && !_wasReady) {
-      _readyClock
-        ..reset()
-        ..start();
-    }
-    _wasReady = v.ready;
-    if (v.ready && _omakase && _pending == null) _select(_omakasePick(v));
-  }
+  void _onSnap(SnapMsg m) => _feed?.addSnap(m);
 
   void _onSel(SelMsg m) {
     if (!m.accepted && m.reason == 'unusable') {
@@ -203,6 +198,7 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
 
   void _onEnd(EndMsg m) {
     _feed?.finish(m.winner);
+    _sendHeldReport(); // the match record exists now
     if (m.reason == 'aborted' || _controller == null) {
       unawaited(_showResult(m));
     }
@@ -249,16 +245,12 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
     if (mounted) context.pushReplacement(Routes.battleResult, extra: outcome);
   }
 
-  int _omakasePick(SideView v) {
-    final moves = _feed!.moves[0];
-    var best = 0;
-    for (var i = 0; i < moves.length; i++) {
-      if (v.sp >= moves[i].spCost * 100 &&
-          moves[i].spCost >= moves[best].spCost) {
-        best = i;
-      }
-    }
-    return best;
+  void _setOmakase(bool on) {
+    setState(() {
+      _omakase = on;
+      if (on) _pending = null; // the server drops a pending さきどり too
+    });
+    _session?.setOmakase(on);
   }
 
   void _select(int slot) {
@@ -311,43 +303,65 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
     }
   }
 
+  /// Report button for the opponent's character (SPEC §9.4). Not for a
+  /// mirror ghost (that is the child's own character).
   Widget _foeReport() {
     final m = _session?.match;
     final id = m?.fighters[1 - m.you].snapshotId;
-    if (id == null) return const SizedBox.shrink();
+    if (id == null || id == _c.onlineId) return const SizedBox.shrink();
     return Align(
       alignment: Alignment.centerRight,
       child: IconButton(
         key: const Key('online-report'),
         iconSize: 28,
         constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-        icon: const Icon(Icons.flag_outlined),
-        onPressed: () => showReportSheet(context, ref, id),
+        icon: Icon(_reported ? Icons.flag : Icons.flag_outlined),
+        onPressed: _reported ? null : () => unawaited(_report(id)),
       ),
     );
+  }
+
+  Future<void> _report(String snapshotId) async {
+    final reason = await pickReportReason(context);
+    if (reason == null || !mounted) return;
+    setState(() => _reported = true);
+    if (_session?.end != null) {
+      await _sendReport(snapshotId, reason);
+    } else {
+      _heldReport = (snapshotId, reason);
+    }
+    if (mounted) await showReportThanks(context);
+  }
+
+  void _sendHeldReport() {
+    final r = _heldReport;
+    if (r == null) return;
+    _heldReport = null;
+    unawaited(_sendReport(r.$1, r.$2));
+  }
+
+  Future<void> _sendReport(String snapshotId, ReportReason reason) async {
+    try {
+      await ref.read(backendApiProvider).reportCharacter(snapshotId, reason);
+    } on Object {
+      // Offline / refused: the child was already thanked; nothing to tell.
+    }
   }
 
   Widget _controls() {
     final feed = _feed!;
     final v = feed.view(0);
-    final ready = v?.ready ?? false;
-    final m = feed.match;
-    final total = (m.decisionTicks + 3) / m.tickHz;
-    final left = ready && !_omakase
-        ? (total - _readyClock.elapsedMilliseconds / 1000).clamp(0.0, total)
-        : null;
+    // The ring: exact server deadline (protocol rev 2), real time.
+    final left = _omakase ? null : feed.choiceLeft;
     final moves = feed.moves[0];
     return BattleControls(
       moves: [for (final (i, mv) in moves.indexed) moveButtonData(mv, i)],
       selected: _pending,
       choiceLeft: left,
-      decisionSeconds: total,
+      decisionSeconds: feed.decisionSeconds,
       casting: v?.casting ?? false,
       omakase: _omakase,
-      onOmakase: (on) => setState(() {
-        _omakase = on;
-        if (on && ready && _pending == null) _select(_omakasePick(v!));
-      }),
+      onOmakase: _setOmakase,
       onTap: _select,
       usable: (i) => v == null || v.sp >= moves[i].spCost * 100,
     );

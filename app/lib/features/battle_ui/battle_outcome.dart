@@ -111,9 +111,9 @@ class BattleRewards {
     await _ref.read(charactersProvider.notifier).save(after);
     // Lv10 / Lv50: the new move may get an AI-designed name (in the
     // background; the result screen updates when it arrives).
-    if (p.newSlots.isNotEmpty) {
+    if (p.namingSlots.isNotEmpty) {
       unawaited(
-        _ref.read(newMoveNamerProvider).nameNewSlots(after, p.newSlots),
+        _ref.read(newMoveNamerProvider).nameNewSlots(after, p.namingSlots),
       );
     }
     return (after, make(after, p.newSlots, p.evolutions));

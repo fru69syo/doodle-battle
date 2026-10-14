@@ -1,6 +1,7 @@
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/game_progress.dart';
 import 'package:doodle_battle/domain/battle_v3/battle_v3.dart';
+import 'package:doodle_battle/domain/cost_mode.dart';
 import 'package:doodle_battle/features/battle_stage/stage_overlay.dart';
 import 'package:doodle_battle/features/battle_ui/battle_outcome.dart';
 import 'package:doodle_battle/features/monetization/monetization_service.dart';
@@ -181,6 +182,48 @@ void main() {
       await unmount(tester);
     }
   });
+
+  testWidgets(
+    'Lv50 naming: a rebuilt move set asks for all its names, quietly',
+    (tester) async {
+      // skill 90 = the hidden late bloomer (internal), rebuilt at Lv50: its
+      // template names are replaced by cloud names for every slot, the new
+      // slot first. Ordinary characters only ask for the new slot. Without
+      // cloud naming (consent / cost mode) nothing is asked. The screens are
+      // the same in every case.
+      for (final (skill, mode, consent, slots) in [
+        (20.0, CostMode.normal, true, [3]),
+        (90.0, CostMode.normal, true, [3, 0, 1, 2]),
+        (90.0, CostMode.saving, true, <int>[]),
+        (90.0, CostMode.normal, false, <int>[]),
+      ]) {
+        final backend = FakeBackend()..mode = mode;
+        final app = await pumpApp(
+          tester,
+          backend: backend,
+          characters: [testCharacter(level: 49, xp: 2839, skill: skill)],
+          settings: setupDone.copyWith(
+            consents: ParentConsents(cloudJudge: consent),
+          ),
+        );
+        await openStage(tester, 1);
+        await playBattle(tester);
+        await settleReal(tester, rounds: 5);
+        expect(find.byKey(const Key('result-evo-densetsu')), findsOneWidget);
+        expect(find.byKey(const Key('result-newmove-3')), findsOneWidget);
+        for (final k in [
+          'result-newmove-0',
+          'result-newmove-1',
+          'result-newmove-2',
+        ]) {
+          expect(find.byKey(Key(k)), findsNothing);
+        }
+        expect([for (final r in backend.generated) r.slot], slots);
+        expect((await app.characters.loadAll()).single.level, 50);
+        await unmount(tester);
+      }
+    },
+  );
 
   testWidgets('rewarded ad (allowed, Android): notice first, then XP ×2', (
     tester,

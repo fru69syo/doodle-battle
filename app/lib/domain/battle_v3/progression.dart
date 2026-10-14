@@ -236,7 +236,24 @@ class LevelProgress {
   final bool rebirth;
 
   bool get levelledUp => level > fromLevel;
+
+  /// Move slots whose name the app may ask the cloud for (`generateMove`)
+  /// after this gain: the newly unlocked ones, plus — INTERNAL — every slot
+  /// of a set rebuilt at the Lv50 evolution (the new slot first, so the
+  /// result screen updates as quickly as for anyone else). Callers treat
+  /// it as an opaque list, so the UI never learns why it is longer.
+  List<int> get namingSlots {
+    if (!rebirth) return newSlots;
+    return [
+      ...newSlots,
+      for (var i = 0; i < kMoveSlotCount; i++)
+        if (!newSlots.contains(i)) i,
+    ];
+  }
 }
+
+/// Move slots a character can have (2 at Lv1, 3rd at Lv10, 4th at Lv50).
+const int kMoveSlotCount = 4;
 
 /// Adds [gained] XP to a character at [level] with [xp] towards the next
 /// level. [isBloomer] is INTERNAL (only used to report [LevelProgress.rebirth]).

@@ -103,6 +103,13 @@ class RealtimeSession extends ChangeNotifier {
   RealtimePhase phase = RealtimePhase.connecting;
   String? error;
 
+  /// The server's protocol revision (`welcome.rev`; 1 = no `omakase`).
+  int serverRev = 1;
+
+  /// The child's おまかせ switch as last set with [setOmakase]. Re-sent
+  /// after every `match` (also when resuming after a reconnect).
+  bool omakase = false;
+
   /// Protocol error code that ended the session, if any.
   String? errorCode;
   MatchMsg? match;
@@ -157,8 +164,9 @@ class RealtimeSession extends ChangeNotifier {
   void _onFrame(String frame) {
     final m = ServerMsg.parse(frame);
     switch (m) {
-      case WelcomeMsg(:final inMatch):
+      case WelcomeMsg(:final inMatch, :final rev):
         _failures = 0;
+        serverRev = rev;
         if (!inMatch && phase != RealtimePhase.ended) {
           if (phase == RealtimePhase.battle) {
             // The match ended while away and its `end` is gone: nothing to
@@ -178,6 +186,7 @@ class RealtimeSession extends ChangeNotifier {
         match = m;
         onMatch?.call(m);
         _set(RealtimePhase.battle);
+        if (omakase) _sendOmakase();
       case EvMsg():
         if (m.seq <= _lastSeq) return; // replayed after a reconnect
         _lastSeq = m.seq;
@@ -199,7 +208,7 @@ class RealtimeSession extends ChangeNotifier {
         } else {
           _fail('うまく いかなかったよ');
         }
-      case PongMsg() || CancelledMsg() || null:
+      case PongMsg() || CancelledMsg() || OmakaseAckMsg() || null:
         break;
     }
   }
@@ -277,6 +286,20 @@ class RealtimeSession extends ChangeNotifier {
   void select(int slot) {
     if (phase != RealtimePhase.battle) return;
     _socket?.send(selectMsg(++_selectSeq, slot));
+  }
+
+  /// The child's おまかせ switch: while on, the server picks the moves (the
+  /// same AI as the 5 s timeout, 1 s after the gauge fills); off gives the
+  /// child full control again. Needs a rev 2 server; a rev 1 server's
+  /// timeout keeps picking for an idle child instead.
+  void setOmakase(bool on) {
+    omakase = on;
+    if (phase == RealtimePhase.battle) _sendOmakase();
+  }
+
+  void _sendOmakase() {
+    if (serverRev < kRealtimeRevision) return;
+    _socket?.send(omakaseMsg(omakase));
   }
 
   /// Leaves the queue / the screen. Safe to call twice.
