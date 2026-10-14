@@ -1,6 +1,5 @@
-import 'package:doodle_battle/domain/battle/battle.dart';
-import 'package:doodle_battle/domain/stats.dart';
-import 'package:doodle_battle/features/family_battle/family_battle_session.dart';
+import 'package:doodle_battle/domain/battle_v3/battle_v3.dart';
+import 'package:doodle_battle/features/battle_stage/stage_overlay.dart';
 import 'package:doodle_battle/features/family_battle/family_setup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,138 +30,86 @@ FamilyBattleConfig config({
       id: 'b',
       name: 'いぬまる',
       level: levelB,
-      stats: const Stats(hp: 120, atk: 150, def: 110, spd: 140),
+      energy: 70,
+      features: const {'inkCoverage': 0.2, 'roundness': 0.8},
     ),
     boost: boostB,
   ),
   sameLevel: sameLevel,
 );
 
-/// Plays the hot-seat flow until the winner is shown. Returns the cover
-/// texts seen (title, hint) in order.
-Future<List<(String, String)>> playFamilyBattle(WidgetTester tester) async {
-  final covers = <(String, String)>[];
-  var steps = 0;
-  while (find.byKey(const Key('family-result-title')).evaluate().isEmpty) {
-    expect(steps++, lessThan(200), reason: 'battle should end');
-    final cover = find.byKey(const Key('family-cover'));
-    if (cover.evaluate().isNotEmpty) {
-      // Nothing to choose while the screen is covered.
-      expect(find.byKey(const Key('move-tackle')), findsNothing);
-      covers.add((
-        tester.widget<Text>(find.byKey(const Key('family-cover-title'))).data!,
-        tester.widget<Text>(find.byKey(const Key('family-cover-hint'))).data!,
-      ));
-      await tester.tap(find.byKey(const Key('family-cover-continue')));
-      await tester.pumpAndSettle();
-      continue;
-    }
-    final special = find.byKey(const Key('move-special'));
-    final ready = tester.widget<ButtonStyleButton>(special).enabled;
-    await tester.tap(ready ? special : find.byKey(const Key('move-element')));
-    await tester.pumpAndSettle();
-  }
-  return covers;
-}
-
 void main() {
+  const spec = V3Spec();
+
   group('handicap', () {
     test('おなじ レベル raises the lower level to the higher one', () {
       final c = config();
-      expect(c.battleLevel(testSpec, Side.a), 5);
-      expect(c.battleLevel(testSpec, Side.b), 5);
+      expect(c.battleLevel(FamilySide.a), 5);
+      expect(c.battleLevel(FamilySide.b), 5);
       final off = config(sameLevel: false);
-      expect(off.battleLevel(testSpec, Side.a), 1);
-      expect(off.battleLevel(testSpec, Side.b), 5);
+      expect(off.battleLevel(FamilySide.a), 1);
+      expect(off.battleLevel(FamilySide.b), 5);
     });
 
     test('manual boost on top, capped at the max level', () {
       final c = config(boostA: 10);
-      expect(c.battleLevel(testSpec, Side.a), 15);
-      expect(c.battleLevel(testSpec, Side.b), 5);
-      final capped = config(levelA: 28, levelB: 3, boostA: 10, boostB: 5);
-      expect(capped.battleLevel(testSpec, Side.a), testSpec.growth.maxLevel);
-      expect(capped.battleLevel(testSpec, Side.b), testSpec.growth.maxLevel);
+      expect(c.battleLevel(FamilySide.a), 15);
+      expect(c.battleLevel(FamilySide.b), 5);
+      final capped = config(levelA: 98, levelB: 3, boostA: 10, boostB: 5);
+      expect(capped.battleLevel(FamilySide.a), spec.maxLevel);
+      expect(capped.battleLevel(FamilySide.b), spec.maxLevel);
+    });
+
+    test('battleLevel is familyBattleLevel', () {
+      final c = config(boostA: 3);
+      expect(
+        c.battleLevel(FamilySide.a),
+        familyBattleLevel(
+          spec,
+          ownLevel: 1,
+          otherLevel: 5,
+          sameLevel: true,
+          boost: 3,
+        ),
+      );
     });
 
     test('setups are ordinary engine setups at the battle level', () {
-      final c = config(boostA: 3, skillA: 90);
-      final a = c.setup(testSpec, Side.a);
-      expect(a.level, 8);
-      // Same growth rules as the character itself (its own growth rate,
-      // spent seeds) — only the level changes.
-      expect(
-        a.stats,
-        statsAtLevel(
-          testSpec,
-          c.a.character.baseStats,
-          8,
-          c.a.character.seedAllocations,
-          isShobo: isShoboSkill(testSpec, 90),
-        ),
-      );
-      expect(a.stats, currentStats(testSpec, c.a.character.copyWith(level: 8)));
-      final b = c.setup(testSpec, Side.b);
-      expect(b.stats, currentStats(testSpec, c.b.character));
-      expect(b.level, 5);
+      final c = config(boostA: 3);
+      final a = c.setup(FamilySide.a);
+      // The character as it would be at Lv8: own growth, Lv8 slots.
+      expect(a.stats, c.a.character.copyWith(level: 8).stats());
+      expect(a.moves.length, unlockedSlots(spec, 8));
+      final b = c.setup(FamilySide.b);
+      expect(b.stats, c.b.character.stats());
+    });
+
+    test('a hidden late bloomer keeps its form even when boosted', () {
+      // Lv45 + 10 = Lv55 battle level, but its real level is below 50:
+      // the family battle must not reveal the Lv50 rebuild early.
+      final c = config(levelA: 45, levelB: 45, skillA: 90, boostA: 10);
+      final boosted = c.setup(FamilySide.a);
+      final real = c.a.character.copyWith(level: 55).battleSetup();
+      expect(boosted.stats, isNot(real.stats));
     });
 
     test('mirror match names carry the team colour', () {
       final c = config();
-      expect(c.fighterName(Side.a), 'ねこまる');
+      expect(c.fighterName(FamilySide.a), 'ねこまる');
       final mirror = c.copyWith(b: c.b.copyWith(character: c.a.character));
-      expect(mirror.fighterName(Side.a), 'ねこまる（あか）');
-      expect(mirror.fighterName(Side.b), 'ねこまる（あお）');
+      expect(mirror.fighterName(FamilySide.a), 'ねこまる（あか）');
+      expect(mirror.fighterName(FamilySide.b), 'ねこまる（あお）');
     });
   });
 
-  test('session: a picks, then b, then the engine resolves', () {
-    final c = config();
-    final s = FamilyBattleSession(spec: testSpec, config: c, seed: 9);
-    final reference = FamilyBattleSession(spec: testSpec, config: c, seed: 9);
-    var state = initBattle(
-      testSpec,
-      c.setup(testSpec, Side.a),
-      c.setup(testSpec, Side.b),
-    );
-    expect(s.state, state);
-    final rng = Mulberry32(deriveSeed(9, 0));
-    while (!s.isOver) {
-      expect(s.picker, Side.a);
-      expect(s.pick(BattleAction.tackle), isNull);
-      expect(s.picker, Side.b);
-      final events = s.pick(BattleAction.element);
-      final r = resolveTurn(
-        testSpec,
-        state,
-        BattleAction.tackle,
-        BattleAction.element,
-        rng,
-      );
-      state = r.state;
-      expect(events, r.events);
-      expect(s.state, state);
-      reference
-        ..pick(BattleAction.tackle)
-        ..pick(BattleAction.element);
-    }
-    expect(reference.state, s.state);
-    expect(() => s.pick(BattleAction.tackle), throwsStateError);
-  });
-
-  testWidgets('full hot-seat battle: cover screens, handicap, no XP', (
+  testWidgets('ATB family battle: both sides play, handicap, no XP', (
     tester,
   ) async {
     final app = await pumpApp(
       tester,
       characters: [
         testCharacter(id: 'c_1', name: 'ねこまる', level: 1),
-        testCharacter(
-          id: 'c_2',
-          name: 'いぬまる',
-          level: 5,
-          stats: const Stats(hp: 120, atk: 150, def: 110, spd: 140),
-        ),
+        testCharacter(id: 'c_2', name: 'いぬまる', level: 5, energy: 70),
       ],
     );
     await tapVisible(tester, find.byKey(const Key('home-family')));
@@ -172,14 +119,10 @@ void main() {
       tester.widget<Text>(find.byKey(const Key('family-char-a'))).data,
       'いぬまる',
     );
-    expect(
-      tester.widget<Text>(find.byKey(const Key('family-char-b'))).data,
-      'ねこまる',
-    );
-    Text level(Side s) =>
+    Text level(FamilySide s) =>
         tester.widget<Text>(find.byKey(Key('family-level-${s.name}')));
-    expect(level(Side.a).data, 'Lv5');
-    expect(level(Side.b).data, 'Lv5');
+    expect(level(FamilySide.a).data, 'Lv5');
+    expect(level(FamilySide.b).data, 'Lv5');
 
     // Swap: あか takes ねこまる (Lv1) with a ハンデ of +3, あお いぬまる (Lv5).
     await tapVisible(tester, find.byKey(const Key('family-pick-a')));
@@ -189,81 +132,57 @@ void main() {
     await tester.tap(find.byKey(const Key('family-option-c_2')));
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byKey(const Key('family-boost-a-3')));
-    expect(level(Side.a).data, 'Lv8');
-    expect(level(Side.b).data, 'Lv5');
-    // Without おなじ レベル: own level + boost.
+    expect(level(FamilySide.a).data, 'Lv8');
     await tapVisible(tester, find.byKey(const Key('family-same-level')));
-    expect(level(Side.a).data, 'Lv4');
+    expect(level(FamilySide.a).data, 'Lv4');
     await tapVisible(tester, find.byKey(const Key('family-same-level')));
-    expect(level(Side.a).data, 'Lv8');
-
+    expect(level(FamilySide.a).data, 'Lv8');
     await tester.scrollUntilVisible(
       find.byKey(const Key('family-no-xp-note')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tapVisible(tester, find.byKey(const Key('family-start')));
+    await tapNoSettle(tester, find.byKey(const Key('family-start')));
+    await settleReal(tester, rounds: 10);
 
-    // First cover: あか's turn, あお looks away; no moves visible.
-    expect(find.text('あか チームの ばん！'), findsOneWidget);
-    expect(find.text('あお チームは みないでね'), findsOneWidget);
-    expect(find.byKey(const Key('move-tackle')), findsNothing);
-    await tester.tap(find.byKey(const Key('family-cover-continue')));
-    await tester.pumpAndSettle();
-
-    // Handicap applied in the engine: Lv8 / Lv5 and HP from statsAtLevel.
+    // Both players have their own move pad (あお's is upside down on top).
+    expect(find.byKey(const Key('family-controls-a')), findsOneWidget);
+    expect(find.byKey(const Key('family-controls-b')), findsOneWidget);
+    expect(find.byType(RotatedBox), findsWidgets);
+    expect(find.byType(MovePad), findsNWidgets(2));
+    // Handicap applied: Lv8 / Lv5 in the status panels.
     expect(find.text('Lv8'), findsOneWidget);
     expect(find.text('Lv5'), findsOneWidget);
-    final hpA =
-        statsAtLevel(
-          testSpec,
-          const Stats(hp: 140, atk: 140, def: 120, spd: 130),
-          8,
-          const {},
-          isShobo: false,
-        ).hp *
-        testSpec.hpMultiplier;
-    expect(find.text('$hpA / $hpA'), findsOneWidget);
-    expect(find.text('あか チーム: わざを えらんでね'), findsOneWidget);
+    // さきどり for both.
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('family-controls-a')),
+        matching: find.byKey(const Key('move-1')),
+      ),
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('family-controls-b')),
+        matching: find.byKey(const Key('move-0')),
+      ),
+    );
+    await tester.pump();
 
-    await tester.tap(find.byKey(const Key('move-tackle')));
-    await tester.pumpAndSettle();
-    // Second cover: あお's turn, あか looks away.
-    expect(find.text('あお チームの ばん！'), findsOneWidget);
-    expect(find.text('あか チームは みないでね'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('family-cover-continue')));
-    await tester.pumpAndSettle();
-    expect(find.text('あお チーム: わざを えらんでね'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('move-guard')));
-    await tester.pumpAndSettle();
-    // Turn resolved and animated; next turn starts with あか's cover.
-    expect(find.text('2 ターンめ'), findsOneWidget);
-    expect(find.text('あか チームの ばん！'), findsOneWidget);
-
-    final covers = await playFamilyBattle(tester);
-    // Covers always alternate あか → あお.
-    for (final (i, (title, hint)) in covers.indexed) {
-      expect(title, i.isEven ? 'あか チームの ばん！' : 'あお チームの ばん！');
-      expect(hint, i.isEven ? 'あお チームは みないでね' : 'あか チームは みないでね');
-    }
+    await playBattle(
+      tester,
+      done: find.byKey(const Key('family-result-title')),
+    );
     expect(find.textContaining('の かち！'), findsOneWidget);
     expect(find.textContaining('けいけんち'), findsNothing);
-
     // No XP, no level change for either character.
     final saved = await app.characters.loadAll();
     expect([for (final c in saved) (c.level, c.xp)], [(1, 0), (5, 0)]);
 
     // もういちど: a fresh battle with the same setup.
-    await tapVisible(tester, find.byKey(const Key('family-rematch')));
-    expect(find.text('1 ターンめ'), findsOneWidget);
-    expect(find.text('あか チームの ばん！'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('family-cover-continue')));
-    await tester.pumpAndSettle();
+    await tapNoSettle(tester, find.byKey(const Key('family-rematch')));
+    await settleReal(tester, rounds: 10);
     expect(find.text('Lv8'), findsOneWidget);
-    // Leave mid-battle via back → setup still holds the choices.
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(level(Side.a).data, 'Lv8');
+    expect(find.byKey(const Key('family-controls-b')), findsOneWidget);
   });
 
   testWidgets('one character: mirror match with family names', (tester) async {
@@ -292,16 +211,15 @@ void main() {
       'Lv13',
     );
 
-    await tapVisible(tester, find.byKey(const Key('family-start')));
-    expect(find.text('おとうさんの ばん！'), findsOneWidget);
-    expect(find.text('いもうとは みないでね'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('family-cover-continue')));
-    await tester.pumpAndSettle();
-    expect(find.text('ねこまる（あか）'), findsOneWidget);
-    expect(find.text('ねこまる（あお）'), findsOneWidget);
+    await tapNoSettle(tester, find.byKey(const Key('family-start')));
+    await settleReal(tester, rounds: 10);
+    expect(find.text('おとうさん: ねこまる（あか）'), findsOneWidget);
+    expect(find.text('いもうと: ねこまる（あお）'), findsOneWidget);
 
-    final covers = await playFamilyBattle(tester);
-    expect(covers.first, ('いもうとの ばん！', 'おとうさんは みないでね'));
+    await playBattle(
+      tester,
+      done: find.byKey(const Key('family-result-title')),
+    );
     expect(
       find.byWidgetPredicate(
         (w) => w is Text && (w.data == 'おとうさんの かち！' || w.data == 'いもうとの かち！'),

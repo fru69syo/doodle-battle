@@ -241,3 +241,20 @@ Future<void> playBattle(
   expect(target, findsWidgets, reason: 'the battle should end');
   await tester.pumpAndSettle();
 }
+
+/// Taps [finder] (scrolling it into view) without waiting for animations
+/// to settle — for buttons that open a battle (the stage animates forever).
+Future<void> tapNoSettle(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+  await tester.ensureVisible(finder);
+  await tester.pump();
+  await tester.tap(finder);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+}

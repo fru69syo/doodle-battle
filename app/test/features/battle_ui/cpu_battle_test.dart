@@ -16,15 +16,7 @@ Future<void> openStage(WidgetTester tester, int stage) async {
   await tapVisible(tester, find.byKey(const Key('select-c_1')));
   await tapVisible(tester, find.byKey(Key('world-${(stage - 1) ~/ 10 + 1}')));
   // The battle animates forever: no pumpAndSettle after this tap.
-  final tile = find.byKey(Key('stage-$stage'));
-  await tester.scrollUntilVisible(
-    tile,
-    200,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.tap(tile);
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 400));
+  await tapNoSettle(tester, find.byKey(Key('stage-$stage')));
 }
 
 void main() {
@@ -96,10 +88,7 @@ void main() {
   testWidgets('ATB battle: さきどり, unlocked moves, おまかせ, XP and stars', (
     tester,
   ) async {
-    final app = await pumpApp(
-      tester,
-      characters: [testCharacter(level: 10)],
-    );
+    final app = await pumpApp(tester, characters: [testCharacter(level: 10)]);
     await openStage(tester, 1);
     await settleReal(tester, rounds: 10);
     // Lv10: three moves, ひっさつ locked until Lv50.
@@ -110,8 +99,10 @@ void main() {
     // さきどり: pick while the gauge is still filling.
     await tester.tap(find.byKey(const Key('move-1')));
     await tester.pump();
-    expect(tester.widget<MoveButton>(find.byKey(const Key('move-1'))).selected,
-        isTrue);
+    expect(
+      tester.widget<MoveButton>(find.byKey(const Key('move-1'))).selected,
+      isTrue,
+    );
     // おまかせ is remembered for the next battle.
     await tester.tap(find.byType(OmakaseToggle));
     await tester.pump();
@@ -170,9 +161,7 @@ void main() {
     expect(c.allMoves()[2].name, 'きらきらビーム');
   });
 
-  testWidgets('Lv50 しんか looks the same for every character', (
-    tester,
-  ) async {
+  testWidgets('Lv50 しんか looks the same for every character', (tester) async {
     // skill 90 = the hidden late bloomer (internal); the screen must not
     // differ from an ordinary character's Lv50 evolution.
     for (final skill in [20.0, 90.0]) {

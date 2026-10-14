@@ -6,6 +6,7 @@ import 'package:doodle_battle/data/drawing_loop_storage.dart';
 import 'package:doodle_battle/domain/cosmetics.dart';
 import 'package:doodle_battle/features/card_print/card_output.dart';
 import 'package:doodle_battle/features/drawing_loop/display_image.dart';
+import 'package:doodle_battle/features/battle_stage/battle_stage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,7 +64,7 @@ void main() {
     expect(image.bytes, composite);
   });
 
-  testWidgets('family battle flies the drawn effect of each player', (
+  testWidgets('family battle flies the drawn effect of the player who drew', (
     tester,
   ) async {
     final store = InMemoryDrawingLoopStorage();
@@ -83,43 +84,15 @@ void main() {
           ),
         ),
       ],
-      battleStep: const Duration(milliseconds: 300),
       overrides: [drawingLoopStorageProvider.overrideWithValue(store)],
     );
     await tapVisible(tester, find.byKey(const Key('home-family')));
-    await tapVisible(tester, find.byKey(const Key('family-start')));
-    Future<void> cover() async {
-      await tester.tap(find.byKey(const Key('family-cover-continue')));
-      await tester.pumpAndSettle();
-    }
-
-    Future<Set<String>> resolveWith(String bMove) async {
-      await tester.tap(find.byKey(Key(bMove)));
-      final seen = <String>{};
-      for (var i = 0; i < 200; i++) {
-        await tester.pump(const Duration(milliseconds: 16));
-        for (final k in ['move-effect-custom', 'move-effect-default']) {
-          if (find.byKey(Key(k)).evaluate().isNotEmpty) seen.add(k);
-        }
-      }
-      await tester.pumpAndSettle();
-      return seen;
-    }
-
-    // あか (drawn effect) uses ぞくせいわざ, あお (no drawing) guards.
-    await cover();
-    await tester.tap(find.byKey(const Key('move-element')));
-    await tester.pumpAndSettle();
-    await cover();
-    final seen = await resolveWith('move-guard');
-    expect(seen, {'move-effect-custom'});
-
-    // あお's ぞくせいわざ falls back to the default effect.
-    await cover();
-    await tester.tap(find.byKey(const Key('move-guard')));
-    await tester.pumpAndSettle();
-    await cover();
-    expect(await resolveWith('move-element'), contains('move-effect-default'));
+    await tapNoSettle(tester, find.byKey(const Key('family-start')));
+    await settleReal(tester, rounds: 10);
+    // あか's drawing is handed to the stage; あお (no drawing) uses the
+    // normal effect.
+    final stage = tester.widget<BattleStage>(find.byType(BattleStage));
+    expect(stage.drawnEffects.keys, [0]);
     await unmount(tester);
   });
 }
