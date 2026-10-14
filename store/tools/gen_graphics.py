@@ -363,7 +363,7 @@ def make_feature() -> Image.Image:
     # crayon underline
     crayon_line(img, [(W * 0.34 + i * W * 0.32 / 20, ty + bb[3] + H * 0.045 + math.sin(i / 2.0) * H * 0.008)
                       for i in range(21)], YELLOW, H * 0.02, rng)
-    sub = "かみに かいた えが たたかう！"
+    sub = "かいた えが うごいて たたかう！"
     f2 = ImageFont.truetype(fp, int(H * 0.058))
     bb2 = d.textbbox((0, 0), sub, font=f2)
     sx = (W - (bb2[2] - bb2[0])) / 2 - bb2[0]
