@@ -259,7 +259,7 @@ scripts/check_16kb.sh app/build/app/outputs/bundle/release/app-release.aab
 python3 scripts/check_listing.py
 ```
 - メモリの少ない環境では Gradle のヒープを下げます（例 `GRADLE_OPTS=-Dorg.gradle.jvmargs=-Xmx5G` か `~/.gradle/gradle.properties`）。Maven Central が 429 を返すときは、キャッシュ済みの `GRADLE_USER_HOME` を使います。
-- 2026-10-14 の計測（v2.0.0+2000099、debug 鍵、`--obfuscate` なし）: §8 を参照。
+- 2026-10-14 の計測（v2.0.0+2000099）: §8。
 
 ---
 
@@ -398,3 +398,4 @@ Play では、一度出した版より**小さい versionCode に戻すことは
 |---|---|---|
 | 2026-10-09 | v1 系、テスト用の鍵 | AAB 61.8 MiB、arm64 のダウンロード 16.9 MiB、64 bit のネイティブライブラリ 22 個すべて 16 KB 境界 |
 | 2026-10-09 | v1 系 + AdMob・Billing・Crashlytics | AAB 88.5 MiB、arm64 のダウンロード 26.9 MiB、24 個すべて 16 KB 境界、`check_release.sh` 合格 |
+| 2026-10-14 | **v2.0.0+2000099**（debug 鍵、`REALTIME_URL` あり、`IAP_ENABLED` なし、`--obfuscate` なし。Gradle `-Xmx5G`） | ビルド成功（約 6.5 分）。AAB 98.6 MiB、ユニバーサル APK 104.1 MiB、**arm64 のダウンロード 31.3 MiB**。ネイティブライブラリ 36 個すべて zip で 16 KB 境界、64 bit 24 個すべて ELF の LOAD ≥ 16 KB。`check_release.sh --expect-version-code 2000099 --expect-version-name 2.0.0` 合格（警告はテストの AdMob ID と debug 鍵だけ）。権限は CAMERA・INTERNET・ACCESS_NETWORK_STATE・WAKE_LOCK・FOREGROUND_SERVICE・WRITE/READ_EXTERNAL_STORAGE（maxSdk 28）だけで、**BILLING と AD_ID は無い**。`IAP_ENABLED=true` を渡したマージ済みマニフェストでは BILLING が残り、`check_release.sh` が失敗することも確認 |
