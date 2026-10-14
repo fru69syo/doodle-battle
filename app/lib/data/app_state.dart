@@ -7,7 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
-import '../domain/character.dart';
+import '../domain/character_v2.dart';
+import '../features/puppet/rig/character_rig.dart';
 import '../features/puppet/puppet_store.dart';
 import 'app_settings.dart';
 import 'character_repository.dart';
@@ -89,30 +90,58 @@ final settingsProvider = AsyncNotifierProvider<SettingsController, AppSettings>(
   SettingsController.new,
 );
 
+/// Products that count right now: the cached entitlements, or none while
+/// in-app purchases are switched off ([iapEnabledProvider]).
+final ownedProductsProvider = Provider<Set<String>>((ref) {
+  if (!ref.watch(iapEnabledProvider)) return const {};
+  return ref.watch(settingsProvider).value?.entitlements ?? const {};
+});
+
 /// Collection size limit from cached entitlements.
 final collectionLimitProvider = Provider<int>((ref) {
-  final s = ref.watch(settingsProvider).value;
-  final extra = (s?.entitlements.contains('slots_24') ?? false)
+  final extra = ref.watch(ownedProductsProvider).contains('slots_24')
       ? extraSlotsPerPack
       : 0;
   return freeCollectionLimit + extra;
 });
 
 /// The child's characters, oldest first.
-class CharactersController extends AsyncNotifier<List<Character>> {
+class CharactersController extends AsyncNotifier<List<CharacterV2>> {
   @override
-  Future<List<Character>> build() =>
-      ref.watch(characterRepositoryProvider).loadAll();
+  Future<List<CharacterV2>> build() async {
+    final repo = ref.watch(characterRepositoryProvider);
+    final all = await repo.loadAll();
+    return [for (final c in all) await _adoptStoredRig(repo, c)];
+  }
+
+  /// Rigs edited before the v2 record existed live only in the
+  /// [PuppetStore]; copy them into `CharacterV2.rig` once (docs/PUPPET.md §6).
+  Future<CharacterV2> _adoptStoredRig(
+    CharacterRepository repo,
+    CharacterV2 c,
+  ) async {
+    if (c.rig != null) return c;
+    try {
+      final json = await ref.read(puppetStoreProvider).loadRigJson(c.id);
+      final blob = CharacterRig.tryDecode(json)?.toBlob();
+      if (blob == null) return c;
+      final updated = c.copyWith(rig: () => blob);
+      await repo.update(updated);
+      return updated;
+    } on Object {
+      return c;
+    }
+  }
 
   CharacterRepository get _repo => ref.read(characterRepositoryProvider);
 
   /// Throws [CollectionFullException].
-  Future<void> add(Character c, Uint8List png) async {
+  Future<void> add(CharacterV2 c, Uint8List png) async {
     await _repo.add(c, png, limit: ref.read(collectionLimitProvider));
     state = AsyncData([...await future, c]);
   }
 
-  Future<void> save(Character c) async {
+  Future<void> save(CharacterV2 c) async {
     await _repo.update(c);
     state = AsyncData([for (final x in await future) x.id == c.id ? c : x]);
   }
@@ -140,12 +169,12 @@ class CharactersController extends AsyncNotifier<List<Character>> {
 }
 
 final charactersProvider =
-    AsyncNotifierProvider<CharactersController, List<Character>>(
+    AsyncNotifierProvider<CharactersController, List<CharacterV2>>(
       CharactersController.new,
     );
 
 /// One character by id (null when missing / still loading).
-final characterByIdProvider = Provider.family<Character?, String>((ref, id) {
+final characterByIdProvider = Provider.family<CharacterV2?, String>((ref, id) {
   final list = ref.watch(charactersProvider).value ?? const [];
   for (final c in list) {
     if (c.id == id) return c;
@@ -168,9 +197,29 @@ class ProgressController extends AsyncNotifier<GameProgress> {
     state = AsyncData(p);
   }
 
-  Future<void> markStageCleared(int stage) async {
+  Future<void> markStageCleared(int stage) => recordStageWin(stage, 1);
+
+  /// A won single-player stage with [stars] (1–3): unlocks the next stage
+  /// and keeps the best stars.
+  Future<void> recordStageWin(int stage, int stars) async {
     final p = await future;
-    if (stage > p.clearedStage) await _save(p.copyWith(clearedStage: stage));
+    final best = p.starsOf(stage) > stars ? p.starsOf(stage) : stars;
+    await _save(
+      p.copyWith(
+        clearedStage: stage > p.clearedStage ? stage : p.clearedStage,
+        stageStars: {...p.stageStars, stage: best.clamp(1, 3)},
+      ),
+    );
+  }
+
+  Future<void> setOmakase(bool on) async {
+    final p = await future;
+    if (p.omakase != on) await _save(p.copyWith(omakase: on));
+  }
+
+  Future<void> setOnlineBadge(String badge) async {
+    final p = await future;
+    if (p.onlineBadge != badge) await _save(p.copyWith(onlineBadge: badge));
   }
 
   /// Returns false when [matchId] was already applied.

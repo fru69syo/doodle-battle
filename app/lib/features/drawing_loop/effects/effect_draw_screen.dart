@@ -10,11 +10,9 @@ import '../../../core/widgets/character_picture.dart';
 import '../../../core/widgets/kid_dialogs.dart';
 import '../../../data/app_state.dart';
 import '../../../data/drawing_loop_storage.dart';
-import '../../../domain/battle/battle.dart';
-import '../../../domain/character.dart';
+import '../../../domain/character_v2.dart';
+import '../../../domain/character_v2_view.dart';
 import '../../../domain/cosmetics.dart';
-import '../../battle_ui/move_labels.dart';
-import '../display_image.dart';
 import '../loop_capture.dart';
 import '../loop_labels.dart';
 import '../odai/odai_controller.dart';
@@ -70,7 +68,7 @@ class _EffectDrawScreenState extends ConsumerState<EffectDrawScreen> {
     }
   }
 
-  Future<void> _save(Character c) async {
+  Future<void> _save(CharacterV2 c) async {
     setState(() => _phase = _Phase.saving);
     final store = ref.read(drawingLoopStorageProvider);
     final now = ref.read(clockProvider)().microsecondsSinceEpoch;
@@ -107,8 +105,8 @@ class _EffectDrawScreenState extends ConsumerState<EffectDrawScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    final action = battleActionOf(widget.move);
-    final moveName = characterMoveLabel(c, action);
+    final action = widget.move;
+    final moveName = drawnMoveLabel(c, widget.move);
     return Scaffold(
       appBar: AppBar(title: Text('「$moveName」の えを かく')),
       body: SafeArea(
@@ -185,8 +183,8 @@ class _PreviewStage extends StatelessWidget {
     required this.tick,
   });
 
-  final Character character;
-  final BattleAction action;
+  final CharacterV2 character;
+  final DrawnMove action;
   final Uint8List effect;
   final int tick;
 
@@ -221,11 +219,11 @@ class _PreviewStage extends StatelessWidget {
               Positioned.fill(
                 child: MoveEffectLayer(
                   key: const Key('effect-preview'),
-                  cue: MoveEffectCue(side: Side.a, move: action, tick: tick),
-                  centerOf: (s) => s == Side.a ? from : to,
+                  cue: MoveEffectCue(side: 0, move: action, tick: tick),
+                  centerOf: (s) => s == 0 ? from : to,
                   elementOf: (_) => character.element,
                   drawn: {
-                    Side.a: {action: effect},
+                    0: {action: effect},
                   },
                 ),
               ),

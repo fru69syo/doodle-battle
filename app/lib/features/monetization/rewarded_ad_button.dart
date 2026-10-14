@@ -103,7 +103,7 @@ class _RewardedAdButtonState extends ConsumerState<RewardedAdButton> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider).value;
-    final pass = _hasPass(settings?.entitlements);
+    final pass = _hasPass(ref.watch(ownedProductsProvider));
     final adsAllowed = settings?.consents.ads ?? false;
     if (!pass && !adsAllowed) return const SizedBox.shrink();
     if (_used) {

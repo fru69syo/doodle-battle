@@ -9,17 +9,15 @@ import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/game_progress.dart';
 import 'package:doodle_battle/data/memory_character_repository.dart';
 import 'package:doodle_battle/data/settings_repository.dart';
-import 'package:doodle_battle/domain/battle/battle.dart';
-import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
+import 'package:doodle_battle/domain/cpu_roster_v2.dart';
 import 'package:doodle_battle/domain/element_type.dart';
-import 'package:doodle_battle/domain/stats.dart';
-import 'package:doodle_battle/features/battle_ui/cpu_battle_screen.dart';
+import 'package:doodle_battle/features/battle_ui/atb_parts.dart';
 import 'package:doodle_battle/features/drawing_loop/display_image.dart';
 import 'package:doodle_battle/features/drawing_loop/parts/composite.dart';
 import 'package:doodle_battle/features/ng_filter/ng_filter.dart';
 import 'package:doodle_battle/features/online/display_name_picker.dart';
-import 'package:doodle_battle/features/online/online_battle_screen.dart';
-import 'package:doodle_battle/features/online/online_lobby_screen.dart';
+import 'package:doodle_battle/features/online/realtime/realtime_client.dart';
 import 'package:doodle_battle/features/parent/policy_links.dart';
 import 'package:doodle_battle/features/parental_gate/parental_gate.dart';
 import 'package:doodle_battle/features/puppet/puppet_builder.dart';
@@ -32,48 +30,48 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes.dart';
 
-final BattleSpec testSpec = BattleSpec.fromJsonString(
-  File('assets/battle/battle_spec.json').readAsStringSync(),
-);
 final NgFilter testNgFilter = NgFilter.fromJsonString(
   File('assets/ng_words/ng_words.json').readAsStringSync(),
 );
 final DisplayNameWords testDisplayNameWords = DisplayNameWords.fromJsonString(
   File(displayNameWordsAsset).readAsStringSync(),
 );
-final CpuRoster testRoster = CpuRoster.fromManifestJson(
-  (jsonDecode(File('assets/cpu/manifest.json').readAsStringSync()) as Map)
+final CpuRosterV2 testRoster = CpuRosterV2.fromManifestJson(
+  (jsonDecode(File(kCpuManifestV2Path).readAsStringSync()) as Map)
       .cast<String, Object?>(),
 );
+
+/// Realtime server URL used by tests (the connector is faked).
+const testRealtimeUrl = 'wss://battle.example.test/v2';
 
 const setupDone = AppSettings(
   setupCompleted: true,
   policyVersion: currentPolicyVersion,
 );
 
-Character testCharacter({
+/// A v2 character from simple analyser features. [skill] above 75 makes
+/// the hidden late bloomer (tests of the hidden-state rules only).
+CharacterV2 testCharacter({
   String id = 'c_1',
   String name = 'ねこまる',
   int level = 1,
   int xp = 0,
   double skill = 20,
-  Stats stats = const Stats(hp: 140, atk: 140, def: 120, spd: 130),
+  double energy = 80,
   String? onlineId,
-}) => Character(
+  Map<String, num> features = const {'inkCoverage': 0.3},
+  String? imageHash,
+}) => CharacterV2.create(
   id: id,
   name: name,
   imagePath: 'memory://$id.png',
-  imageHash: 'h$id',
-  element: ElementType.fire,
-  baseStats: stats,
-  energy: 80,
+  imageHash: imageHash ?? 'h$id',
+  rawFeatures: features,
+  energy: energy,
   skill: skill,
-  features: const {'inkCoverage': 0.3},
   createdAt: DateTime.utc(2026, 10, 1),
-  level: level,
-  xp: xp,
-  onlineId: onlineId,
-);
+  legacyElement: ElementType.fire,
+).copyWith(level: level, xp: xp, onlineId: () => onlineId);
 
 /// Everything a test may want to inspect after pumping the app.
 class TestApp {
@@ -105,7 +103,7 @@ Future<TestApp> pumpApp(
   WidgetTester tester, {
   AppSettings settings = setupDone,
   GameProgress progress = const GameProgress(),
-  List<Character> characters = const [],
+  List<CharacterV2> characters = const [],
   FakeBackend? backend,
   FakeMonetization? monetization,
   ParentalGate? gate,
@@ -117,7 +115,10 @@ Future<TestApp> pumpApp(
   Map<String, Uint8List> images = const {},
   Size physicalSize = const Size(1080, 2340),
   double devicePixelRatio = 2.75,
-  Duration battleStep = const Duration(milliseconds: 20),
+  double battleTimeScale = 40,
+  bool adsSupported = true,
+  bool iapEnabled = false,
+  String realtimeUrl = testRealtimeUrl,
   Widget Function(Widget app)? wrap,
   List<Override> overrides = const [],
   bool jointEditorAfterBirth = false,
@@ -159,15 +160,15 @@ Future<TestApp> pumpApp(
         drawingImageSourceProvider.overrideWithValue(app.imageSource),
         randomProvider.overrideWithValue(Random(seed)),
         clockProvider.overrideWithValue(() => DateTime(2026, 10, 9, 10)),
-        battleSpecProvider.overrideWithValue(AsyncData(testSpec)),
         ngFilterProvider.overrideWithValue(AsyncData(testNgFilter)),
-        cpuRosterProvider.overrideWithValue(AsyncData(testRoster)),
+        cpuRosterV2Provider.overrideWithValue(AsyncData(testRoster)),
+        battleTimeScaleProvider.overrideWithValue(battleTimeScale),
+        adsSupportedProvider.overrideWithValue(adsSupported),
+        iapEnabledProvider.overrideWithValue(iapEnabled),
+        realtimeUrlProvider.overrideWithValue(realtimeUrl),
         displayNameWordsProvider.overrideWithValue(
           AsyncData(testDisplayNameWords),
         ),
-        battleStepProvider.overrideWithValue(battleStep),
-        queueHeartbeatProvider.overrideWithValue(const Duration(seconds: 10)),
-        matchPollProvider.overrideWithValue(const Duration(seconds: 5)),
         // Isolates don't run inside testWidgets' fake async zone.
         compositeRunnerProvider.overrideWithValue(
           (r) async => renderComposite(r),
@@ -216,17 +217,46 @@ Future<void> unmount(WidgetTester tester) async {
   await tester.pump();
 }
 
-/// Taps moves (ひっさつ when ready) until the result screen shows. Returns
-/// the number of turns played.
-Future<int> fightUntilResult(WidgetTester tester) async {
-  var turns = 0;
-  while (find.byKey(const Key('result-title')).evaluate().isEmpty) {
-    expect(turns, lessThan(40), reason: 'battle should end by the turn cap');
-    final special = find.byKey(const Key('move-special'));
-    final ready = tester.widget<ButtonStyleButton>(special).enabled;
-    await tester.tap(ready ? special : find.byKey(const Key('move-element')));
-    await tester.pumpAndSettle();
-    turns++;
+/// Real async work (image decoding, puppet sprites) inside a widget test.
+Future<void> settleReal(WidgetTester tester, {int rounds = 30}) async {
+  for (var i = 0; i < rounds; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
   }
-  return turns;
+}
+
+/// Lets an ATB battle on the 2.5D stage run (the child does not tap: the
+/// 5 s timer picks おまかせ) until [done] (default: the result screen).
+Future<void> playBattle(
+  WidgetTester tester, {
+  Finder? done,
+  int maxFrames = 3000,
+}) async {
+  final target = done ?? find.byKey(const Key('result-title'));
+  await settleReal(tester, rounds: 10);
+  for (var i = 0; i < maxFrames && target.evaluate().isEmpty; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+    if (i % 100 == 99) await settleReal(tester, rounds: 1);
+  }
+  expect(target, findsWidgets, reason: 'the battle should end');
+  await tester.pumpAndSettle();
+}
+
+/// Taps [finder] (scrolling it into view) without waiting for animations
+/// to settle — for buttons that open a battle (the stage animates forever).
+Future<void> tapNoSettle(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+  await tester.ensureVisible(finder);
+  await tester.pump();
+  await tester.tap(finder);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }

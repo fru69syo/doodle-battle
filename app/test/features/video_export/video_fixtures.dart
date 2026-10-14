@@ -3,12 +3,14 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:doodle_battle/data/before_photo.dart';
-import 'package:doodle_battle/domain/battle/battle.dart' show BattleAction;
-import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
+import 'package:doodle_battle/domain/cosmetics.dart';
 import 'package:doodle_battle/domain/drawing_analysis_result.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 import 'package:doodle_battle/features/video_export/before_photo_extractor.dart';
 import 'package:doodle_battle/features/video_export/video_composer.dart';
+import 'package:doodle_battle/features/puppet/puppet_builder.dart';
+import 'package:doodle_battle/features/puppet/render/puppet_sprite.dart';
 import 'package:doodle_battle/features/video_export/video_content_loader.dart';
 
 import '../../support/harness.dart';
@@ -34,24 +36,26 @@ Future<Uint8List> readAssetFile(String key) async =>
   return (jpeg: photo.jpeg, report: analyzeDrawingSync(photo.jpeg));
 }
 
-Character characterFrom(
+CharacterV2 characterFrom(
   DrawingAnalysisResult r, {
   String id = 'c_video',
   String name = 'ぐるぐるまる',
   int level = 3,
-}) => Character(
+}) => CharacterV2.create(
   id: id,
   name: name,
   imagePath: 'memory://$id.png',
   imageHash: r.imageHash,
-  element: r.element,
-  baseStats: r.baseStats,
+  rawFeatures: r.features,
   energy: r.energy,
   skill: r.skill,
-  features: r.features,
   createdAt: DateTime.utc(2026, 10, 10),
-  level: level,
-);
+  legacyElement: r.element,
+).copyWith(level: level);
+
+/// Builds 2.5D puppet sprites like the export screen does.
+Future<PuppetSprite?> testPuppetOf(Uint8List png, {required bool cpu}) =>
+    PuppetBuilder(runner: syncRunner).sprite(PuppetSpec(png: png));
 
 /// Full pipeline: synthetic photo → analysis → Before photo → content.
 Future<VideoComposer> sampleComposer({
@@ -60,6 +64,7 @@ Future<VideoComposer> sampleComposer({
   String name = 'ぐるぐるまる',
   int level = 3,
   bool drawnEffect = false,
+  bool puppet = false,
 }) async {
   final shot = photographedKidDrawing(seed: seed);
   BeforePhoto? before;
@@ -75,14 +80,14 @@ Future<VideoComposer> sampleComposer({
     before: before,
     moveEffectPngs: drawnEffect
         ? {
-            BattleAction.element: await readAssetFile(
+            DrawnMove.element: await readAssetFile(
               'assets/cpu/cpu_thunder_star.png',
             ),
           }
         : const {},
-    spec: testSpec,
     roster: testRoster,
     loadAsset: readAssetFile,
+    puppetOf: puppet ? testPuppetOf : null,
   );
   return VideoComposer(content);
 }

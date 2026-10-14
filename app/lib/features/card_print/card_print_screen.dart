@@ -5,9 +5,7 @@ import '../../core/config/app_config.dart';
 import '../../core/providers.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../data/app_state.dart';
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
-import '../battle_ui/move_labels.dart';
+import '../../domain/character_v2.dart';
 import '../drawing_loop/drawing_loop.dart';
 import '../monetization/card_frames.dart';
 import '../monetization/monetization_service.dart';
@@ -34,14 +32,10 @@ class _CardPrintScreenState extends ConsumerState<CardPrintScreen> {
   bool _busy = false;
 
   /// Card contents once the spec and every picture are loaded.
-  List<CardContent>? _cards(List<Character> chars, BattleSpec spec) {
-    final framesOwned =
-        ref
-            .watch(settingsProvider)
-            .value
-            ?.entitlements
-            .contains(Product.framePack.id) ??
-        false;
+  List<CardContent>? _cards(List<CharacterV2> chars) {
+    final framesOwned = ref
+        .watch(ownedProductsProvider)
+        .contains(Product.framePack.id);
     final out = <CardContent>[];
     for (final id in widget.characterIds) {
       final c = chars.where((x) => x.id == id).firstOrNull;
@@ -52,10 +46,8 @@ class _CardPrintScreenState extends ConsumerState<CardPrintScreen> {
       if (image.isLoading) return null;
       out.add(
         cardContentFor(
-          spec,
           c,
           image: image.value,
-          moveLabel: characterMoveLabel,
           background: framesOwned
               ? _background(CardFrame.byId(c.cardFrame))
               : CardBackground.plain,
@@ -110,8 +102,7 @@ class _CardPrintScreenState extends ConsumerState<CardPrintScreen> {
   @override
   Widget build(BuildContext context) {
     final chars = ref.watch(charactersProvider).value;
-    final spec = ref.watch(battleSpecProvider).value;
-    final cards = chars == null || spec == null ? null : _cards(chars, spec);
+    final cards = chars == null ? null : _cards(chars);
     return Scaffold(
       appBar: AppBar(title: const Text('キャラカード')),
       body: SafeArea(

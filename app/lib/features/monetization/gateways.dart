@@ -83,3 +83,32 @@ abstract interface class StoreGateway {
   /// pending). Throws when the store cannot be reached.
   Future<List<StorePurchase>> queryOwned();
 }
+
+/// Store used while in-app purchases are switched off (`kIapEnabled`,
+/// SPEC §10.2): never reaches the billing library, sells and owns nothing.
+class DisabledStoreGateway implements StoreGateway {
+  const DisabledStoreGateway();
+
+  @override
+  Future<bool> isAvailable() async => false;
+  @override
+  Future<List<StoreProduct>> queryProducts(Set<String> ids) async => const [];
+  @override
+  Future<bool> buyNonConsumable(StoreProduct product) async => false;
+  @override
+  Stream<List<StorePurchase>> get purchaseUpdates => const Stream.empty();
+  @override
+  Future<void> completePurchase(StorePurchase purchase) async {}
+  @override
+  Future<List<StorePurchase>> queryOwned() async => const [];
+}
+
+/// Ads gateway when rewarded ads are switched off (`ADS_ENABLED=false`).
+class NoAdsGateway implements RewardedAdsGateway {
+  const NoAdsGateway();
+
+  @override
+  Future<void> initialize() async {}
+  @override
+  Future<LoadedRewardedAd?> load(String adUnitId) async => null;
+}

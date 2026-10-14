@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import '../domain/character.dart';
+import '../domain/character_v2.dart';
 import 'before_photo.dart';
 
 /// Free collection size (SPEC §2-4). Purchases add [extraSlotsPerPack].
@@ -18,22 +18,22 @@ class CollectionFullException implements Exception {
 /// Local store of the child's characters (JSON + cut-out PNG).
 abstract interface class CharacterRepository {
   /// All characters, oldest first.
-  Future<List<Character>> loadAll();
+  Future<List<CharacterV2>> loadAll();
 
   /// Where the cut-out PNG of character [id] is (or will be) stored. Use it
-  /// as `Character.imagePath` when creating a character.
+  /// as `CharacterV2.imagePath` when creating a character.
   String imagePathFor(String id);
 
   /// Stores a new character and its cut-out. Throws
   /// [CollectionFullException] when [limit] characters already exist.
   Future<void> add(
-    Character character,
+    CharacterV2 character,
     Uint8List cutoutPng, {
     required int limit,
   });
 
   /// Replaces an existing character (level, xp, seeds, name, onlineId...).
-  Future<void> update(Character character);
+  Future<void> update(CharacterV2 character);
 
   Future<void> delete(String id);
 

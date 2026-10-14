@@ -101,6 +101,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: ConsentToggles(
+              adsSupported: ref.watch(adsSupportedProvider),
+              showPurchases: ref.watch(iapEnabledProvider),
               value: consents,
               serverAvailable: serverAvailable,
               crashReportsAvailable: ref

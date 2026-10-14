@@ -5,7 +5,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import 'ar_effects.dart';
 import 'ar_support.dart';
 import 'capture/photo_saver.dart';
@@ -71,7 +72,7 @@ class ArViewScreen extends StatefulWidget {
     this.dependencies = const ArViewDependencies(),
   });
 
-  final Character character;
+  final CharacterV2 character;
 
   /// Offer installing "Google Play Services for AR" when the device supports
   /// ARCore but it is missing (opens the Play Store). PM decision; see

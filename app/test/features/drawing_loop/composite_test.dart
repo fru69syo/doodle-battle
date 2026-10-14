@@ -1,9 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:doodle_battle/domain/cosmetics.dart';
-import 'package:doodle_battle/domain/element_type.dart';
-import 'package:doodle_battle/domain/stats.dart';
 import 'package:doodle_battle/features/drawing_loop/parts/composite.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -166,33 +165,38 @@ void main() {
   });
 
   test('compositeRequestFor skips parts whose PNG is missing', () {
-    final c = Character(
-      id: 'c1',
-      name: 'x',
-      imagePath: '',
-      imageHash: 'h',
-      element: ElementType.values.first,
-      baseStats: const Stats(hp: 1, atk: 1, def: 1, spd: 1),
-      energy: 1,
-      skill: 1,
-      features: const {},
-      createdAt: DateTime.utc(2026),
-      level: 20,
-      cosmetics: const CharacterCosmetics(
-        parts: [
-          CharacterPart(
-            id: 'a',
-            type: PartType.hat,
-            transform: PartTransform(cx: 0.5, cy: 0, scale: 0.3),
+    final c =
+        CharacterV2.create(
+          id: 'c1',
+          name: 'x',
+          imagePath: '',
+          imageHash: 'h',
+          rawFeatures: const {},
+          energy: 1,
+          skill: 1,
+          createdAt: DateTime.utc(2026),
+        ).copyWith(
+          level: 50,
+          cosmetics: const CharacterCosmetics(
+            parts: [
+              CharacterPart(
+                id: 'a',
+                type: PartType.hat,
+                transform: PartTransform(cx: 0.5, cy: 0, scale: 0.3),
+              ),
+              CharacterPart(
+                id: 'b',
+                type: PartType.tail,
+                transform: PartTransform(
+                  cx: 1,
+                  cy: 1,
+                  scale: 0.3,
+                  behind: true,
+                ),
+              ),
+            ],
           ),
-          CharacterPart(
-            id: 'b',
-            type: PartType.tail,
-            transform: PartTransform(cx: 1, cy: 1, scale: 0.3, behind: true),
-          ),
-        ],
-      ),
-    );
+        );
     final r = compositeRequestFor(c, solid(10, 10, red), {
       'b': solid(5, 5, blue),
     }, glowArgb: 0xFF112233);

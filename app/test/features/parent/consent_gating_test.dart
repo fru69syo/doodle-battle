@@ -98,7 +98,7 @@ void main() {
       tester,
     ) async {
       final backend = FakeBackend();
-      final app = await pumpApp(tester, backend: backend);
+      final app = await pumpApp(tester, backend: backend, iapEnabled: true);
       await openParent(tester);
       await tapVisible(tester, find.byKey(const Key('consent-ads')));
       await tapVisible(tester, find.byKey(const Key('consent-purchases')));
@@ -144,7 +144,8 @@ void main() {
       await tapVisible(tester, find.byKey(const Key('home-draw')));
       await tapVisible(tester, find.byKey(const Key('draw-camera')));
       await tapVisible(tester, find.byKey(const Key('guide-shoot')));
-      expect(backend.calls, ['judgeDrawing']);
+      // The cost mode is read first (config/costMode), then the judge.
+      expect(backend.calls, ['costMode', 'judgeDrawing']);
     });
   });
 
@@ -217,8 +218,33 @@ void main() {
       expect(app.backend.lastConsent?.cloudJudge, isTrue);
     });
 
+    testWidgets('IAP off (v2.0 default): no shop, no purchases switch', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        settings: withConsents(const ParentConsents(purchases: true)),
+      );
+      await openParent(tester);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -3000));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('shop')), findsNothing);
+      expect(find.byKey(const Key('shop-notice')), findsNothing);
+      expect(find.byKey(const Key('consent-purchases')), findsNothing);
+      expect(find.text('ショップ'), findsNothing);
+    });
+
+    testWidgets('no ads switch where the build has no ads (iPhone)', (
+      tester,
+    ) async {
+      await pumpApp(tester, adsSupported: false);
+      await openParent(tester);
+      expect(find.byKey(const Key('consent-ads')), findsNothing);
+      expect(find.byKey(const Key('consent-online')), findsOneWidget);
+    });
+
     testWidgets('shop hidden unless purchases are allowed', (tester) async {
-      await pumpApp(tester);
+      await pumpApp(tester, iapEnabled: true);
       await openParent(tester);
       await tester.scrollUntilVisible(
         find.byKey(const Key('shop-disabled')),
@@ -237,6 +263,7 @@ void main() {
         tester,
         gate: gate,
         monetization: store,
+        iapEnabled: true,
         settings: withConsents(const ParentConsents(purchases: true)),
       );
       await openParent(tester);

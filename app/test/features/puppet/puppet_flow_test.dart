@@ -5,22 +5,13 @@ import 'package:doodle_battle/features/draw_canvas/draw_canvas_screen.dart';
 import 'package:doodle_battle/features/puppet/editor/joint_editor_screen.dart';
 import 'package:doodle_battle/features/puppet/puppet_store.dart';
 import 'package:doodle_battle/features/puppet/samples.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fakes.dart';
 import '../../support/harness.dart';
 import '../draw_canvas/draw_canvas_test.dart' show kidDrawing;
-
-/// Real async work (image decoding / encoding) inside a widget test.
-Future<void> settleReal(WidgetTester tester, {int rounds = 30}) async {
-  for (var i = 0; i < rounds; i++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 30)),
-    );
-    await tester.pump(const Duration(milliseconds: 50));
-  }
-}
 
 void main() {
   testWidgets('after birth: うごく ところを なおそう, あとで → character page', (
@@ -111,7 +102,8 @@ void main() {
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byKey(const Key('name-save')));
     final c = (await app.characters.loadAll()).single;
-    expect(c.skill, lessThan(75));
+    expect(c.skill10, lessThan(750));
+    expect(c.source, DrawingSource.canvas);
     final rec = await store.loadStrokesJson(c.id);
     expect(hintStrokesFromRecord(rec), hasLength(kidDrawing().strokes.length));
     await unmount(tester);

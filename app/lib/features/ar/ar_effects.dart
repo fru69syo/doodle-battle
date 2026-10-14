@@ -1,12 +1,13 @@
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/element_type.dart';
 
 /// Visual effects shown around a character in AR, derived from its
 /// evolution stage (SPEC §6: "進化の段階に応じたエフェクト（オーラ・きらきら）").
 ///
 /// - [EvolutionStage.normal]   (Lv1–9):  none
-/// - [EvolutionStage.kagayaki] (Lv10–19): aura
-/// - [EvolutionStage.densetsu] (Lv20+):   aura + sparkles
+/// - [EvolutionStage.kagayaki] (Lv10–49): aura
+/// - [EvolutionStage.densetsu] (Lv50+):   aura + sparkles
 class ArEffects {
   const ArEffects({
     this.aura = false,
@@ -15,7 +16,7 @@ class ArEffects {
     this.rainbowAura = false,
   });
 
-  factory ArEffects.forCharacter(Character character) =>
+  factory ArEffects.forCharacter(CharacterV2 character) =>
       ArEffects.forStage(character.stage, character.element);
 
   factory ArEffects.forStage(EvolutionStage stage, ElementType element) {

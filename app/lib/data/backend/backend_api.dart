@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import '../../domain/battle/battle.dart';
+import '../../domain/cost_mode.dart';
 import '../app_settings.dart';
 import '../game_progress.dart';
 import 'backend_models.dart';
@@ -23,24 +23,26 @@ abstract interface class BackendApi {
   /// Writes the parent's consent to `users/{uid}` (signs in if needed).
   Future<void> syncConsent(ParentConsents consents, int policyVersion);
 
-  Future<CloudJudgement> judgeDrawing(Uint8List cutoutPng);
+  /// Cloud judgement; with [v2] the same call also proposes AI moves
+  /// ([CloudJudgement.moves]).
+  Future<CloudJudgement> judgeDrawing(
+    Uint8List cutoutPng, {
+    V2DrawingInput? v2,
+  });
 
   Future<RegisterOutcome> registerCharacter(RegisterCharacterRequest request);
 
-  /// Join or heartbeat (call every ~10 s while waiting).
-  Future<QueueStatus> joinQueue(String snapshotId);
+  /// One AI move for a newly unlocked slot; null = keep the template move
+  /// (offline, cost mode, refusal…, never shown to the child).
+  Future<Map<String, Object?>?> generateMove(GenerateMoveRequest request);
 
-  Future<void> leaveQueue();
+  /// Fresh Firebase ID token (+ App Check token) for the realtime battle
+  /// server's `hello` (signs in if needed).
+  Future<RealtimeAuth> realtimeAuth();
 
-  /// Live `matches/{id}`.
-  Stream<MatchSnapshot> watchMatch(String matchId);
-
-  /// Events of resolved turn [turn] (`matches/{id}/turns/{turn}`).
-  Future<List<BattleEvent>> turnEvents(String matchId, int turn);
-
-  Future<void> submitAction(String matchId, int turn, BattleAction action);
-
-  Future<PollResult> pollMatch(String matchId);
+  /// `config/costMode` (normal / saving / minimal). Read failures count as
+  /// [CostMode.normal] (the server enforces the real mode anyway).
+  Future<CostMode> costMode();
 
   /// Sets the online display name from preset word ids (shared/names);
   /// returns the name as composed by the server.
@@ -76,28 +78,20 @@ class UnavailableBackendApi implements BackendApi {
   @override
   Future<void> syncConsent(ParentConsents consents, int policyVersion) async {}
   @override
-  Future<CloudJudgement> judgeDrawing(Uint8List cutoutPng) async => _fail();
+  Future<CloudJudgement> judgeDrawing(
+    Uint8List cutoutPng, {
+    V2DrawingInput? v2,
+  }) async => _fail();
   @override
   Future<RegisterOutcome> registerCharacter(RegisterCharacterRequest r) async =>
       _fail();
   @override
-  Future<QueueStatus> joinQueue(String snapshotId) async => _fail();
+  Future<Map<String, Object?>?> generateMove(GenerateMoveRequest r) async =>
+      null;
   @override
-  Future<void> leaveQueue() async {}
+  Future<RealtimeAuth> realtimeAuth() async => _fail();
   @override
-  Stream<MatchSnapshot> watchMatch(String matchId) =>
-      Stream.error(const BackendException(BackendCodes.unavailable));
-  @override
-  Future<List<BattleEvent>> turnEvents(String matchId, int turn) async =>
-      _fail();
-  @override
-  Future<void> submitAction(
-    String matchId,
-    int turn,
-    BattleAction action,
-  ) async => _fail();
-  @override
-  Future<PollResult> pollMatch(String matchId) async => _fail();
+  Future<CostMode> costMode() async => CostMode.normal;
   @override
   Future<ChosenDisplayName> setDisplayName(
     String adjectiveId,

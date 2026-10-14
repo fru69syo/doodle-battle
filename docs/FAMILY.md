@@ -6,6 +6,9 @@ SPEC §11.2 の 2（親子・兄弟で対戦、ローカル）と 4（キャラ�
 
 ## 1. かぞくで たいせん（`app/lib/features/family_battle/`）
 
+> **v2.0（統合チーム）での変更**: ターン制とかくし画面はやめ、エンジン v3 の **リアルタイム ATB** になった。あか（手前）と あお（向こう側、ボタンは上下逆）がそれぞれの技ボタンで同時に遊ぶ（さきどり・5 秒・おまかせも各自）。戦うレベルは `familyBattleLevel`（おなじ レベル・ハンデはそのまま）、隠し要素のキャラは本当の Lv50 前なら作り直し前の形のまま（`familySetup`）。経験値は 0。`family_battle_session.dart` は削除。下の表の「かくし画面」「ターン」の記述は v1.1 の記録。
+
+
 | ファイル | 内容 |
 |---|---|
 | `family_setup.dart` | `FamilyPlayer` / `FamilyBattleConfig`、ハンデの計算 `battleLevel()`、`familyFighterSetup()`、プリセットの名前 |

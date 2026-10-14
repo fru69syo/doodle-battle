@@ -2,25 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/character_picture.dart';
-import '../../core/widgets/element_badge.dart';
+import '../../core/widgets/attr_badge.dart';
 import '../../core/widgets/kid_dialogs.dart';
 import '../../core/widgets/stat_bars.dart';
 import '../../data/app_state.dart';
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
-import '../../domain/stats.dart';
-import '../battle_ui/move_labels.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../drawing_loop/drawing_loop.dart';
 import '../monetization/card_frames.dart';
 import '../monetization/monetization_service.dart';
 import '../video_export/video_export_entry.dart';
 import 'xp_bar.dart';
 
-/// Character page: stats, level, XP, evolution, パワーのたね, AR, battle.
+/// CharacterV2 page: stats, level, XP, evolution, パワーのたね, AR, battle.
 class CharacterDetailScreen extends ConsumerWidget {
   const CharacterDetailScreen({super.key, required this.characterId});
   final String characterId;
@@ -28,14 +25,12 @@ class CharacterDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = ref.watch(characterByIdProvider(characterId));
-    final spec = ref.watch(battleSpecProvider).value;
-    if (c == null || spec == null) {
+    if (c == null) {
       return Scaffold(
         appBar: AppBar(),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    final seeds = seedsAvailable(spec, c);
     final justBorn = ref.watch(justBornCharacterProvider) == c.id;
     return Scaffold(
       appBar: AppBar(title: Text(c.name)),
@@ -55,14 +50,9 @@ class CharacterDetailScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _Header(c: c),
             const SizedBox(height: 8),
-            XpBar(spec: spec, character: c),
+            XpBar(character: c),
             const SizedBox(height: 12),
-            if (seeds > 0) _SeedHeader(seeds: seeds),
-            StatBars(
-              stats: currentStats(spec, c),
-              hpMultiplier: spec.hpMultiplier,
-              trailing: seeds > 0 ? (k) => _SeedButton(c: c, stat: k) : null,
-            ),
+            StatBarsV2(stats: c.stats()),
             const SizedBox(height: 12),
             _Moves(c: c),
             _FramePicker(c: c),
@@ -120,7 +110,7 @@ class CharacterDetailScreen extends ConsumerWidget {
   Future<void> _release(
     BuildContext context,
     WidgetRef ref,
-    Character c,
+    CharacterV2 c,
   ) async {
     final ok = await askKid(
       context,
@@ -137,7 +127,7 @@ class CharacterDetailScreen extends ConsumerWidget {
 
 class _Header extends StatelessWidget {
   const _Header({required this.c});
-  final Character c;
+  final CharacterV2 c;
 
   @override
   Widget build(BuildContext context) => Wrap(
@@ -151,19 +141,17 @@ class _Header extends StatelessWidget {
         key: const Key('detail-level'),
         style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
       ),
-      ElementBadge(c.element, big: true),
+      AttrBadge(c.attribute(), big: true),
       Chip(
         key: const Key('detail-stage'),
         avatar: Icon(
-          c.stage == EvolutionStage.normal
-              ? Icons.child_care
-              : Icons.auto_awesome,
+          c.evolution == null ? Icons.child_care : Icons.auto_awesome,
           color: c.stage == EvolutionStage.densetsu
               ? AppColors.gold
               : AppColors.purple,
         ),
         label: Text(
-          stageLabel(c.stage),
+          c.evolution == null ? 'ふつう' : evolutionLabel(c.evolution!),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
@@ -171,102 +159,66 @@ class _Header extends StatelessWidget {
   );
 }
 
-class _SeedHeader extends StatelessWidget {
-  const _SeedHeader({required this.seeds});
-  final int seeds;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    color: const Color(0xFFE8F8E0),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          const Icon(Icons.spa, color: AppColors.success, size: 36),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'パワーのたねが $seeds こ あるよ！ ＋を おして つよく しよう',
-              key: const Key('detail-seeds'),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _SeedButton extends ConsumerWidget {
-  const _SeedButton({required this.c, required this.stat});
-  final Character c;
-  final StatKind stat;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => IconButton(
-    key: Key('seed-${stat.name}'),
-    tooltip: '${statLabel(stat)} を つよく する',
-    icon: const Icon(Icons.add_circle, color: AppColors.success),
-    onPressed: () async {
-      final spec = await ref.read(battleSpecProvider.future);
-      final current = ref.read(characterByIdProvider(c.id)) ?? c;
-      if (seedsAvailable(spec, current) <= 0) return;
-      await ref
-          .read(charactersProvider.notifier)
-          .save(allocateSeed(spec, current, stat));
-    },
-  );
-}
-
 class _Moves extends StatelessWidget {
   const _Moves({required this.c});
-  final Character c;
+  final CharacterV2 c;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      const Text(
-        'わざ',
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-      ),
-      Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final a in [
-            BattleAction.tackle,
-            BattleAction.element,
-            BattleAction.guard,
-            BattleAction.special,
-          ])
-            Chip(
-              label: Text(
-                characterMoveLabel(c, a),
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-        ],
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final moves = c.allMoves();
+    final open = c.unlockedSlotCount();
+    const unlockAt = [1, 1, 10, 50];
+    return Column(
+      children: [
+        const Text(
+          'わざ',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var i = 0; i < 4; i++)
+              i < open
+                  ? Chip(
+                      key: Key('detail-move-$i'),
+                      avatar: Icon(
+                        attrIcon(moves[i].attr),
+                        color: attrColor(moves[i].attr),
+                      ),
+                      label: Text(
+                        moveDisplayName(moves[i]),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    )
+                  : Chip(
+                      key: Key('detail-move-$i'),
+                      avatar: const Icon(Icons.lock, color: AppColors.disabled),
+                      label: Text(
+                        'Lv${unlockAt[i]}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /// フレームパック: choose a card frame (only when the pack is owned; nothing
 /// is advertised to the child otherwise).
 class _FramePicker extends ConsumerWidget {
   const _FramePicker({required this.c});
-  final Character c;
+  final CharacterV2 c;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final owned =
-        ref
-            .watch(settingsProvider)
-            .value
-            ?.entitlements
-            .contains(Product.framePack.id) ??
-        false;
+    final owned = ref
+        .watch(ownedProductsProvider)
+        .contains(Product.framePack.id);
     if (!owned) return const SizedBox.shrink();
     Future<void> pick(String? id) => ref
         .read(charactersProvider.notifier)

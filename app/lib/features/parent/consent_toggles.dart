@@ -13,7 +13,16 @@ class ConsentToggles extends StatelessWidget {
     required this.serverAvailable,
     this.crashReportsAvailable = false,
     this.noAdsPass = false,
+    this.adsSupported = true,
+    this.showPurchases = false,
   });
+
+  /// In-app purchases are on in this build (off in v2.0, SPEC §10.2).
+  final bool showPurchases;
+
+  /// Rewarded ads exist in this build (Android only); otherwise the ads
+  /// switch is not shown at all (the iPhone build is ad-free).
+  final bool adsSupported;
 
   final ParentConsents value;
   final ValueChanged<ParentConsents> onChanged;
@@ -53,28 +62,31 @@ class ConsentToggles extends StatelessWidget {
         enabled: serverAvailable,
         set: (v) => onChanged(value.copyWith(online: v)),
       ),
-      _tile(
-        key: 'ads',
-        title: '広告の視聴',
-        body: noAdsPass
-            ? 'こうこくなしパスを購入済みのため、広告は表示されません。'
-                  'バトルのあとの経験値 2 倍は、広告なしで 1 日 $dailyAdBoostCap 回まで受け取れます。'
-            : 'バトルのあとに「どうがを みて けいけんち 2ばい」が表示されます（1 日 $dailyAdBoostCap 回まで）。'
-                  '子ども向けに設定したリワード広告のみで、見る前に必ず注意書きが出ます。',
-        on: value.ads,
-        enabled: !noAdsPass,
-        set: (v) => onChanged(value.copyWith(ads: v)),
-      ),
-      _tile(
-        key: 'purchases',
-        title: 'アプリ内課金',
-        body:
-            '「おうちのひと」画面のショップで購入できるようになります。'
-            '購入の前には毎回この確認（保護者ゲート）が出ます。',
-        on: value.purchases,
-        enabled: true,
-        set: (v) => onChanged(value.copyWith(purchases: v)),
-      ),
+      if (adsSupported)
+        _tile(
+          key: 'ads',
+          title: '広告の視聴',
+          body: noAdsPass
+              ? 'こうこくなしパスを購入済みのため、広告は表示されません。'
+                    'バトルのあとの経験値 2 倍は、広告なしで 1 日 $dailyAdBoostCap 回まで受け取れます。'
+              : 'バトルのあとに「どうがを みて けいけんち 2ばい」が表示されます（1 日 $dailyAdBoostCap 回まで）。'
+                    '子ども向けに設定したリワード広告のみで、見る前に必ず注意書きが出ます。',
+          on: value.ads,
+          enabled: !noAdsPass,
+          set: (v) => onChanged(value.copyWith(ads: v)),
+        ),
+      // In-app purchases are switched off in v2.0 (SPEC §10.2).
+      if (showPurchases)
+        _tile(
+          key: 'purchases',
+          title: 'アプリ内課金',
+          body:
+              '「おうちのひと」画面のショップで購入できるようになります。'
+              '購入の前には毎回この確認（保護者ゲート）が出ます。',
+          on: value.purchases,
+          enabled: true,
+          set: (v) => onChanged(value.copyWith(purchases: v)),
+        ),
       _tile(
         key: 'crashReports',
         title: 'ふぐあいの じょうほうを おくる',

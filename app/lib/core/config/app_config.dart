@@ -51,3 +51,22 @@ enum PolicyPage {
 
   Uri get uri => Uri.parse('$policySiteBaseUrl$path');
 }
+
+/// In-app purchases (SPEC §10.2: v2.0 ships free, no products). The store
+/// code is kept but nothing is sold, shown or queried while this is false
+/// (default). Turn on with `--dart-define=IAP_ENABLED=true` once the owner
+/// is allowed to sell again.
+const bool kIapEnabled = bool.fromEnvironment('IAP_ENABLED');
+
+/// Rewarded ads exist only in the Android build (SPEC §10.2: the iPhone
+/// build has no ads at all). `--dart-define=ADS_ENABLED=false` removes
+/// them from Android too.
+const bool kAdsEnabledOnAndroid = bool.fromEnvironment(
+  'ADS_ENABLED',
+  defaultValue: true,
+);
+
+/// Realtime battle server (docs/REALTIME_PROTOCOL.md §1), e.g.
+/// `wss://battle-xxxx-an.a.run.app/v2` (Terraform output `realtime_url`).
+/// Empty = online battles show 「じゅんびちゅう」.
+const String realtimeUrl = String.fromEnvironment('REALTIME_URL');

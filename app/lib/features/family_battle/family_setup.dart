@@ -3,8 +3,16 @@
 /// See docs/FAMILY.md.
 library;
 
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
+import '../../domain/battle_v3/battle_v3.dart';
+import '../../domain/character_v2.dart';
+
+/// The two players: あか (a, bottom, side 0) and あお (b, top, side 1).
+enum FamilySide {
+  a,
+  b;
+
+  FamilySide get other => this == a ? b : a;
+}
 
 /// Preset player names (no free text: nothing typed by a child is shown, so
 /// no NG check is needed). The first two are the defaults of the slots.
@@ -27,7 +35,7 @@ const familyPlayerLabels = [
 const familyBoostChoices = [0, 3, 5, 10];
 
 /// Short colour word of a side, used to tell a mirror match apart.
-String familySideColour(Side side) => side == Side.a ? 'あか' : 'あお';
+String familySideColour(FamilySide side) => side == FamilySide.a ? 'あか' : 'あお';
 
 /// One of the two players sharing the device.
 class FamilyPlayer {
@@ -39,12 +47,12 @@ class FamilyPlayer {
 
   /// Preset name from [familyPlayerLabels].
   final String label;
-  final Character character;
+  final CharacterV2 character;
 
   /// ハンデ: extra levels for this battle only (never saved).
   final int boost;
 
-  FamilyPlayer copyWith({String? label, Character? character, int? boost}) =>
+  FamilyPlayer copyWith({String? label, CharacterV2? character, int? boost}) =>
       FamilyPlayer(
         label: label ?? this.label,
         character: character ?? this.character,
@@ -68,7 +76,7 @@ class FamilyBattleConfig {
   /// higher one's level (on by default).
   final bool sameLevel;
 
-  FamilyPlayer player(Side side) => side == Side.a ? a : b;
+  FamilyPlayer player(FamilySide side) => side == FamilySide.a ? a : b;
 
   FamilyBattleConfig copyWith({
     FamilyPlayer? a,
@@ -80,47 +88,28 @@ class FamilyBattleConfig {
     sameLevel: sameLevel ?? this.sameLevel,
   );
 
-  /// Level [side] fights at: its own level (or the higher of the two with
-  /// [sameLevel]) plus its boost, capped at the spec's max level.
-  int battleLevel(BattleSpec spec, Side side) {
-    final own = player(side).character.level;
-    final base = sameLevel
-        ? (a.character.level > b.character.level
-              ? a.character.level
-              : b.character.level)
-        : own;
-    final l = base + player(side).boost;
-    final max = spec.growth.maxLevel;
-    return l > max ? max : (l < 1 ? 1 : l);
-  }
+  /// Level [side] fights at ([familyBattleLevel]: its own level, or the
+  /// higher of the two with [sameLevel], plus its boost, ≤ Lv100).
+  int battleLevel(FamilySide side, {V3Spec spec = const V3Spec()}) =>
+      familyBattleLevel(
+        spec,
+        ownLevel: player(side).character.level,
+        otherLevel: player(side.other).character.level,
+        sameLevel: sameLevel,
+        boost: player(side).boost,
+      );
 
-  /// Engine setup of [side] (see [familyFighterSetup]).
-  FighterSetup setup(BattleSpec spec, Side side) =>
-      familyFighterSetup(spec, player(side).character, battleLevel(spec, side));
+  /// Engine setup of [side]: the character at its battle level
+  /// (`CharacterV2.familyBattleSetup`). Family battles give no XP.
+  FighterSetup setup(FamilySide side) =>
+      player(side).character.familyBattleSetup(battleLevel(side));
 
   /// Name shown in battle messages. In a mirror match (same name on both
   /// sides) the team colour is appended so 「ねこまるの たいあたり！」 stays
   /// unambiguous.
-  String fighterName(Side side) {
+  String fighterName(FamilySide side) {
     final name = player(side).character.name;
     if (a.character.name != b.character.name) return name;
     return '$name（${familySideColour(side)}）';
   }
 }
-
-/// [c] as it would be at [level], using the normal growth rules
-/// (`statsAtLevel`, same growth rate and spent パワーのたね as the character
-/// itself), so the engine sees an ordinary, valid setup. Only levels are
-/// changed by a handicap; nothing is saved.
-FighterSetup familyFighterSetup(BattleSpec spec, Character c, int level) =>
-    FighterSetup(
-      element: c.element,
-      level: level,
-      stats: statsAtLevel(
-        spec,
-        c.baseStats,
-        level,
-        c.seedAllocations,
-        isShobo: isShoboSkill(spec, c.skill),
-      ),
-    );

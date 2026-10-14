@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:doodle_battle/core/crash_reporting.dart';
 import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/backend/backend_api.dart';
-import 'package:doodle_battle/domain/battle/battle.dart';
+import 'package:doodle_battle/domain/cost_mode.dart';
 import 'package:doodle_battle/domain/drawing_analysis_result.dart';
 import 'package:doodle_battle/domain/element_type.dart';
 import 'package:doodle_battle/domain/stats.dart';
@@ -42,10 +42,14 @@ class FakeAnalyzer implements DrawingAnalyzerService {
     DrawingAnalysisResult? result,
     this.reject,
     this.undecodable = false,
+    this.verdict,
   }) : result = result ?? fakeAnalysis();
 
   final DrawingAnalysisResult result;
   final DrawingRejectReason? reject;
+
+  /// v2 admission verdict (internal) of an accepted picture.
+  final String? verdict;
   final bool undecodable;
   int calls = 0;
 
@@ -53,7 +57,7 @@ class FakeAnalyzer implements DrawingAnalyzerService {
   Future<AnalysisOutcome> analyze(Uint8List imageBytes) async {
     calls++;
     if (undecodable) throw const UndecodableImageException();
-    return AnalysisOutcome(result, rejectReason: reject);
+    return AnalysisOutcome(result, rejectReason: reject, verdict: verdict);
   }
 }
 
@@ -200,10 +204,9 @@ class FakeBackend implements BackendApi {
   CloudJudgement? judgement;
   Object? judgeError;
   final registerOutcomes = <RegisterOutcome>[];
-  final queueResults = <QueueStatus>[];
-  final matchController = StreamController<MatchSnapshot>.broadcast();
-  final turnLogs = <int, List<BattleEvent>>{};
-  final submitted = <(int, BattleAction)>[];
+  final registered = <RegisterCharacterRequest>[];
+  final judgeInputs = <V2DrawingInput?>[];
+  CostMode mode = CostMode.normal;
   final reports = <(String, ReportReason)>[];
   bool deleteFails = false;
 
@@ -221,8 +224,12 @@ class FakeBackend implements BackendApi {
   }
 
   @override
-  Future<CloudJudgement> judgeDrawing(Uint8List cutoutPng) async {
+  Future<CloudJudgement> judgeDrawing(
+    Uint8List cutoutPng, {
+    V2DrawingInput? v2,
+  }) async {
     calls.add('judgeDrawing');
+    judgeInputs.add(v2);
     if (judgeError != null) throw judgeError!;
     return judgement!;
   }
@@ -232,40 +239,31 @@ class FakeBackend implements BackendApi {
     RegisterCharacterRequest request,
   ) async {
     calls.add('registerCharacter:${request.character.name}');
+    registered.add(request);
     return registerOutcomes.removeAt(0);
   }
 
+  /// Answer of `generateMove` (null = keep the template move).
+  Map<String, Object?>? moveProposal;
+  final generated = <GenerateMoveRequest>[];
+
   @override
-  Future<QueueStatus> joinQueue(String snapshotId) async {
-    calls.add('joinQueue');
-    return queueResults.length > 1
-        ? queueResults.removeAt(0)
-        : queueResults.first;
+  Future<Map<String, Object?>?> generateMove(GenerateMoveRequest r) async {
+    calls.add('generateMove');
+    generated.add(r);
+    return moveProposal;
   }
 
   @override
-  Future<void> leaveQueue() async => calls.add('leaveQueue');
-
-  @override
-  Stream<MatchSnapshot> watchMatch(String matchId) => matchController.stream;
-
-  @override
-  Future<List<BattleEvent>> turnEvents(String matchId, int turn) async =>
-      turnLogs[turn] ?? const [];
-
-  @override
-  Future<void> submitAction(
-    String matchId,
-    int turn,
-    BattleAction action,
-  ) async {
-    submitted.add((turn, action));
+  Future<RealtimeAuth> realtimeAuth() async {
+    calls.add('realtimeAuth');
+    return const RealtimeAuth(idToken: 'id-token', appCheckToken: 'ac');
   }
 
   @override
-  Future<PollResult> pollMatch(String matchId) async {
-    calls.add('pollMatch');
-    return const PollResult(status: MatchStatus.active, turn: 1);
+  Future<CostMode> costMode() async {
+    calls.add('costMode');
+    return mode;
   }
 
   final displayNames = <(String, String)>[];

@@ -23,14 +23,16 @@ abstract final class Routes {
       '/zukan/$id/effect/$move';
   static const odai = '/odai';
   static const battle = '/battle';
+
+  /// Single-player: the 10 worlds, then the 10 stages of one world.
   static String stages(String characterId) => '/battle/$characterId/stages';
+  static String world(String characterId, int world) =>
+      '/battle/$characterId/world/$world';
   static String cpuBattle(String characterId, int stage) =>
       '/battle/$characterId/stage/$stage';
   static const battleResult = '/battle/result';
   static const online = '/online';
   static String onlineQueue(String characterId) => '/online/queue/$characterId';
-  static String onlineMatch(String matchId, String characterId) =>
-      '/online/match/$matchId?c=$characterId';
   static const parent = '/parent';
 
   /// かぞくで たいせん (docs/FAMILY.md): setup, then the hot-seat battle

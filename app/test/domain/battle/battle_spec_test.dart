@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:doodle_battle/domain/battle/battle.dart';
-import 'package:doodle_battle/domain/battle/battle_spec_asset.dart';
 import 'package:doodle_battle/domain/element_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,7 +11,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'bundled asset is byte-identical to shared/battle_spec/battle_spec.json',
+    'v1 spec copy is byte-identical to shared/battle_spec/battle_spec.json',
     () {
       expect(
         File(assetCopyPath).readAsStringSync(),
@@ -22,16 +21,15 @@ void main() {
     },
   );
 
-  test(
-    'spec loaded through the asset bundle equals the shared JSON file',
-    () async {
-      final spec = await loadBattleSpec();
-      final raw = jsonDecode(File(sharedSpecPath).readAsStringSync());
-      // toJson() rebuilds every field from the typed model, so this also proves
-      // nothing in the JSON is dropped or misread.
-      expect(spec.toJson(), raw);
-    },
-  );
+  test('spec parsed from the copy equals the shared JSON file', () async {
+    final spec = BattleSpec.fromJsonString(
+      File(assetCopyPath).readAsStringSync(),
+    );
+    final raw = jsonDecode(File(sharedSpecPath).readAsStringSync());
+    // toJson() rebuilds every field from the typed model, so this also proves
+    // nothing in the JSON is dropped or misread.
+    expect(spec.toJson(), raw);
+  });
 
   final spec = loadSpecFromFile();
 
@@ -106,8 +104,11 @@ void main() {
     expect(spec.cpu.stage(30).aiTier, AiTier.strong);
   });
 
-  test('CPU roster loads through the asset bundle', () async {
-    final roster = await loadCpuRoster();
+  test('v1 CPU roster manifest still parses (v1 engine tools)', () {
+    final roster = CpuRoster.fromManifestJson(
+      (jsonDecode(File('assets/cpu/manifest.json').readAsStringSync()) as Map)
+          .cast<String, Object?>(),
+    );
     expect(roster.byId.length, 12);
   });
 }

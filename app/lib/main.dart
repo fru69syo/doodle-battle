@@ -17,6 +17,7 @@ import 'data/settings_repository.dart';
 import 'features/birth/ai_report.dart';
 import 'features/monetization/admob_gateway.dart';
 import 'features/monetization/app_monetization_service.dart';
+import 'features/monetization/gateways.dart';
 import 'features/monetization/monetization_service.dart';
 import 'features/monetization/play_store_gateway.dart';
 import 'features/puppet/puppet_store.dart';
@@ -33,10 +34,15 @@ Future<void> main() async {
       ? FirebaseCrashReporter()
       : const NoopCrashReporter();
   // Ads SDK is only initialised after the parent allows ads (lazy).
-  final MonetizationService monetization = Platform.isAndroid
+  // Rewarded ads exist only on Android (SPEC §10.2: the iPhone build has
+  // no ads); purchases only when kIapEnabled (SPEC §10.2: v2.0 is free).
+  final MonetizationService monetization =
+      Platform.isAndroid && (kAdsEnabledOnAndroid || kIapEnabled)
       ? AppMonetizationService(
-          ads: AdMobGateway(),
-          store: PlayStoreGateway(),
+          ads: kAdsEnabledOnAndroid ? AdMobGateway() : const NoAdsGateway(),
+          store: kIapEnabled
+              ? PlayStoreGateway()
+              : const DisabledStoreGateway(),
           rewardedAdUnitId: rewardedAdUnitId,
         )
       : const NoopMonetizationService();

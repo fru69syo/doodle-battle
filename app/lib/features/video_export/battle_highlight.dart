@@ -1,16 +1,18 @@
 /// The battle part of the Before/After video (docs/VIDEO.md §3): a short,
 /// scripted fight against a CPU doodle, played with the real battle engine
-/// so damage, effectiveness and HP are exactly what the game would show.
+/// v3 so damage, effectiveness and HP are exactly what the game would show.
 library;
 
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
-import '../battle_ui/move_labels.dart';
+import '../../domain/battle_v3/battle_v3.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
+import '../../domain/cosmetics.dart';
+import '../../domain/cpu_roster_v2.dart';
 
 /// One attack shown in the video.
 class HighlightHit {
   const HighlightHit({
-    required this.action,
+    required this.move,
     required this.moveLabel,
     required this.damage,
     required this.targetHpBefore,
@@ -21,7 +23,8 @@ class HighlightHit {
     required this.faint,
   });
 
-  final BattleAction action;
+  /// Which drawn effect (if any) this move flies (slot 1 = ぞくせいわざ).
+  final DrawnMove move;
   final String moveLabel;
   final int damage;
   final int targetHpBefore;
@@ -48,7 +51,7 @@ class BattleHighlight {
     required this.seed,
   });
 
-  final CpuCharacter cpu;
+  final CpuCharacterV2 cpu;
   final int cpuLevel;
   final int playerMaxHp;
   final int cpuMaxHp;
@@ -56,7 +59,7 @@ class BattleHighlight {
   /// Player hits in order (at least one; the last may be the KO).
   final List<HighlightHit> hits;
 
-  /// 「こうかは ばつぐんだ！」 from the battle spec.
+  /// 「こうかは ばつぐんだ！」.
   final String superText;
 
   /// Battle seed that produced this script (for reproducibility).
@@ -66,90 +69,80 @@ class BattleHighlight {
 }
 
 /// Seeds tried when looking for a good-looking fight.
-const int kHighlightSeedTries = 48;
+const int kHighlightSeedTries = 24;
 
-/// Picks a CPU doodle the player's element beats (deterministic per
-/// character) and plays battles with the real engine until one shows a
-/// super-effective element hit — ideally ending in a KO by the player.
-///
-/// The player uses its element move (ひっさつ when the gauge is full); the
-/// CPU uses たいあたり. Returns null only when no battle produced a hit by
-/// the player (practically impossible: element moves rarely miss).
+/// CPU stats in the video (a little weaker so the child's drawing shines).
+const int kHighlightCpuPowerPct = 85;
+
+/// Picks a CPU doodle the player's attribute beats (deterministic per
+/// character) and plays battles with engine v3 until one shows a
+/// super-effective slot-1 hit, ideally ending in a KO by the player. The
+/// player always uses slot 1 (its own attribute, always usable); the CPU
+/// uses its slot 1 too. Null only when the player never landed a hit.
 BattleHighlight? scriptBattleHighlight({
-  required BattleSpec spec,
-  required CpuRoster roster,
-  required Character player,
+  required CpuRosterV2 roster,
+  required CharacterV2 player,
+  V3Spec spec = const V3Spec(),
 }) {
-  final cpu = pickHighlightOpponent(spec, roster, player);
+  final cpu = pickHighlightOpponent(roster, player, spec: spec);
   if (cpu == null) return null;
   final level = player.level;
-  final playerSetup = fighterSetupFor(spec, player);
-  final cpuSetup = FighterSetup(
-    element: cpu.element,
-    level: level,
-    stats: statsAtLevel(
-      spec,
-      cpu.baseStats,
-      level,
-      const {},
-      isShobo: cpu.isShobo,
-    ),
+  final a = player.battleSetup(s: spec);
+  final b = setupAt(
+    spec,
+    cpu.genome(spec),
+    level,
+    powerPct: kHighlightCpuPowerPct,
+    label: cpu.name,
   );
-  final initial = initBattle(spec, playerSetup, cpuSetup);
+  final label = moveDisplayName(a.moves[0]);
   BattleHighlight? fallback;
   BattleHighlight? best;
-  var bestTurns = 1 << 30;
+  var bestTicks = 1 << 30;
   for (var seed = 1; seed <= kHighlightSeedTries; seed++) {
-    final run = _play(spec, playerSetup, cpuSetup, seed, player);
-    if (run == null) continue;
-    final (hits, turns, koByPlayer) = run;
+    final battle = Battle(spec, a, b, seed: seed);
+    int? slot0(Battle _, int _) => 0;
+    while (!battle.finished) {
+      battle.step(a: slot0, b: slot0);
+    }
+    final hits = _playerHits(battle, label);
+    if (hits.isEmpty) continue;
+    final ko = battle.winner == 0 && battle.endReason == 'ko';
     final first = hits.first;
     final h = BattleHighlight(
       cpu: cpu,
       cpuLevel: level,
-      playerMaxHp: initial.a.maxHp,
-      cpuMaxHp: initial.b.maxHp,
-      hits: koByPlayer && !first.faint ? [first, hits.last] : [first],
-      superText: spec.texts['super'] ?? 'こうかは ばつぐんだ！',
+      playerMaxHp: battle.fighters[0].maxHp,
+      cpuMaxHp: battle.fighters[1].maxHp,
+      hits: ko && !first.faint ? [first, hits.last] : [first],
+      superText: 'こうかは ばつぐんだ！',
       seed: seed,
     );
-    if (!first.superEffective) {
+    if (!first.superEffective || !ko) {
       fallback ??= h;
       continue;
     }
-    if (!koByPlayer) {
-      fallback = fallback == null || !fallback.hits.first.superEffective
-          ? h
-          : fallback;
-      continue;
-    }
-    if (turns < bestTurns) {
+    if (battle.tick < bestTicks) {
       best = h;
-      bestTurns = turns;
+      bestTicks = battle.tick;
     }
   }
   return best ?? fallback;
 }
 
-/// The CPU used in the video: one whose element the player's element move
-/// is strong against, chosen deterministically from the character id.
-CpuCharacter? pickHighlightOpponent(
-  BattleSpec spec,
-  CpuRoster roster,
-  Character player,
-) {
+/// The CPU used in the video: one whose attribute the player's attribute
+/// beats, chosen deterministically from the character id.
+CpuCharacterV2? pickHighlightOpponent(
+  CpuRosterV2 roster,
+  CharacterV2 player, {
+  V3Spec spec = const V3Spec(),
+}) {
   final all = roster.byId.values.toList()..sort((a, b) => a.id.compareTo(b.id));
   if (all.isEmpty) return null;
+  final beats = player.attribute(spec).beats;
   final weak = [
     for (final c in all)
-      if (typeMultiplierPct(
-            spec,
-            BattleAction.element,
-            player.element,
-            c.element,
-          ) >
-          spec.typeChart.neutralPct)
-        c,
+      if (c.genome(spec).attr == beats) c,
   ];
   final pool = weak.isEmpty ? all : weak;
   var h = 0;
@@ -159,77 +152,32 @@ CpuCharacter? pickHighlightOpponent(
   return pool[h % pool.length];
 }
 
-/// Plays one battle; returns the player's landed hits, the number of turns
-/// and whether the player won by KO. Null when the player never hit.
-(List<HighlightHit>, int, bool)? _play(
-  BattleSpec spec,
-  FighterSetup a,
-  FighterSetup b,
-  int seed,
-  Character player,
-) {
-  var state = initBattle(spec, a, b);
-  final rng = Mulberry32(deriveSeed(seed, 0));
-  final hits = <HighlightHit>[];
-  while (!state.isOver) {
-    final ready = state.a.gauge >= spec.gauge.max;
-    final action = ready ? BattleAction.special : BattleAction.element;
-    final before = state;
-    final r = resolveTurn(spec, state, action, BattleAction.tackle, rng);
-    state = r.state;
-    hits.addAll(_playerHits(spec, r.events, before, player));
-  }
-  if (hits.isEmpty) return null;
-  final ko = state.winner == Side.a && state.endReason == EndReason.ko;
-  return (hits, state.turn, ko);
-}
-
-/// Hits landed by side a in one turn's [events].
-List<HighlightHit> _playerHits(
-  BattleSpec spec,
-  List<BattleEvent> events,
-  BattleState before,
-  Character player,
-) {
+/// Hits landed by side 0, from the battle's event log.
+List<HighlightHit> _playerHits(Battle battle, String label) {
   final out = <HighlightHit>[];
-  var cpuHp = before.b.hp;
-  var playerHp = before.a.hp;
-  BattleAction? move;
-  var crit = false;
-  var superHit = false;
-  for (final e in events) {
-    switch (e) {
-      case MoveEvent(:final side, move: final m):
-        move = side == Side.a ? m : null;
-        crit = false;
-        superHit = false;
-      case CritEvent(:final side) when side == Side.a:
-        crit = true;
-      case EffectivenessEvent(:final side, :final multiplierPct)
-          when side == Side.a:
-        superHit = multiplierPct > spec.typeChart.neutralPct;
-      case DamageEvent(:final target, :final amount, :final hp):
-        if (target == Side.a) {
-          playerHp = hp;
-        } else if (move != null) {
-          out.add(
-            HighlightHit(
-              action: move,
-              moveLabel: characterMoveLabel(player, move),
-              damage: amount,
-              targetHpBefore: cpuHp,
-              targetHpAfter: hp,
-              attackerHp: playerHp,
-              superEffective: superHit,
-              crit: crit,
-              faint: hp <= 0,
-            ),
-          );
-          cpuHp = hp;
-        }
-      default:
-        break;
+  var cpuHp = battle.fighters[1].maxHp;
+  var playerHp = battle.fighters[0].maxHp;
+  for (final e in battle.events) {
+    if (e.type != 'hit') continue;
+    final hp = e.i('hp') ?? 0;
+    if (e.i('target') == 0) {
+      playerHp = hp;
+      continue;
     }
+    out.add(
+      HighlightHit(
+        move: DrawnMove.element,
+        moveLabel: label,
+        damage: e.i('amount') ?? 0,
+        targetHpBefore: cpuHp,
+        targetHpAfter: hp,
+        attackerHp: playerHp,
+        superEffective: (e.i('pct') ?? 100) > 100,
+        crit: e.i('crit') == 1,
+        faint: hp <= 0,
+      ),
+    );
+    cpuHp = hp;
   }
   return out;
 }

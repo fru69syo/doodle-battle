@@ -1,28 +1,30 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../core/router/routes.dart';
-import '../../core/widgets/character_picture.dart';
 import '../../data/app_state.dart';
-import '../../domain/battle/battle.dart';
-import '../../domain/character.dart';
-import '../drawing_loop/display_image.dart';
-import 'battle_arena.dart';
-import 'battle_display.dart';
+import '../../domain/battle_v3/battle_v3.dart';
+import '../../domain/character_v2.dart';
+import '../../domain/cosmetics.dart';
+import '../../domain/cpu_roster_v2.dart';
+import '../battle_stage/adapters/battle_v3_feed.dart';
+import '../battle_stage/battle_stage.dart';
+import '../../data/drawing_loop_storage.dart';
+import '../puppet/character_puppet.dart';
+import '../puppet/puppet_builder.dart';
+import '../puppet/puppet_look.dart';
+import 'atb_parts.dart';
 import 'battle_outcome.dart';
-import 'cpu_display.dart';
-import 'cpu_battle_session.dart';
-import 'move_labels.dart';
 
-/// Pause after each animated battle message (tests shorten it).
-final battleStepProvider = Provider<Duration>(
-  (ref) => const Duration(milliseconds: 900),
-);
-
-/// Loads what a CPU battle needs, then shows [_CpuBattleView].
-class CpuBattleScreen extends ConsumerWidget {
+/// Loads what a single-player battle needs (once), then shows
+/// [CpuBattleView].
+class CpuBattleScreen extends ConsumerStatefulWidget {
   const CpuBattleScreen({
     super.key,
     required this.characterId,
@@ -32,135 +34,233 @@ class CpuBattleScreen extends ConsumerWidget {
   final int stage;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final spec = ref.watch(battleSpecProvider).value;
-    final roster = ref.watch(cpuRosterProvider).value;
-    final player = ref.watch(characterByIdProvider(characterId));
-    if (spec == null || roster == null || player == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-    final stageRow = spec.cpu.stage(stage);
-    final cpu = cpuDisplayCharacter(roster[stageRow.cpuId], stageRow);
-    return _CpuBattleView(
-      session: CpuBattleSession(
-        spec: spec,
+  ConsumerState<CpuBattleScreen> createState() => _CpuBattleScreenState();
+}
+
+class _CpuBattleScreenState extends ConsumerState<CpuBattleScreen> {
+  CpuBattleView? _view;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final chars = await ref.read(charactersProvider.future);
+    final player = chars.where((c) => c.id == widget.characterId).firstOrNull;
+    if (player == null) return;
+    final roster = await ref.read(cpuRosterV2Provider.future);
+    final st = stageAt(widget.stage.clamp(1, 100));
+    final cpu = roster.byId[st.cpuId];
+    if (cpu == null) return;
+    final cpuPng = await ref.read(assetBytesProvider(cpu.asset).future);
+    final spec = await characterPuppetSpec(ref.read, player);
+    final progress = await ref.read(progressProvider.future);
+    if (!mounted || spec == null) return;
+    setState(
+      () => _view = CpuBattleView(
         player: player,
-        cpu: cpu,
-        stage: stageRow,
+        playerPuppet: spec,
+        cpuPuppet: PuppetSpec(
+          png: cpuPng,
+          look: PuppetLook.of(level: st.cpuLevel),
+        ),
+        cpuName: cpu.name,
+        stage: st,
         roster: roster,
+        omakase: progress.omakase,
         seed: ref.read(randomProvider).nextInt(1 << 32),
       ),
     );
   }
-}
-
-class _CpuBattleView extends ConsumerStatefulWidget {
-  const _CpuBattleView({required this.session});
-  final CpuBattleSession session;
 
   @override
-  ConsumerState<_CpuBattleView> createState() => _CpuBattleViewState();
+  Widget build(BuildContext context) =>
+      _view ?? const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
-class _CpuBattleViewState extends ConsumerState<_CpuBattleView> {
-  late final CpuBattleSession _s = widget.session;
-  late final BattleDisplay _d = _displayFor(_s);
-  bool _animating = false;
+/// A real-time ATB battle against the stage's CPU on the 2.5D stage. The
+/// child only picks moves (さきどり while the gauge fills, 5 s ring, おまかせ).
+class CpuBattleView extends ConsumerStatefulWidget {
+  const CpuBattleView({
+    super.key,
+    required this.player,
+    required this.playerPuppet,
+    required this.cpuPuppet,
+    required this.cpuName,
+    required this.stage,
+    required this.roster,
+    required this.omakase,
+    required this.seed,
+  });
 
-  static BattleDisplay _displayFor(CpuBattleSession s) {
-    FighterDisplay f(Character c, FighterState st) => FighterDisplay(
-      name: c.name,
-      level: c.level,
-      element: c.element,
-      maxHp: st.maxHp,
-      hp: st.hp,
-      elementMoveName: c.elementMoveName,
-      specialMoveName: c.specialMoveName,
-    );
-    return BattleDisplay(a: f(s.player, s.state.a), b: f(s.cpu, s.state.b))
-      ..message = '${s.cpu.name}が あらわれた！ どうする？';
+  final CharacterV2 player;
+  final PuppetSpec playerPuppet, cpuPuppet;
+  final String cpuName;
+  final Stage stage;
+  final CpuRosterV2 roster;
+  final bool omakase;
+  final int seed;
+
+  @override
+  ConsumerState<CpuBattleView> createState() => _CpuBattleViewState();
+}
+
+class _CpuBattleViewState extends ConsumerState<CpuBattleView> {
+  static const _spec = V3Spec();
+  late final Battle _engine = Battle(
+    _spec,
+    widget.player.battleSetup(),
+    widget.roster.stageFighter(widget.stage),
+    seed: widget.seed,
+  );
+  late final BattleV3Feed _feed = BattleV3Feed(
+    _engine,
+    alwaysAuto: widget.omakase,
+    cpu: aiController(tier: widget.stage.tier),
+  );
+  late final BattleStageController _controller;
+  Map<int, ui.Image> _drawn = const {};
+  late final AtbFeed _atbFeed;
+  bool _finishing = false;
+
+  /// The stage starts once the drawn effects are known.
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _atbFeed = AtbFeed(_feed, timeScale: ref.read(battleTimeScaleProvider));
+    _controller = BattleStageController(
+      feed: _atbFeed,
+      theme: StageTheme.forWorld(widget.stage.world),
+      seed: widget.seed,
+    )..addListener(_onChange);
+    unawaited(_loadDrawnEffects());
   }
 
-  String _moveName(Side side, BattleAction a) =>
-      characterMoveLabel(side == Side.a ? _s.player : _s.cpu, a);
+  /// The child's drawn ぞくせいわざ / ひっさつ effects (docs/LOOP.md §5).
+  Future<void> _loadDrawnEffects() async {
+    try {
+      await _loadDrawnEffectsInner();
+    } on Object {
+      // Default effects.
+    }
+    if (mounted) setState(() => _ready = true);
+  }
 
-  Future<void> _onMove(BattleAction action) async {
-    if (_animating || _s.isOver) return;
-    setState(() => _animating = true);
-    final events = _s.playTurn(action);
-    final step = ref.read(battleStepProvider);
-    for (final e in events) {
-      final wait = applyBattleEvent(
-        _d,
-        e,
-        texts: _s.spec.texts,
-        moveName: _moveName,
-        step: step,
-      );
-      if (!mounted) return;
-      setState(() {});
-      if (wait > Duration.zero) await Future<void>.delayed(wait);
+  Future<void> _loadDrawnEffectsInner() async {
+    final store = ref.read(drawingLoopStorageProvider);
+    final pngs = <DrawnMove, Uint8List>{};
+    for (final e in widget.player.cosmetics.effects.entries) {
+      final png = await store.readAsset(widget.player.id, e.value);
+      if (png != null) pngs[e.key] = png;
     }
-    if (!mounted) return;
-    if (_s.isOver) {
-      await _finish();
-    } else {
-      setState(() {
-        _animating = false;
-        _d.message = 'どうする？';
-      });
-    }
+    if (pngs.isEmpty) return;
+    final images = await decodeDrawnEffects({
+      0: pngs[DrawnMove.element] ?? pngs[DrawnMove.special]!,
+    });
+    if (!mounted || images.isEmpty) return;
+    _atbFeed.drawnSlots = {
+      0: {
+        if (pngs.containsKey(DrawnMove.element)) 0,
+        if (pngs.containsKey(DrawnMove.special)) 3,
+      },
+    };
+    _drawn = images;
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_onChange)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onChange() {
+    if (_controller.over && !_finishing) _finish();
   }
 
   Future<void> _finish() async {
-    setState(
-      () => _d.message = _s.playerWon ? 'やったー！ かった！' : 'まけちゃった… つぎは がんばろう！',
-    );
+    _finishing = true;
+    final won = _controller.winner == 0;
+    final me = _engine.fighters[0];
     final outcome = await ref
         .read(battleRewardsProvider)
         .applyCpuResult(
-          spec: _s.spec,
-          player: _s.player,
-          stage: _s.stage,
-          won: _s.playerWon,
+          player: widget.player,
+          stage: widget.stage.stage,
+          won: won,
+          stars: stageStars(
+            won: won,
+            hp: me.hp,
+            maxHp: me.maxHp,
+            ticks: _engine.tick,
+          ),
         );
-    await Future<void>.delayed(ref.read(battleStepProvider));
+    // Let the K.O. sink in.
+    await Future<void>.delayed(const Duration(milliseconds: 900));
     if (mounted) context.pushReplacement(Routes.battleResult, extra: outcome);
   }
 
+  void _setOmakase(bool on) {
+    setState(() {
+      _feed.alwaysAuto = on;
+      _feed.cancelTap();
+    });
+    unawaited(ref.read(progressProvider.notifier).setOmakase(on));
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('ステージ ${_s.stage.stage}')),
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: BattleArena(
-                  display: _d,
-                  gaugeMax: _s.spec.gauge.max,
-                  pictures: {
-                    Side.a: CharacterPicture(character: _s.player, size: 140),
-                    Side.b: CharacterPicture(character: _s.cpu, size: 120),
-                  },
-                  effectImages: {Side.a: watchMoveEffects(ref, _s.player)},
-                ),
-              ),
-            ),
-            MoveButtons(
-              labels: (a) => characterMoveLabel(_s.player, a),
-              enabled: !_animating && !_s.isOver,
-              specialReady: _s.specialReady,
-              onMove: _onMove,
-            ),
-          ],
+  Widget build(BuildContext context) {
+    final theme = StageTheme.forWorld(widget.stage.world);
+    if (!_ready) {
+      return Scaffold(
+        backgroundColor: theme.skyBottom,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    return Scaffold(
+      backgroundColor: theme.ground,
+      body: AtbStageLayout(
+        controller: _controller,
+        drawnEffects: _drawn,
+        sides: [
+          AtbSide(
+            name: widget.player.name,
+            level: widget.player.level,
+            puppet: widget.playerPuppet,
+          ),
+          AtbSide(
+            name: widget.cpuName,
+            level: widget.stage.cpuLevel,
+            puppet: widget.cpuPuppet,
+          ),
+        ],
+        top: (_) => Align(
+          alignment: Alignment.centerLeft,
+          child: IconButton(
+            key: const Key('battle-close'),
+            iconSize: 32,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
         ),
+        bottom: (_) => _controller.over
+            ? const SizedBox(height: 120)
+            : LocalControls(
+                engine: _engine,
+                side: 0,
+                selected: _feed.pending,
+                choiceLeft: _feed.choiceLeft,
+                omakase: _feed.alwaysAuto,
+                onOmakase: _setOmakase,
+                onTap: (i) => setState(() => _feed.tap(i)),
+              ),
       ),
-    ),
-  );
+    );
+  }
 }

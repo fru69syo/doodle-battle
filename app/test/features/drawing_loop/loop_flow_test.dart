@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:doodle_battle/core/router/app_router.dart';
 import 'package:doodle_battle/data/app_state.dart';
 import 'package:doodle_battle/data/drawing_loop_storage.dart';
-import 'package:doodle_battle/domain/battle/battle.dart';
+import 'package:doodle_battle/domain/character_v2_view.dart';
 import 'package:doodle_battle/domain/cosmetics.dart';
 import 'package:doodle_battle/domain/drawing_analysis_result.dart';
 import 'package:doodle_battle/features/draw/drawing_services.dart';
@@ -11,6 +11,7 @@ import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 import 'package:doodle_battle/features/drawing_loop/effects/move_effect_layer.dart';
 import 'package:doodle_battle/features/drawing_loop/odai/daily_odai.dart';
 import 'package:doodle_battle/features/drawing_loop/odai/stamp_card.dart';
+import 'package:doodle_battle/features/battle_stage/battle_stage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -170,7 +171,7 @@ void main() {
         expect(find.byKey(Key('loop-slot-locked-$s')), findsOneWidget);
       }
       expect(find.text('Lv5'), findsOneWidget);
-      expect(find.text('Lv10'), findsOneWidget);
+      expect(find.text('Lv10'), findsWidgets); // also the locked move slot
       expect(find.text('Lv20'), findsOneWidget);
       expect(find.byKey(const Key('loop-effect-element')), findsOneWidget);
       expect(find.byKey(const Key('loop-effect-special')), findsOneWidget);
@@ -222,7 +223,8 @@ void main() {
       expect(part.type, PartType.hat);
       expect(part.transform.cx, greaterThan(0.6));
       expect(part.transform.scale, closeTo(0.5 * 1.15, 1e-9));
-      expect(c.baseStats.toJson(), testCharacter().baseStats.toJson());
+      // Cosmetics only: the numbers stay those of the drawing.
+      expect(c.stats(), testCharacter(level: c.level).stats());
       // Base drawing untouched; part and composite stored separately.
       expect(await app.characters.readImage('c_1'), base);
       final assets = await store.listAssets('c_1');
@@ -292,7 +294,10 @@ void main() {
       );
       await go(app, tester, '/zukan/c_1');
       await tapVisible(tester, find.byKey(const Key('loop-effect-element')));
-      expect(find.textContaining('めらめらパンチ'), findsWidgets);
+      expect(
+        find.textContaining(testCharacter().elementMoveName),
+        findsWidgets,
+      );
       await tapVisible(tester, find.byKey(const Key('loop-capture')));
       expect(find.byKey(const Key('effect-preview')), findsOneWidget);
       await tapVisible(tester, find.byKey(const Key('effect-save')));
@@ -317,25 +322,22 @@ void main() {
   group('battle effect', () {
     test('custom sprite only for the side and move that has one', () {
       final drawn = {
-        Side.a: {BattleAction.element: testPng()},
+        0: {DrawnMove.element: testPng()},
       };
-      MoveEffectCue cue(Side s, BattleAction m) =>
+      MoveEffectCue cue(int s, DrawnMove m) =>
           MoveEffectCue(side: s, move: m, tick: 1);
       expect(
-        effectSpriteFor(cue(Side.a, BattleAction.element), drawn),
+        effectSpriteFor(cue(0, DrawnMove.element), drawn),
         EffectSprite.custom,
       );
       expect(
-        effectSpriteFor(cue(Side.a, BattleAction.special), drawn),
+        effectSpriteFor(cue(0, DrawnMove.special), drawn),
         EffectSprite.fallback,
       );
       expect(
-        effectSpriteFor(cue(Side.b, BattleAction.element), drawn),
+        effectSpriteFor(cue(1, DrawnMove.element), drawn),
         EffectSprite.fallback,
       );
-      expect(movePlaysEffect(BattleAction.tackle), isFalse);
-      expect(movePlaysEffect(BattleAction.guard), isFalse);
-      expect(movePlaysEffect(BattleAction.special), isTrue);
     });
 
     test('motion flies, then bursts and fades', () {
@@ -347,20 +349,7 @@ void main() {
       expect(effectMotion(0.9).scale, greaterThan(effectMotion(0.6).scale));
     });
 
-    Future<Set<String>> playElementMove(WidgetTester tester) async {
-      await tester.tap(find.byKey(const Key('move-element')));
-      final seen = <String>{};
-      for (var i = 0; i < 120; i++) {
-        await tester.pump(const Duration(milliseconds: 16));
-        for (final k in ['move-effect-custom', 'move-effect-default']) {
-          if (find.byKey(Key(k)).evaluate().isNotEmpty) seen.add(k);
-        }
-      }
-      await tester.pumpAndSettle();
-      return seen;
-    }
-
-    testWidgets('battle uses the drawn effect when there is one', (
+    testWidgets('the battle stage gets the drawn effect when there is one', (
       tester,
     ) async {
       final store = InMemoryDrawingLoopStorage();
@@ -375,27 +364,21 @@ void main() {
             ),
           ),
         ],
-        battleStep: const Duration(milliseconds: 300),
         overrides: [drawingLoopStorageProvider.overrideWithValue(store)],
       );
-      await go(app, tester, '/battle/c_1/stage/1');
-      final seen = await playElementMove(tester);
-      expect(seen, contains('move-effect-custom'));
+      app.container.read(routerProvider).go('/battle/c_1/stage/1');
+      await settleReal(tester, rounds: 15);
+      final stage = tester.widget<BattleStage>(find.byType(BattleStage));
+      expect(stage.drawnEffects.keys, [0]);
       await unmount(tester);
     });
 
-    testWidgets('falls back to the default effect without a drawing', (
-      tester,
-    ) async {
-      final app = await pumpApp(
-        tester,
-        characters: [testCharacter()],
-        battleStep: const Duration(milliseconds: 300),
-      );
-      await go(app, tester, '/battle/c_1/stage/1');
-      final seen = await playElementMove(tester);
-      expect(seen, contains('move-effect-default'));
-      expect(seen, isNot(contains('move-effect-custom')));
+    testWidgets('no drawing: the stage uses its own effects', (tester) async {
+      final app = await pumpApp(tester, characters: [testCharacter()]);
+      app.container.read(routerProvider).go('/battle/c_1/stage/1');
+      await settleReal(tester, rounds: 15);
+      final stage = tester.widget<BattleStage>(find.byType(BattleStage));
+      expect(stage.drawnEffects, isEmpty);
       await unmount(tester);
     });
   });

@@ -66,7 +66,9 @@ Future<bool> deleteAllData(BuildContext context, WidgetRef ref) async {
   await ref.read(settingsProvider.notifier).resetLocal();
   // Purchases live in the parent's Google account, not in our data: put
   // them back into the (now empty) local cache.
-  unawaited(ref.read(monetizationServiceProvider).restorePurchases());
+  if (ref.read(iapEnabledProvider)) {
+    unawaited(ref.read(monetizationServiceProvider).restorePurchases());
+  }
   ref.invalidate(progressProvider);
   ref.invalidate(stampCardProvider);
   ref.invalidate(activeOdaiProvider);

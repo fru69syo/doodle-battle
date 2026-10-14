@@ -10,7 +10,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../core/config/app_config.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/element_type.dart';
 import '../../domain/stats.dart';
 import 'card_content.dart';

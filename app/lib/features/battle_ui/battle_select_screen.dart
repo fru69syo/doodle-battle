@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/router/routes.dart';
 import '../../core/widgets/character_picture.dart';
-import '../../core/widgets/element_badge.dart';
+import '../../core/widgets/attr_badge.dart';
 import '../../data/app_state.dart';
-import '../../domain/character.dart';
+import '../../domain/character_v2.dart';
 
 /// Choose which character fights (バトル).
 class BattleSelectScreen extends ConsumerWidget {
@@ -21,10 +21,10 @@ class BattleSelectScreen extends ConsumerWidget {
   final String title;
 
   /// Defaults to opening the CPU stage list.
-  final void Function(BuildContext context, Character c)? onSelect;
+  final void Function(BuildContext context, CharacterV2 c)? onSelect;
 
   /// Characters that may be chosen (others are greyed out with the reason).
-  final String? Function(Character c)? filter;
+  final String? Function(CharacterV2 c)? filter;
 
   /// Shown above the list (e.g. the online display name).
   final Widget? header;
@@ -76,9 +76,9 @@ class BattleSelectScreen extends ConsumerWidget {
 
 class _Row extends StatelessWidget {
   const _Row({required this.c, required this.blocked, required this.onTap});
-  final Character c;
+  final CharacterV2 c;
   final String? blocked;
-  final void Function(BuildContext context, Character c)? onTap;
+  final void Function(BuildContext context, CharacterV2 c)? onTap;
 
   @override
   Widget build(BuildContext context) => Opacity(
@@ -117,7 +117,7 @@ class _Row extends StatelessWidget {
                           'Lv${c.level}',
                           style: const TextStyle(fontSize: 18),
                         ),
-                        ElementBadge(c.element),
+                        AttrBadge(c.attribute()),
                       ],
                     ),
                     if (blocked != null)

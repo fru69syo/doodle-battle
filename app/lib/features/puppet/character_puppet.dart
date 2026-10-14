@@ -1,12 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/drawing_loop_storage.dart';
-import '../../domain/character.dart';
 import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/puppet_look_rule.dart';
 import '../draw_canvas/canvas_analysis.dart';
 import '../drawing_loop/display_image.dart';
@@ -24,19 +25,24 @@ import 'rig/limb_hints.dart';
 /// appendages, the stored (edited) rig or an auto-rig made with the
 /// drawing-tool strokes, and the look for its level.
 ///
-/// [lateBloomer] is the engine's hidden flag; it only becomes the
-/// [PuppetLook] here and is never shown.
+/// The look comes from the domain rule ([drawsSimpleLook]); no flag
+/// reaches the UI. The rig is `CharacterV2.rig` (the edited joints), else
+/// the [PuppetStore] copy, else the auto-rig.
+/// Reads a provider (`ref.read` of a `Ref` or a `WidgetRef`).
+typedef ProviderReader = T Function<T>(ProviderListenable<T> provider);
+
 Future<PuppetSpec?> characterPuppetSpec(
-  Ref ref,
-  Character c, {
-  bool lateBloomer = false,
+  ProviderReader read,
+  CharacterV2 c, {
   PuppetQuality quality = PuppetQuality.high,
 }) async {
-  final base = await ref.read(characterRepositoryProvider).readImage(c.id);
+  final base = await read(characterRepositoryProvider).readImage(c.id);
   if (base == null) return null;
-  final store = ref.read(puppetStoreProvider);
-  final look = PuppetLook.of(level: c.level, lateBloomer: lateBloomer);
-  final stored = CharacterRig.tryDecode(await store.loadRigJson(c.id));
+  final store = read(puppetStoreProvider);
+  final look = lookOf(c);
+  final stored =
+      CharacterRig.fromBlob(c.rig) ??
+      CharacterRig.tryDecode(await store.loadRigJson(c.id));
   final strokes = hintStrokesFromRecord(await store.loadStrokesJson(c.id));
   if (c.cosmetics.parts.isEmpty) {
     return PuppetSpec(
@@ -49,7 +55,7 @@ Future<PuppetSpec?> characterPuppetSpec(
   }
   // With drawn parts: rig the base drawing, then add one limb per part in
   // the composite picture's coordinates.
-  final loop = ref.read(drawingLoopStorageProvider);
+  final loop = read(drawingLoopStorageProvider);
   final partPngs = <String, Uint8List>{};
   for (final p in c.cosmetics.parts) {
     final png = await loop.readAsset(c.id, p.assetName);
@@ -57,10 +63,10 @@ Future<PuppetSpec?> characterPuppetSpec(
   }
   final baseRig =
       stored ??
-      await ref.read(puppetBuilderProvider).autoRig(base, strokes: strokes);
+      await read(puppetBuilderProvider).autoRig(base, strokes: strokes);
   final CompositeImage comp;
   try {
-    comp = await ref.read(compositeRunnerProvider)(
+    comp = await read(compositeRunnerProvider)(
       compositeRequestFor(
         c,
         base,
@@ -121,13 +127,16 @@ PuppetSpec characterV2PuppetSpec(
     png: cutoutPng,
     rig: rig,
     strokes: rig == null ? strokes : null,
-    look: PuppetLook(
-      simple: drawsSimpleLook(c),
-      legend: c.level >= PuppetLook.legendLevel,
-    ),
+    look: lookOf(c),
     quality: quality,
   );
 }
+
+/// The puppet look of [c] (simple / でんせつ) from the domain rule.
+PuppetLook lookOf(CharacterV2 c) => PuppetLook(
+  simple: drawsSimpleLook(c),
+  legend: c.level >= PuppetLook.legendLevel,
+);
 
 /// Width and height from a PNG header (IHDR), or (1, 1).
 (int, int) pngSize(Uint8List png) {
@@ -139,4 +148,6 @@ PuppetSpec characterV2PuppetSpec(
 
 /// [characterPuppetSpec] as a provider (character id → spec).
 final characterPuppetSpecProvider = FutureProvider.autoDispose
-    .family<PuppetSpec?, Character>((ref, c) => characterPuppetSpec(ref, c));
+    .family<PuppetSpec?, CharacterV2>(
+      (ref, c) => characterPuppetSpec(ref.read, c),
+    );

@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
+import '../../../data/app_state.dart';
 import '../../draw_canvas/canvas_analysis.dart';
 import '../puppet_store.dart';
+import '../rig/character_rig.dart';
 import '../rig/limb_hints.dart';
 import 'joint_editor_screen.dart';
 
@@ -46,7 +48,11 @@ class _CharacterJointsPageState extends ConsumerState<CharacterJointsPage> {
         .read(characterRepositoryProvider)
         .readImage(widget.characterId);
     final store = ref.read(puppetStoreProvider);
-    final rig = await store.loadRigJson(widget.characterId);
+    // The record's rig (CharacterV2.rig) wins; the store keeps a copy.
+    final c = ref.read(characterByIdProvider(widget.characterId));
+    final rig =
+        CharacterRig.fromBlob(c?.rig)?.encode() ??
+        await store.loadRigJson(widget.characterId);
     final strokes = hintStrokesFromRecord(
       await store.loadStrokesJson(widget.characterId),
     );
@@ -57,6 +63,21 @@ class _CharacterJointsPageState extends ConsumerState<CharacterJointsPage> {
       _strokes = strokes;
       _missing = png == null;
     });
+  }
+
+  /// The edited joints travel with the character (online opponents see
+  /// them too: `registerCharacter` sends `rig`).
+  Future<void> _saveToCharacter(CharacterRig rig) async {
+    final c = ref.read(characterByIdProvider(widget.characterId));
+    final blob = rig.toBlob();
+    if (c == null || blob == null) return;
+    try {
+      await ref
+          .read(charactersProvider.notifier)
+          .save(c.copyWith(rig: () => blob));
+    } on Object {
+      // The PuppetStore copy is still there; adopted on the next start.
+    }
   }
 
   void _finish() {
@@ -86,7 +107,10 @@ class _CharacterJointsPageState extends ConsumerState<CharacterJointsPage> {
       strokes: _strokes,
       initialRigJson: _rig,
       firstTime: widget.firstTime,
-      onFinished: (_) => _finish(),
+      onFinished: (rig) async {
+        if (rig != null) await _saveToCharacter(rig);
+        if (mounted) _finish();
+      },
     );
   }
 }

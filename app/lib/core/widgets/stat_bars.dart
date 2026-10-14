@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/battle_v3/battle_v3.dart';
+import '../../domain/character_v2_view.dart';
 import '../../domain/stats.dart';
 import '../theme/app_colors.dart';
 
@@ -128,4 +130,85 @@ class _StatRow extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The ten v2 stats as bars (relative to the character's best stat, with
+/// the number). [visible] reveals them one by one (birth animation).
+class StatBarsV2 extends StatelessWidget {
+  const StatBarsV2({super.key, required this.stats, this.visible = 10});
+
+  /// Ten values in [Stat] order.
+  final List<int> stats;
+  final int visible;
+
+  static Color colorOf(Stat s) => switch (s) {
+    Stat.hp || Stat.vit => AppColors.hpHigh,
+    Stat.sp || Stat.intl => AppColors.purple,
+    Stat.str => AppColors.danger,
+    Stat.def || Stat.res => AppColors.secondary,
+    Stat.dex || Stat.agi => AppColors.gold,
+    Stat.luk => AppColors.pink,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final best = stats.fold<int>(1, (a, b) => b > a ? b : a).toDouble();
+    return Column(
+      children: [
+        for (final s in Stat.values)
+          AnimatedOpacity(
+            opacity: s.index < visible ? 1 : 0,
+            duration: const Duration(milliseconds: 300),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 112,
+                    child: Text(
+                      statLabelV2(s),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(
+                          end: s.index < visible
+                              ? (stats[s.index] / best).clamp(0.0, 1.0)
+                              : 0,
+                        ),
+                        duration: const Duration(milliseconds: 600),
+                        builder: (context, v, _) => LinearProgressIndicator(
+                          value: v,
+                          minHeight: 16,
+                          color: colorOf(s),
+                          backgroundColor: const Color(0xFFE6E0D4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 48,
+                    child: Text(
+                      '${stats[s.index]}',
+                      key: Key('stat-${s.name}'),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

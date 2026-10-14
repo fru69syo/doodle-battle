@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../data/app_state.dart';
 import '../../data/backend/backend_api.dart';
+import '../../domain/battle_v3/battle_v3.dart' show FeatureVector;
+import '../../domain/character_v2.dart';
+import '../../domain/character_v2_view.dart' show cutoutHash;
 import '../../domain/drawing_analysis_result.dart';
 import '../birth/pending_birth.dart';
 import 'drawing_services.dart';
@@ -65,7 +68,9 @@ class DrawFlow {
       );
     }
     final judged = await _judge(result);
-    if (judged != null && judged.rejectCode != null) {
+    // v2 judge: only a confident photo / print / screen verdict refuses
+    // (an AI picture is accepted; the server makes it weaker, unseen).
+    if (judged != null && judged.rejectCode == CloudJudgement.notDrawing) {
       return const DrawRetake(kPaperDrawingMessage, notPaperDrawing: true);
     }
     final cloud = judged != null && judged.appropriate ? judged : null;
@@ -76,6 +81,7 @@ class DrawFlow {
             : applyCloudSkill(result, cloud.skillEstimate.toDouble()),
         cloud: cloud,
         beforePhoto: outcome.beforePhoto,
+        verdict: outcome.verdict,
       ),
     );
   }
@@ -107,19 +113,27 @@ class DrawFlow {
     );
   }
 
-  /// Cloud judgement, or null when not allowed / unavailable / failed (the
-  /// local result is used silently). An inappropriate judgement is returned
-  /// so that a "not hand-drawn" verdict ([CloudJudgement.rejectCode]) can
-  /// ask for a new photo; otherwise it is ignored.
+  /// Cloud judgement, or null when not allowed / unavailable / failed /
+  /// switched off by the cost mode (the on-device result is used silently,
+  /// moves then come from `generateOfflineMoves`). With the `v2` input the
+  /// same call proposes AI moves. An inappropriate judgement is returned so
+  /// that a "not a drawing" verdict ([CloudJudgement.rejectCode]) can ask
+  /// for a new photo; otherwise it is ignored.
   Future<CloudJudgement?> _judge(DrawingAnalysisResult result) async {
     final settings = await _ref.read(settingsProvider.future);
     final backend = _ref.read(backendApiProvider);
     if (!settings.consents.cloudJudge || !backend.isAvailable) return null;
     if (result.cutoutPng.length > _maxCloudPngBytes) return null;
     try {
+      // Budget switch (config/costMode): saving / minimal → on device only.
+      final mode = await backend.costMode().timeout(cloudJudgeTimeout);
+      if (!mode.cloudJudge) return null;
       await _ref.read(settingsProvider.notifier).ensureConsentSynced();
       final judgement = await backend
-          .judgeDrawing(result.cutoutPng)
+          .judgeDrawing(
+            result.cutoutPng,
+            v2: mode.cloudMoveGen ? v2InputOf(result) : null,
+          )
           .timeout(cloudJudgeTimeout);
       return judgement;
     } on Object {
@@ -127,6 +141,14 @@ class DrawFlow {
     }
   }
 }
+
+/// The analyser's quantised output for `judgeDrawing` (`v2`).
+V2DrawingInput v2InputOf(DrawingAnalysisResult r) => V2DrawingInput(
+  features: FeatureVector.quantize(r.features).toJson(),
+  energy10: CharacterV2.tenths(r.energy),
+  skill10: CharacterV2.tenths(r.skill),
+  imageHash: cutoutHash(r.cutoutPng),
+);
 
 final drawFlowProvider = Provider<DrawFlow>(DrawFlow.new);
 

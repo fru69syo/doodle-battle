@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/character.dart' show EvolutionStage;
+import 'package:doodle_battle/domain/character_v2.dart';
 import 'package:doodle_battle/domain/element_type.dart';
-import 'package:doodle_battle/domain/stats.dart';
 import 'package:doodle_battle/features/ar/ar_effects.dart';
 import 'package:doodle_battle/features/ar/glb/glb_reader.dart';
 import 'package:doodle_battle/features/ar/glb/glb_writer.dart';
@@ -234,19 +234,17 @@ void main() {
   });
 
   group('evolution effects', () {
-    Character character(int level, ElementType element) => Character(
+    CharacterV2 character(int level, ElementType element) => CharacterV2.create(
       id: 'c',
       name: 'test',
       imagePath: '/x.png',
       imageHash: 'h',
-      element: element,
-      baseStats: const Stats(hp: 10, atk: 10, def: 10, spd: 10),
+      rawFeatures: const {},
       energy: 50,
       skill: 30,
-      features: const {},
       createdAt: DateTime(2026),
-      level: level,
-    );
+      legacyElement: element,
+    ).copyWith(level: level);
 
     test('stage → effects mapping (SPEC §6)', () {
       expect(
@@ -257,7 +255,7 @@ void main() {
       expect(lv10.aura, true);
       expect(lv10.sparkles, false);
       expect(lv10.auraColor, elementAuraColor(ElementType.water));
-      final lv20 = ArEffects.forCharacter(character(20, ElementType.rainbow));
+      final lv20 = ArEffects.forCharacter(character(50, ElementType.rainbow));
       expect(lv20.aura, true);
       expect(lv20.sparkles, true);
       expect(lv20.rainbowAura, true);

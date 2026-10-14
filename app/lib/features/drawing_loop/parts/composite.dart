@@ -9,7 +9,8 @@ import 'dart:ui' show Offset, Rect;
 
 import 'package:image/image.dart' as img;
 
-import '../../../domain/character.dart';
+import '../../../domain/character_v2.dart';
+import '../../../domain/character_v2_view.dart';
 import '../../../domain/cosmetics.dart';
 import 'part_geometry.dart';
 
@@ -316,7 +317,7 @@ CompositeImage renderComposite(CompositeRequest r) {
 /// Builds the request for [c] from its stored PNGs ([partPngs] by part id;
 /// parts whose PNG is missing are skipped).
 CompositeRequest compositeRequestFor(
-  Character c,
+  CharacterV2 c,
   Uint8List basePng,
   Map<String, Uint8List> partPngs, {
   required int glowArgb,
