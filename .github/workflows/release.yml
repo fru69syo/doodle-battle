@@ -137,13 +137,20 @@ jobs:
           ADMOB_REWARDED_UNIT_ID: ${{ secrets.ADMOB_REWARDED_UNIT_ID }}
           # Optional: policy site base URL (default https://fru69syo.github.io/doodle-battle/).
           POLICY_BASE_URL: ${{ vars.POLICY_BASE_URL }}
+          # Required (v2.0 online play): realtime battle server, Terraform output realtime_url
+          # (wss://…/v2). Without it the app shows 「じゅんびちゅう」 instead of online battles.
+          REALTIME_URL: ${{ vars.REALTIME_URL }}
         run: |
           case "$ADMOB_REWARDED_UNIT_ID" in
             ca-app-pub-3940256099942544/*) echo "::error::ADMOB_REWARDED_UNIT_ID is Google's test unit"; exit 1 ;;
             ca-app-pub-[0-9]*/[0-9]*) ;;
             *) echo "::error::ADMOB_REWARDED_UNIT_ID must look like ca-app-pub-XXXXXXXXXXXXXXXX/NNNNNNNNNN"; exit 1 ;;
           esac
-          defines=(--dart-define "ADMOB_REWARDED_UNIT_ID=$ADMOB_REWARDED_UNIT_ID")
+          [[ "$REALTIME_URL" == wss://*/v2 ]] || { echo "::error::variable REALTIME_URL (environment play-release) must look like wss://…/v2 (docs/RELEASE.md §1.10, §1.12)"; exit 1; }
+          # v2.0 is free (SPEC §10.2): IAP_ENABLED is never passed, so purchases stay off and the
+          # release manifest has no BILLING permission (check_release.sh fails otherwise).
+          defines=(--dart-define "ADMOB_REWARDED_UNIT_ID=$ADMOB_REWARDED_UNIT_ID"
+                   --dart-define "REALTIME_URL=$REALTIME_URL")
           if [[ -n "$POLICY_BASE_URL" ]]; then
             [[ "$POLICY_BASE_URL" == https://*/ ]] || { echo "::error::POLICY_BASE_URL must start with https:// and end with /"; exit 1; }
             defines+=(--dart-define "POLICY_BASE_URL=$POLICY_BASE_URL")

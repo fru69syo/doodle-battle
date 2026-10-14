@@ -1,8 +1,10 @@
 # Compliance & Monetization（feat/compliance）
 
-SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・Play Billing への対応をまとめる。
+SPEC（v2.0: §9・§10・§11）の実装と、Google Play「ファミリー」ポリシー・AdMob・Play Billing への対応をまとめる。
 決めたことは §1 に理由と一緒に書き、オーナーの作業は §8、PM に確認したいことは §9 にある。
-出典は §10（2026-10-09 に確認）。
+出典は §10（2026-10-09 に確認）。**v2.0 のデータの流れとファミリーポリシーの再確認は §11・§12（2026-10-14、Release チーム）**。
+
+> **v2.0 の要点**: 無料で公開し、**アプリ内課金は `IAP_ENABLED`（既定オフ）で無効**（§3 は課金を有効にするときのための記録。リリースのマニフェストから BILLING 権限も外す: C19）。広告は **Android だけ**（C20）。AI は **Claude だけ**（C21）。
 
 | 項目 | どこ |
 |---|---|
@@ -15,7 +17,8 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 | 外部 ID・URL（1 ファイル） | `app/lib/core/config/app_config.dart` |
 | オンラインの表示名 | `features/online/display_name_picker.dart`、語彙は `shared/names/display_name_words.json` |
 | ポリシーのページ | `site/`（`scripts/build_site.py`、`.github/workflows/pages.yml`） |
-| リリースの検査 | `scripts/check_release.sh`（AdMob・Crashlytics の検査を追加）、`scripts/write_firebase_config.sh`（プレースホルダーの検出）+ `scripts/test_write_firebase_config.sh` |
+| リリースの検査 | `scripts/check_release.sh`（AdMob・Crashlytics・課金オフ・広告リクエストの子ども向け設定・モデル ID の検査）、`scripts/write_firebase_config.sh`（プレースホルダーの検出）+ `scripts/test_write_firebase_config.sh` |
+| 課金のフラグ（v2.0 はオフ） | `app/lib/core/config/app_config.dart`（`kIapEnabled`）、`app/android/app/build.gradle.kts`（`dart-defines` を読んで `src/noIap/AndroidManifest.xml` を release に重ねる）、`test/core/config/release_flags_test.dart` |
 
 ---
 
@@ -35,12 +38,15 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 | C10 | v1 は**サーバーでの購入の検証をしない**（Firebase なしで課金が動く） | 下の §3.3 のリスクを受け入れる。v1.1 で検証を足す |
 | C11 | 「すべてのデータを削除」のあと、購入は Play から復元してキャッシュに戻す | 購入記録は保護者の Google アカウントのもので、こちらのデータではない |
 | C12 | フレームパックの枠（ほし・はな・にじ）は**端末の中だけ**（サーバーに送らない）。パックを持っていないときは、選択の UI も見せない（子どもに購入を勧めない） | 見た目だけのアイテム。Teacher Approved の観点で、子どもの画面に課金の案内を出さない |
-| C13 | Crashlytics は**初期設定オフ**。「ふぐあいの じょうほうを おくる」（おうちのひと・初回セットアップ）をオンにしたときだけ、`setCrashlyticsCollectionEnabled(true)`。オフにすると未送信のレポートも削除。Firebase が未設定なら「準備中」で押せない | SPEC §7（Crashlytics だけ使う）、RELEASE §7-4 の PM 判断事項を「任意（保護者の許可制）」で実装。データセーフティで「任意」と申告できる |
+| C13 | Crashlytics は**初期設定オフ**。「ふぐあいの じょうほうを おくる」（おうちのひと・初回セットアップ）をオンにしたときだけ、`setCrashlyticsCollectionEnabled(true)`。オフにすると未送信のレポートも削除。Firebase が未設定なら「準備中」で押せない | SPEC §7（Crashlytics だけ使う）、RELEASE §7 の PM 判断事項を「任意（保護者の許可制）」で実装。データセーフティで「任意」と申告できる |
 | C14 | Crashlytics の **Gradle プラグインは使わない**。代わりに `com.google.firebase.crashlytics.RequireBuildId=false` を resource で設定 | プラグインなしで Firebase を設定すると Crashlytics SDK は起動時に「build ID が無い」と例外でアプリを止める（[C1]）。google-services.json なしでビルドできる方針（UI.md §5）を守る。難読化の対応表のアップロードは任意（§4） |
 | C15 | 外部 ID と URL は `app/lib/core/config/app_config.dart` にまとめ、ビルドごとに違う値は `--dart-define`（`ADMOB_REWARDED_UNIT_ID`、`POLICY_BASE_URL`）。AdMob の **App ID** はマニフェストに必要なので Gradle の `ADMOB_APP_ID`（Gradle プロパティか環境変数）→ `manifestPlaceholders`。どちらも既定値は Google の**テスト ID** | 開発・CI・フォークでは何も設定しなくてもテスト広告で動き、リリースでは本物の ID がないと失敗する（`check_release.sh --require-real-admob`、release.yml） |
 | C16 | ポリシーのページ（プライバシー・規約・削除・サポート）は `site/`。アプリからはおうちのひと（と初回セットアップの同意画面）でだけ開く（外部ブラウザ） | ファミリーポリシー: アプリの外へ出るリンクは保護者ゲートの先 |
 | C17 | オンラインの表示名の語彙を `shared/names/` に移し、サーバー（vendor）とアプリ（asset のバイト単位のコピー + ずれ検出テスト）で共有 | ng_words と同じ方式。ID は再利用・付け替え禁止 |
-| C18 | `ParentConsents` に `crashReports` を追加したが、ポリシー版（`currentPolicyVersion`）は 1 のまま | まだ公開前で、公開するポリシーが版 1 になるため |
+| C18 | `ParentConsents` に `crashReports` を追加したが、ポリシー版（`currentPolicyVersion`）は 1 のまま | まだ公開前で、公開するポリシーが版 1 になるため。2026-10-14 の v2.0 の改定（§11）も公開前なので版 1 のまま |
+| C19 | **v2.0 は課金なし**（SPEC §10.2）。`kIapEnabled = bool.fromEnvironment('IAP_ENABLED')`（既定 false）。オフの間はショップ・購入の同意・復元・ストアへの接続が一切ない。さらに release ビルドは `src/noIap/AndroidManifest.xml` で `com.android.vending.BILLING` を `tools:node="remove"`（Play Billing Library が足すため）。`check_release.sh` は BILLING があれば失敗（`--iap` で許可）、`app_config.dart` の既定がオフであることも確認。release.yml は `IAP_ENABLED` を渡さない | BILLING 権限が残っていると、Play で「アプリ内購入あり」と表示される場合があり、IARC の回答（デジタル商品: いいえ）とも食い違う。使わない権限は持たない（ファミリー向けアプリの原則）。課金を有効にするときの手順は STORE_LISTING §8 |
+| C20 | **広告は Android だけ**（`adsSupportedProvider` が `Platform.isAndroid && ADS_ENABLED`）。iPhone 版は広告の許可の項目も無い | SPEC §10.2（Apple の Kids カテゴリーの審査の危険を避ける）。`check_release.sh` がコードを確認 |
+| C21 | **AI は Claude だけ**。すべてのシステムプロンプトに `CHILD_SAFETY_RULES`、出力はサーバーで検査してから表示、プライバシーポリシーで AI の利用と COPPA などへの準拠を公表（`privacy.html#ai`）、Anthropic Console の利用上限（目安 月 2,000 円）。モデル ID はリポジトリに書かない（`CLAUDE_MODEL`、`check_release.sh` が検査） | SPEC §11.1。Gemini・Vertex AI は 18 歳未満向けのサービスでの利用が規約で禁止 |
 
 ## 2. 広告（AdMob）
 
@@ -61,6 +67,7 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 - `AD_ID`・`ACCESS_ADSERVICES_*` を remove、`DELAY_APP_MEASUREMENT_INIT=true`。
 - `MobileAdsInitProvider`（SDK の ContentProvider）はマニフェストに残る。これは App ID を確認するためのもので、SDK の初期化（広告の通信）は `initialize()` まで行わない想定。**実機で「許可前に広告ドメインへの通信がない」ことを QA で確認する**（QA_CHECKLIST 8.9）。
 - 確認結果（2026-10-09、debug 鍵で署名した release AAB）: `check_release.sh` 合格。マージ後のマニフェストの権限は CAMERA、WRITE/READ_EXTERNAL_STORAGE（maxSdk 28）、INTERNET、ACCESS_NETWORK_STATE、BILLING、WAKE_LOCK、FOREGROUND_SERVICE だけ。AD_ID なし。警告はテストの App ID の 1 件だけ。
+- **v2.0（2026-10-14）**: BILLING も外した（C19）。結果は §11.3。
 
 ### 2.3 AdMob 側の設定（オーナー）
 - ブロックの管理 → 最大の広告コンテンツのレーティング **G**、センシティブなカテゴリをすべてブロック。
@@ -68,6 +75,8 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 - `app-ads.txt`（§5.3）。
 
 ## 3. アプリ内購入（Play Billing）
+
+> **v2.0 では無効**（C19。`IAP_ENABLED` 既定オフ、release のマニフェストに BILLING なし、Play Console に商品を作らない）。この節は、オーナーの副業申請が通って課金を有効にするときのための記録。
 
 ### 3.1 実装
 - `in_app_purchase` 3.3 / `in_app_purchase_android` 0.5（**Play Billing Library 8.0.0**。2026-08-31 以降、新規アプリと更新は 8 以上が必須 [B2]）。
@@ -122,7 +131,7 @@ SPEC §7 の実装と、Google Play「ファミリー」ポリシー・AdMob・P
 - アプリ内の URL: `POLICY_BASE_URL`（既定 `https://fru69syo.github.io/doodle-battle/`）+ `privacy.html` などのファイル名。
 
 ### 5.2 公開の方法
-**A. このリポジトリの GitHub Pages**（`.github/workflows/pages.yml`）: private リポジトリの Pages は**有料プラン**が必要（RELEASE §1.10）。使えるなら: Settings → Pages → Source を「GitHub Actions」、リポジトリ変数 `DEVELOPER_NAME`・`SUPPORT_EMAIL`・`ADMOB_PUBLISHER_ID` を設定し、`PAGES_ENABLED=true`。`main` で `site/` が変わるたびに公開される。
+**A. このリポジトリの GitHub Pages**（`.github/workflows/pages.yml`）: private リポジトリの Pages は**有料プラン**が必要（RELEASE §1.13）。使えるなら: Settings → Pages → Source を「GitHub Actions」、リポジトリ変数 `DEVELOPER_NAME`・`SUPPORT_EMAIL`・`ADMOB_PUBLISHER_ID` を設定し、`PAGES_ENABLED=true`。`main` で `site/` が変わるたびに公開される。
 
 **B. 別の public リポジトリ（無料・推奨）**: `fru69syo/fru69syo.github.io`（ユーザーサイト）を作り、
 ```bash
@@ -151,17 +160,19 @@ AdMob は Play に登録した「ウェブサイト」の**ドメインの直下
 
 ## 8. オーナーがやること
 
-1. **AdMob**（RELEASE §1.8）: アプリとリワード広告ユニットを作り、環境 `play-release` の secret に `ADMOB_APP_ID`（`ca-app-pub-…~…`）と `ADMOB_REWARDED_UNIT_ID`（`ca-app-pub-…/…`）を入れる。ブロックの管理で G・センシティブなカテゴリをブロック。
-2. **Play Console**: §3.2 の 3 商品を作成して有効にする（価格は PM と決める）。ライセンス テスターを登録。
+（v2.0 の全体の順番は RELEASE.md §0・§1。ここはこの文書に関係するものだけ。）
+
+1. **AdMob**（RELEASE §1.11）: アプリとリワード広告ユニットを作り、環境 `play-release` の secret に `ADMOB_APP_ID`（`ca-app-pub-…~…`）と `ADMOB_REWARDED_UNIT_ID`（`ca-app-pub-…/…`）を入れる。子ども向けの扱いを有効にし、ブロックの管理で G・センシティブなカテゴリをブロック。
+2. **Play Console**: v2.0 では**商品を作らない**（C19）。データセーフティ・IARC・ターゲット層は STORE_LISTING §4〜§6（v2.0 で確認済み）のとおりに入力。
 3. **問い合わせ先メール**（公開される専用アドレス）と**デベロッパー名**（Play の表示と同じ）を決め、§5.2 の変数（または `build_site.py --var`）に入れる。
 4. **ページの公開**（§5.2 の A か B）。B の場合は `app-ads.txt` をユーザーサイトの直下に置く。Play Console の「プライバシーポリシー」と「データの削除の URL」に `privacy.html`・`delete.html` の URL を入れる。
-5. **Anthropic の契約とデータ保持**を確認し（RELEASE §1.6）、`privacy.html` の「原則 30 日以内に削除」と違えば直す（ZDR を契約した場合は「保持しない」に）。
+5. **Anthropic の契約とデータ保持**を確認し（RELEASE §1.7）、`privacy.html` の「原則 30 日以内に削除」と違えば直す（ZDR を契約した場合は「保持しない」に）。月の利用上限（目安 2,000 円）を設定する。
 6. Firebase を設定したら、Crashlytics をコンソールで有効にする（データは保護者がオンにした端末からだけ届く）。
-7. ウェブからの削除依頼に対応する手順（RELEASE §1.11・§7-6 の管理スクリプト）を用意する。
+7. ウェブからの削除依頼に対応する手順（RELEASE §1.13・§7-5 の管理スクリプト）を用意する。
 
 ## 9. PM に確認したいこと（未決定）
 
-1. 商品の価格（§3.2 の案: 250 / 160 / 320 円。320 円はこうこくなしパスの目安として SPEC §11.4 で決定）。
+1. 商品の価格（§3.2 の案: 250 / 160 / 320 円）。v2.0 は課金なしなので、課金を有効にするときに決める。
 2. 広告の 1 日の上限（3 回）でよいか。
 3. v1.1 のサーバー検証（§3.3）を入れる時期。入れると購入に Firebase（保護者の同意）が必要になる。
 4. ターゲット年齢に「5 歳以下」を含めるか（含めるなら広告と文言の見直し。STORE_LISTING §5）。
@@ -182,3 +193,45 @@ AdMob は Play に登録した「ウェブサイト」の**ドメインの直下
 - [C1] Crashlytics Android SDK のソース（`CrashlyticsCore.onPreExecute`、`com.google.firebase.crashlytics.RequireBuildId`）: <https://github.com/firebase/firebase-android-sdk/blob/main/firebase-crashlytics/src/main/java/com/google/firebase/crashlytics/internal/common/CrashlyticsCore.java>
 - [C2] Crashlytics「オプトインのレポート」: <https://firebase.google.com/docs/crashlytics/android/customize-crash-reports#enable-reporting>（`firebase_crashlytics_collection_enabled=false` と `setCrashlyticsCollectionEnabled`）。
 - [AN] Anthropic「How long do you store my organization's data?」: <https://privacy.claude.com/en/articles/7996866>（API の入力と出力は原則 30 日以内に削除。契約で変わりうる）。
+
+## 11. v2.0 のデータの流れの再確認（2026-10-14、Release チーム）
+
+データセーフティ（STORE_LISTING §6）とプライバシーポリシー（`site/privacy.html`、2026-10-14 改定）を、v2.0 の実装（BACKEND §3〜§5・§16・§17、REALTIME_PROTOCOL、TRUST §8）と突き合わせた結果。
+
+### 11.1 流れごとの確認
+
+| 流れ | 送るもの | いつ（同意） | 保存 | データセーフティ | プライバシーポリシー |
+|---|---|---|---|---|---|
+| お絵かきツール | **線そのものは送らない**（`StrokeDrawing` は端末の `PuppetStore` だけ） | – | 端末 | 申告なし | §2 の 1 行目（端末の中だけ） |
+| 線の要約 | `canvas {v, strokes, points, colors, inkBox}`（`registerCharacter` schema 2、`source: canvas` のとき） | オンライン登録（`consent.online`） | スナップショット（サーバー専用） | その他のユーザー作成コンテンツ | §2 オンライン登録の行 |
+| クラウド判定・技づくり | 切り抜いた PNG・特徴量 → Claude（`judgeDrawing`、Lv10・Lv50 の `generateMove`） | `consent.cloudJudge` | **保存しない**（Anthropic は原則 30 日） | 写真（収集・任意） | §2 AI の行、§3 Anthropic |
+| 登録の審査 | PNG・名前・わざの名前 → Claude（`moderateCharacter`。**コストモードでも止めない**） | `consent.online` | スナップショット + Storage の画像 | 写真、その他のユーザー作成コンテンツ | §2 オンライン登録の行 |
+| スナップショット | 表示用（名前・わざの名前・表示名・レベル・関節 `rig`・画像）+ `engine`（特徴量・`trust` など。**本人にも読ませない**） | `consent.online` | 削除・許可の取り消しまで（取り消しで `withdrawn`） | 同上 | 同上 |
+| リアルタイム対戦 | WebSocket（`wss://`、ID トークン + App Check）。技の指示とおまかせの切り替えだけ | `consent.online` | `rtMatches`（相手・勝敗・経験値・理由。レートの数字なし）、`replays`（入力。**TTL 30 日**） | アプリの操作 | §2 対戦の記録の行、§4 保存期間 |
+| Elo | `users.rated {rating, games, best, dayKey, dayMatches}`、`snapshots.ghostRating`。アプリにはバッジだけ | `consent.online` | 削除まで | アプリの操作 | 同上（数字は表示しない） |
+| 通報 | `reportCharacter`（snapshotId + 選択式の理由）、`reportAiSuggestion`（言葉 + 選択式の理由） | `consent.online` / `consent.cloudJudge` | `reports`・`moderationQueue`・`aiSuggestionReports` | その他のユーザー作成コンテンツ | §2 通報の 2 行 |
+| コストモード | アプリ・対戦サーバーは `config/costMode` を**読むだけ** | – | – | 申告なし | §2 の注記（新たに集めない） |
+| Crashlytics | クラッシュ・診断・インストール ID | 「ふぐあいの じょうほうを おくる」（初期値オフ） | 90 日 | クラッシュログ・診断・デバイス ID | §2 クラッシュの行 |
+| 広告（Android） | AdMob（IP・操作・診断・アプリセット ID。**広告 ID なし**） | `consent.ads` + 子どもが選んだとき | Google | アプリの操作・診断・デバイス ID・おおよその位置（共有） | §2 広告の行 |
+| 課金 | **なし**（C19） | – | – | 購入履歴: 収集しない | §2 の注記 |
+
+- 削除: `deleteMyData` は profile・snapshots と画像・v1 の matches・`rtMatches`・`replays`・reports・`aiSuggestionReports`・queue・rate limits・moderation log・Auth ユーザーを消す（BACKEND §5）。`site/delete.html` に反映済み。
+- ゴースト: ほかの子のスナップショットを使うが、持ち主の uid は送らない（BACKEND §4 SideInfo）。表示名はプリセットだけ。
+
+### 11.2 ファミリーポリシーの確認
+
+| 項目 | どう守っているか | どこで確かめるか |
+|---|---|---|
+| AdMob の子ども向け設定（Android だけ） | `ageRestrictedTreatment=child`・TFCD・TFUA・G・`nonPersonalizedAds`・メディエーションなし（C2）、iPhone は広告なし（C20） | `check_release.sh`（コード）、`monetization_ui_test.dart`、QA_CHECKLIST §8 |
+| 広告 ID を使わない | `AD_ID`・`ACCESS_ADSERVICES_*` を削除（C3） | `check_release.sh`（マニフェスト）、QA_CHECKLIST §8.9 |
+| 広告の前の保護者の許可と子どもへの注意 | 保護者が許可するまで SDK を初期化しない、見る前に「おうちのひとに きいてから みてね」（C1・§2.1） | QA_CHECKLIST §8.1〜8.9 |
+| アプリの外へのリンクは保護者ゲートの先 | ポリシーのページ・ARCore のインストール・動画の共有はゲートの先（C16） | ウィジェットテスト、QA_CHECKLIST §2.4 |
+| チャットなし | 自由入力の文字を他人に見せない。表示名はプリセット（§6） | QA_CHECKLIST §7.5・§13.7 |
+| 課金なし | `IAP_ENABLED` オフ、BILLING 権限なし（C19） | `check_release.sh`、`release_flags_test.dart`、QA_CHECKLIST §8 |
+| 子ども向けの AI | Claude だけ、`CHILD_SAFETY_RULES`、出力の検査、通報（C21） | Functions のテスト、QA_CHECKLIST §5.10 |
+
+### 11.3 リリース AAB の確認（2026-10-14）
+debug 鍵で署名した v2.0.0+2000099 の release AAB（`REALTIME_URL` あり、`IAP_ENABLED` なし）で `check_release.sh` と `check_16kb.sh` に合格。マージ後のマニフェストの権限に BILLING と AD_ID が無いことを確認した（数値は RELEASE.md §8）。
+
+## 12. 出典の追加（2026-10-14）
+- Play Billing の権限とストアの表示: `com.android.vending.BILLING` を宣言しているアプリは、商品が無くても Play で「アプリ内購入あり」と表示される場合がある（開発者の報告が多い。Google の公式の説明は見つからなかった）。課金をしない版では権限を外しておくのが安全（C19）。申請の前に、内部テストのストアの表示で「アプリ内購入」が出ていないことを確認する（QA_CHECKLIST §13）。

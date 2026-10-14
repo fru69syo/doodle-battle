@@ -37,6 +37,24 @@ require(Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$").matches(admobAppId)) {
     "ADMOB_APP_ID must look like ca-app-pub-0000000000000000~0000000000 (got '$admobAppId')"
 }
 
+// Release team: in-app purchases (SPEC §10.2). The Dart flag IAP_ENABLED (app_config.dart
+// kIapEnabled) defaults to off; Flutter passes `--dart-define`s to Gradle as the property
+// `dart-defines` (comma-separated, each base64 "KEY=VALUE"). While purchases are off, the
+// release build overlays src/noIap/AndroidManifest.xml, which removes the BILLING permission
+// that the Play Billing library merges in (scripts/check_release.sh checks it).
+val dartDefines: Map<String, String> =
+    (findProperty("dart-defines") as String?)
+        ?.split(",")
+        ?.filter { it.isNotBlank() }
+        ?.mapNotNull {
+            val kv = runCatching { String(java.util.Base64.getDecoder().decode(it)) }.getOrNull()
+            val i = kv?.indexOf('=') ?: -1
+            if (kv == null || i <= 0) null else kv.substring(0, i) to kv.substring(i + 1)
+        }
+        ?.toMap()
+        ?: emptyMap()
+val iapEnabled = dartDefines["IAP_ENABLED"] == "true"
+
 android {
     namespace = "com.fru69syo.doodle_battle"
     compileSdk = flutter.compileSdkVersion
@@ -79,6 +97,12 @@ android {
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
             }
+        }
+    }
+
+    sourceSets {
+        if (!iapEnabled) {
+            getByName("release").manifest.srcFile("src/noIap/AndroidManifest.xml")
         }
     }
 

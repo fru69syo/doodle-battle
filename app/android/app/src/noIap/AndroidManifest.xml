@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Release team (SPEC §10.2: v2.0 is free, in-app purchases are off).
+     Overlaid on the RELEASE build type by build.gradle.kts unless the app is built with
+     `--dart-define=IAP_ENABLED=true`. The Play Billing library (kept for when purchases
+     come back) merges in the BILLING permission; without products for sale it must not be
+     in the release manifest (apps that declare it may be shown as offering in-app purchases).
+     scripts/check_release.sh fails when it is still there (unless --iap). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="com.android.vending.BILLING" tools:node="remove" />
+</manifest>
