@@ -4,6 +4,7 @@ import type { FighterInfo, ServerMsg } from "../../src/protocol";
 import { FakeSim, fakeSetup } from "../helpers/fakeSim";
 
 const info = (isGhost = false): FighterInfo => ({
+  snapshotId: isGhost ? "g" : "s",
   displayName: "x",
   characterName: "c",
   imagePath: null,
@@ -60,6 +61,60 @@ describe("Match timers (server-side)", () => {
     const ev = inbox[0].find((x) => x.t === "ev" && x.events.some((e) => e.type === "autoPick"));
     expect(ev).toBeDefined();
     expect(DEFAULT_TIMING.decisionTicks + DEFAULT_TIMING.graceTicks).toBe(53);
+  });
+
+  it("deadline: the ready tick carries the exact tick of the timeout pick (children only)", () => {
+    const sim = new FakeSim([10, 10_000]);
+    sim.aiChoice = 1;
+    const { m, inbox } = setup(sim);
+    runUntil(m, () => sim.inputsSeen.length > 0);
+    const deadlines = inbox[0].flatMap((x) => (x.t === "ev" ? x.events.filter((e) => e.type === "deadline") : []));
+    expect(deadlines).toEqual([{ tick: 10, type: "deadline", side: 0, at: 62 }]);
+    // The pick happens exactly at `at`; the opponent's app gets the same stream.
+    expect(sim.inputsSeen[0]?.tick).toBe(62);
+    expect(inbox[1].some((x) => x.t === "ev" && x.events.some((e) => e.type === "deadline"))).toBe(true);
+    expect(m.deadlineOf(10)).toBe(62);
+  });
+
+  it("no deadline when さきどり fires in the very tick the gauge fills, none for ghosts", () => {
+    const sim = new FakeSim([10, 10]);
+    const { m, inbox } = setup(sim, ghost());
+    m.select(0, 1, 0);
+    runUntil(m, () => sim.tick >= 11);
+    const deadlines = inbox[0].flatMap((x) => (x.t === "ev" ? x.events.filter((e) => e.type === "deadline") : []));
+    expect(deadlines).toEqual([]);
+  });
+
+  it("おまかせ switch: the server's AI picks 1 s after ready; off = manual control again", () => {
+    const sim = new FakeSim([10, 10_000]);
+    sim.aiChoice = 1;
+    const { m, inbox } = setup(sim);
+    m.select(0, 1, 2); // さきどり, dropped when おまかせ goes on
+    expect(m.setOmakase(0, true)).toEqual({ t: "omakase", on: true });
+    runUntil(m, () => sim.inputsSeen.length > 0);
+    expect(sim.inputsSeen[0]).toEqual({ tick: 20, side: 0, slot: 1 });
+    expect(m.summary(0).inputs[0]?.src).toBe("omakase");
+    // No autoPick event (that is only the 5 s timeout) and the ack is private.
+    expect(inbox[0].some((x) => x.t === "ev" && x.events.some((e) => e.type === "autoPick"))).toBe(false);
+    expect(inbox[1].some((x) => x.t === "omakase")).toBe(false);
+
+    expect(m.setOmakase(0, false)).toEqual({ t: "omakase", on: false });
+    const calls = sim.aiCalls;
+    runUntil(m, () => sim.tick >= 45);
+    expect(sim.inputsSeen).toHaveLength(1); // ready again at 30, waiting for the child
+    m.select(0, 2, 0);
+    runUntil(m, () => sim.inputsSeen.length > 1);
+    expect(sim.inputsSeen[1]).toEqual({ tick: 46, side: 0, slot: 0 });
+    expect(sim.aiCalls).toBe(calls);
+  });
+
+  it("おまかせ switched on while the gauge is already full: picks after the think time", () => {
+    const sim = new FakeSim([10, 10_000]);
+    const { m } = setup(sim);
+    runUntil(m, () => sim.tick >= 30);
+    m.setOmakase(0, true);
+    m.advance();
+    expect(sim.inputsSeen[0]).toMatchObject({ tick: 31, side: 0 });
   });
 
   it("an unusable queued move is rejected when the gauge fills, the child can pick again", () => {

@@ -5,6 +5,10 @@
  *   さきどり    a move picked while the gauge fills is queued and used the tick the gauge is full
  *   5 s timer  50 ticks after the gauge filled (+3 ticks network grace) おまかせ picks for the child
  *   ghosts     the おまかせ AI ("normal", thinks 10 ticks = 1 s) plays the ghost
+ *   おまかせ   the child's switch (`omakase` message): the same AI plays that side, 1 s after
+ *              the gauge filled; switching it off gives the child full control again
+ *   deadline   when a child's gauge fills, a `deadline` event tells the exact tick of the 5 s
+ *              timeout pick, so the app's ring does not have to guess from 2 Hz snapshots
  *   disconnect after 10 s away おまかせ plays for the child; after 30 s the child loses (XP 0);
  *              if both sides are away for 30 s the match is aborted (no rating change)
  *
@@ -50,6 +54,8 @@ interface SideState extends MatchSide {
   queued: number | null;
   queuedSeq: number;
   lastSeq: number;
+  /** The child's おまかせ switch (protocol rev 2). */
+  omakase: boolean;
   readyAt: number | null;
   disconnectedAt: number | null;
 }
@@ -75,7 +81,7 @@ export class Match {
     readonly startedAtMs: number,
     private readonly timing: MatchTiming = DEFAULT_TIMING,
   ) {
-    const mk = (x: MatchSide): SideState => ({ ...x, send: null, queued: null, queuedSeq: -1, lastSeq: -1, readyAt: null, disconnectedAt: null });
+    const mk = (x: MatchSide): SideState => ({ ...x, send: null, queued: null, queuedSeq: -1, lastSeq: -1, omakase: false, readyAt: null, disconnectedAt: null });
     this.s = [mk(sides[0]), mk(sides[1])];
   }
 
@@ -130,8 +136,28 @@ export class Match {
     return { t: "sel", seq, slot, accepted: true, queued: !this.sim.isReady(side) };
   }
 
+  /**
+   * The child's おまかせ switch. On: the server's AI (ふつう, like the timeout) picks for this
+   * side 1 s after its gauge fills; a pending さきどり is dropped. Off: full control again.
+   * Private ack (the opponent never learns about it).
+   */
+  setOmakase(side: Side, on: boolean): ServerMsg {
+    const st = this.s[side];
+    if (st.kind === "player") {
+      st.omakase = on;
+      if (on) st.queued = null;
+    }
+    return { t: "omakase", on: st.omakase };
+  }
+
+  /** Tick at which the 5 s timeout picks for a side whose gauge filled at `readyAt`. */
+  deadlineOf(readyAt: number): number {
+    // The ready tick counts as the first waiting tick (like the engine's own timer).
+    return readyAt + this.timing.decisionTicks + this.timing.graceTicks - 1;
+  }
+
   private aiControlled(st: SideState): boolean {
-    if (st.kind === "ghost") return true;
+    if (st.kind === "ghost" || st.omakase) return true;
     return st.disconnectedAt !== null && this.sim.tick - st.disconnectedAt >= this.timing.autoAfterDisconnectTicks;
   }
 
@@ -149,7 +175,7 @@ export class Match {
       if (this.aiControlled(st)) {
         if (ready && st.readyAt !== null && next - st.readyAt >= this.timing.aiThinkTicks) {
           inputs[side] = this.sim.chooseMove(side, st.aiTier ?? "normal");
-          srcs[side] = "ai";
+          srcs[side] = st.kind === "player" && st.omakase && st.disconnectedAt === null ? "omakase" : "ai";
         }
         continue;
       }
@@ -160,7 +186,7 @@ export class Match {
       if (st.queued !== null) {
         inputs[side] = st.queued;
         srcs[side] = "player";
-      } else if (ready && st.readyAt !== null && next - st.readyAt + 1 >= this.timing.decisionTicks + this.timing.graceTicks) {
+      } else if (ready && st.readyAt !== null && next >= this.deadlineOf(st.readyAt)) {
         inputs[side] = this.sim.chooseMove(side, "normal");
         srcs[side] = "auto";
       }
@@ -178,7 +204,11 @@ export class Match {
         if (src === "player") st.queued = null;
         st.readyAt = null;
       }
-      if (this.sim.isReady(side) && st.readyAt === null) st.readyAt = this.sim.tick;
+      if (this.sim.isReady(side) && st.readyAt === null) {
+        st.readyAt = this.sim.tick;
+        // The exact tick of the 5 s おまかせ pick (children only; ghosts never wait).
+        if (st.kind === "player") events.push({ tick: this.sim.tick, type: "deadline", side, at: this.deadlineOf(st.readyAt) });
+      }
     }
 
     if (events.length > 0) {

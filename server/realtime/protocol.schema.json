@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/fru69syo/doodle-battle/server/realtime/protocol.schema.json",
-  "title": "おえかきファイターズ realtime protocol v1",
+  "title": "おえかきファイターズ realtime protocol v1 (rev 2)",
   "description": "WebSocket JSON messages (one per text frame). Client->server: Hello (first), then ClientMessage. Server->client: ServerMessage. Human-readable: docs/REALTIME_PROTOCOL.md. Kept in sync with src/protocol.ts by test/unit/protocolSchema.test.ts.",
   "$defs": {
     "Hello": {
@@ -109,6 +109,23 @@
       ],
       "additionalProperties": false
     },
+    "Omakase": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "omakase"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "t",
+        "on"
+      ],
+      "additionalProperties": false
+    },
     "ClientMessage": {
       "oneOf": [
         {
@@ -122,6 +139,9 @@
         },
         {
           "$ref": "#/$defs/Ping"
+        },
+        {
+          "$ref": "#/$defs/Omakase"
         }
       ]
     },
@@ -159,6 +179,13 @@
     "FighterInfo": {
       "type": "object",
       "properties": {
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "description": "Registered character id (snapshots/{id}); what the app passes to reportCharacter. A mirror ghost carries the child's own id. rev 2"
+        },
         "displayName": {
           "type": "string"
         },
@@ -201,6 +228,7 @@
         }
       },
       "required": [
+        "snapshotId",
         "displayName",
         "characterName",
         "imagePath",
@@ -274,7 +302,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Engine v3 types (ready, inputIgnored, select, moveStart, effective, hit, miss, dot, heal, stage, status, statusFail, shield, expire, heatUp, faint, end) plus the server's autoPick and forfeit; clients ignore unknown types and fields"
+          "description": "Engine v3 types (ready, inputIgnored, select, moveStart, effective, hit, miss, dot, heal, stage, status, statusFail, shield, expire, heatUp, faint, end) plus the server's autoPick, forfeit and (rev 2) deadline {side, at}; clients ignore unknown types and fields"
         },
         "side": {
           "type": "integer",
@@ -298,6 +326,11 @@
           "type": "integer",
           "const": 1
         },
+        "rev": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Additive revision of protocol v1: 2 = omakase, deadline event, FighterInfo.snapshotId"
+        },
         "serverTimeMs": {
           "type": "integer",
           "minimum": 0
@@ -309,6 +342,7 @@
       "required": [
         "t",
         "proto",
+        "rev",
         "serverTimeMs",
         "inMatch"
       ],
@@ -581,6 +615,24 @@
       ],
       "additionalProperties": false
     },
+    "OmakaseAck": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "omakase"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "t",
+        "on"
+      ],
+      "additionalProperties": false,
+      "description": "Private ack of the client's omakase message (rev 2)"
+    },
     "Error": {
       "type": "object",
       "properties": {
@@ -674,6 +726,9 @@
         },
         {
           "$ref": "#/$defs/Pong"
+        },
+        {
+          "$ref": "#/$defs/OmakaseAck"
         },
         {
           "$ref": "#/$defs/Error"
