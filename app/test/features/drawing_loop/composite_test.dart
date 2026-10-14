@@ -165,32 +165,38 @@ void main() {
   });
 
   test('compositeRequestFor skips parts whose PNG is missing', () {
-    final c = CharacterV2.create(
-      id: 'c1',
-      name: 'x',
-      imagePath: '',
-      imageHash: 'h',
-      rawFeatures: const {},
-      energy: 1,
-      skill: 1,
-      createdAt: DateTime.utc(2026),
-    ).copyWith(
-      level: 20,
-      cosmetics: const CharacterCosmetics(
-        parts: [
-          CharacterPart(
-            id: 'a',
-            type: PartType.hat,
-            transform: PartTransform(cx: 0.5, cy: 0, scale: 0.3),
+    final c =
+        CharacterV2.create(
+          id: 'c1',
+          name: 'x',
+          imagePath: '',
+          imageHash: 'h',
+          rawFeatures: const {},
+          energy: 1,
+          skill: 1,
+          createdAt: DateTime.utc(2026),
+        ).copyWith(
+          level: 50,
+          cosmetics: const CharacterCosmetics(
+            parts: [
+              CharacterPart(
+                id: 'a',
+                type: PartType.hat,
+                transform: PartTransform(cx: 0.5, cy: 0, scale: 0.3),
+              ),
+              CharacterPart(
+                id: 'b',
+                type: PartType.tail,
+                transform: PartTransform(
+                  cx: 1,
+                  cy: 1,
+                  scale: 0.3,
+                  behind: true,
+                ),
+              ),
+            ],
           ),
-          CharacterPart(
-            id: 'b',
-            type: PartType.tail,
-            transform: PartTransform(cx: 1, cy: 1, scale: 0.3, behind: true),
-          ),
-        ],
-      ),
-    );
+        );
     final r = compositeRequestFor(c, solid(10, 10, red), {
       'b': solid(5, 5, blue),
     }, glowArgb: 0xFF112233);

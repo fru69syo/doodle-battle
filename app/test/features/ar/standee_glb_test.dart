@@ -234,18 +234,17 @@ void main() {
   });
 
   group('evolution effects', () {
-    CharacterV2 character(int level, ElementType element) =>
-        CharacterV2.create(
-          id: 'c',
-          name: 'test',
-          imagePath: '/x.png',
-          imageHash: 'h',
-          rawFeatures: const {},
-          energy: 50,
-          skill: 30,
-          createdAt: DateTime(2026),
-          legacyElement: element,
-        ).copyWith(level: level);
+    CharacterV2 character(int level, ElementType element) => CharacterV2.create(
+      id: 'c',
+      name: 'test',
+      imagePath: '/x.png',
+      imageHash: 'h',
+      rawFeatures: const {},
+      energy: 50,
+      skill: 30,
+      createdAt: DateTime(2026),
+      legacyElement: element,
+    ).copyWith(level: level);
 
     test('stage → effects mapping (SPEC §6)', () {
       expect(

@@ -21,18 +21,15 @@ void main() {
     },
   );
 
-  test(
-    'spec parsed from the copy equals the shared JSON file',
-    () async {
-      final spec = BattleSpec.fromJsonString(
-        File(assetCopyPath).readAsStringSync(),
-      );
-      final raw = jsonDecode(File(sharedSpecPath).readAsStringSync());
-      // toJson() rebuilds every field from the typed model, so this also proves
-      // nothing in the JSON is dropped or misread.
-      expect(spec.toJson(), raw);
-    },
-  );
+  test('spec parsed from the copy equals the shared JSON file', () async {
+    final spec = BattleSpec.fromJsonString(
+      File(assetCopyPath).readAsStringSync(),
+    );
+    final raw = jsonDecode(File(sharedSpecPath).readAsStringSync());
+    // toJson() rebuilds every field from the typed model, so this also proves
+    // nothing in the JSON is dropped or misread.
+    expect(spec.toJson(), raw);
+  });
 
   final spec = loadSpecFromFile();
 
@@ -109,8 +106,7 @@ void main() {
 
   test('v1 CPU roster manifest still parses (v1 engine tools)', () {
     final roster = CpuRoster.fromManifestJson(
-      (jsonDecode(File('assets/cpu/manifest.json').readAsStringSync())
-              as Map)
+      (jsonDecode(File('assets/cpu/manifest.json').readAsStringSync()) as Map)
           .cast<String, Object?>(),
     );
     expect(roster.byId.length, 12);

@@ -34,8 +34,9 @@ Character sample({CharacterCosmetics cosmetics = CharacterCosmetics.none}) =>
     );
 
 /// [sample] as the app stores it now (v2; migrated from the v1 record).
-CharacterV2 sampleV2({CharacterCosmetics cosmetics = CharacterCosmetics.none}) =>
-    CharacterV2.fromJson(sample(cosmetics: cosmetics).toJson());
+CharacterV2 sampleV2({
+  CharacterCosmetics cosmetics = CharacterCosmetics.none,
+}) => CharacterV2.fromJson(sample(cosmetics: cosmetics).toJson());
 
 const fullCosmetics = CharacterCosmetics(
   parts: [

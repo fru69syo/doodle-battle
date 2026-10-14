@@ -17,10 +17,10 @@ import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/before_photo.dart';
 import 'package:doodle_battle/data/drawing_loop_storage.dart';
 import 'package:doodle_battle/data/game_progress.dart';
-import 'package:doodle_battle/domain/battle/battle.dart';
-import 'package:doodle_battle/domain/character.dart';
+import 'package:doodle_battle/domain/battle_v3/battle_v3.dart';
+import 'package:doodle_battle/domain/character_v2.dart';
+import 'package:doodle_battle/domain/character_v2_view.dart';
 import 'package:doodle_battle/domain/drawing_analysis_result.dart';
-import 'package:doodle_battle/domain/stats.dart';
 import 'package:doodle_battle/features/card_print/card_output.dart';
 import 'package:doodle_battle/features/drawing_analysis/drawing_analyzer.dart';
 import 'package:doodle_battle/features/drawing_loop/odai/daily_odai.dart';
@@ -68,52 +68,54 @@ Future<void> _loadFonts() async {
 DrawingAnalysisResult _analyse(DoodleCanvas c) =>
     analyzeDrawingSync(c.encodePng()).result;
 
-Character _char(
+CharacterV2 _char(
   String id,
   String name,
   DrawingAnalysisResult r, {
   required int level,
   int xp = 0,
-  Map<StatKind, int> seeds = const {},
   String? frame,
   String? elementMove,
   String? specialMove,
   String? subject,
-}) => Character(
-  id: id,
-  name: name,
-  imagePath: 'memory://$id.png',
-  imageHash: r.imageHash,
-  element: r.element,
-  baseStats: r.baseStats,
-  energy: r.energy,
-  skill: r.skill,
-  features: r.features,
-  createdAt: DateTime(2026, 10, int.parse(id.substring(2))),
-  level: level,
-  xp: xp,
-  seedAllocations: seeds,
-  cardFrame: frame,
-  elementMoveName: elementMove,
-  specialMoveName: specialMove,
-  subject: subject,
-);
+}) =>
+    CharacterV2.create(
+      id: id,
+      name: name,
+      imagePath: 'memory://$id.png',
+      imageHash: cutoutHash(r.cutoutPng),
+      rawFeatures: r.features,
+      energy: r.energy,
+      skill: r.skill,
+      createdAt: DateTime(2026, 10, int.parse(id.substring(2))),
+      subject: subject,
+      legacyElement: r.element,
+    ).copyWith(
+      level: level,
+      xp: xp,
+      cardFrame: () => frame,
+      moves: [
+        CharacterMove(name: elementMove),
+        CharacterMove.empty,
+        CharacterMove.empty,
+        CharacterMove(name: specialMove),
+      ],
+    );
 
 /// The child's collection: levels 12 / 7 / 3 (polished line art) / 1.
-List<Character> _collection() => [
+List<CharacterV2> _collection() => [
   _char(
     'c_1',
     'ぐるぐるドラゴン',
     _scribble,
     level: 12,
-    xp: xpToNext(testSpec, 12) - 20,
-    seeds: const {StatKind.atk: 5, StatKind.hp: 4},
+    xp: xpToNext(const V3Spec(), 12) - 20,
     frame: 'hoshi',
     elementMove: 'ぐるぐるファイヤー',
     specialMove: 'ドラゴンだいばくはつ',
     subject: 'ドラゴン',
   ),
-  _char('c_2', 'ぷにまる', _blob, level: 7, xp: 40, seeds: const {StatKind.spd: 3}),
+  _char('c_2', 'ぷにまる', _blob, level: 7, xp: 40),
   _char('c_3', 'ふくろうくん', _artist, level: 3, xp: 30),
   _char('c_4', 'にこにこ', _marker, level: 1),
 ];
@@ -152,9 +154,8 @@ AppSettings _settings({
 Future<TestApp> _pump(
   WidgetTester tester, {
   AppSettings? settings,
-  List<Character>? characters,
+  List<CharacterV2>? characters,
   FakeAnalyzer? analyzer,
-  Duration battleStep = const Duration(milliseconds: 900),
   List<Override> overrides = const [],
 }) => pumpApp(
   tester,
@@ -166,7 +167,7 @@ Future<TestApp> _pump(
   analyzer: analyzer,
   physicalSize: _physical,
   devicePixelRatio: _dpr,
-  battleStep: battleStep,
+  battleTimeScale: 1,
   overrides: overrides,
   wrap: (app) => RepaintBoundary(key: _boundary, child: app),
 );
@@ -233,15 +234,12 @@ Future<void> _centre(
   await tester.pumpAndSettle();
 }
 
-/// Highest unlocked stage where [c]'s element move is super effective.
-int _advantageStage(Character c) {
-  for (final s in testSpec.cpu.stages.reversed) {
-    if (s.stage > _progress.clearedStage + 1) continue;
-    final cpu = testRoster[s.cpuId];
-    if (testSpec.typeChart.multiplierPct(c.element, cpu.element) >
-        testSpec.typeChart.neutralPct) {
-      return s.stage;
-    }
+/// Highest unlocked stage whose CPU [c]'s attribute beats.
+int _advantageStage(CharacterV2 c) {
+  final beats = c.attribute().beats;
+  for (final st in stageTable().reversed) {
+    if (st.stage > _progress.clearedStage + 1) continue;
+    if (testRoster.byId[st.cpuId]?.genome().attr == beats) return st.stage;
   }
   return 1;
 }
@@ -332,42 +330,26 @@ void main() {
     await _pump(tester);
     await _tap(tester, find.byKey(const Key('home-battle')));
     await _tap(tester, find.byKey(const Key('select-c_1')));
+    await _shot(tester, '09_world_select');
+    await _tap(tester, find.byKey(const Key('world-1')));
     await _centre(
       tester,
       find.byKey(Key('stage-${_progress.clearedStage + 1}')),
       alignment: 0.7,
     );
-    await _shot(tester, '09_stage_select');
+    await _shot(tester, '09b_stage_select');
 
-    await _tap(tester, find.byKey(Key('stage-$stage')));
-    // Mid-fight: a tackle first, then the element move until it is
-    // 「こうかは ばつぐんだ！」 and its damage number is on screen.
-    await tester.tap(find.byKey(const Key('move-tackle')));
-    await tester.pumpAndSettle();
-    var captured = false;
-    for (var turn = 0; turn < 6 && !captured; turn++) {
-      await tester.tap(find.byKey(const Key('move-element')));
-      for (var i = 0; i < 60; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        final banner = find.byKey(const Key('battle-banner'));
-        if (banner.evaluate().isNotEmpty) {
-          await tester.pump(const Duration(milliseconds: 950)); // damage pops
-          await tester.pump(const Duration(milliseconds: 150));
-          if (banner.evaluate().isNotEmpty) {
-            await _shot(tester, '10_battle', settle: false);
-            captured = true;
-          }
-          break;
-        }
-      }
-      await tester.pumpAndSettle();
-      if (find.byKey(const Key('result-title')).evaluate().isNotEmpty) break;
+    await tapNoSettle(tester, find.byKey(Key('stage-$stage')));
+    await settleReal(tester, rounds: 10);
+    // Mid-fight on the 2.5D stage, with a move picked ahead (さきどり).
+    await tester.tap(find.byKey(const Key('move-0')));
+    for (var i = 0; i < 80; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(captured, isTrue, reason: 'no super-effective hit captured');
+    await _shot(tester, '10_battle', settle: false);
 
-    await fightUntilResult(tester);
-    expect(find.byKey(const Key('result-levelup')), findsOneWidget);
-    await _shot(tester, '11_result_levelup');
+    await playBattle(tester);
+    await _shot(tester, '11_result');
 
     await _tap(tester, find.byKey(const Key('ad-double-xp')));
     await _shot(tester, '12_ad_notice');
@@ -381,16 +363,14 @@ void main() {
     await _shot(tester, '14_display_name_picker');
   });
 
-  _shotTest('15 おうちのひと / 16 purchase notice', (tester) async {
+  // No purchase notice shot: in-app purchases are off in v2.0 (SPEC §10.2).
+  _shotTest('15 おうちのひと', (tester) async {
     await _pump(tester);
     await _tap(tester, find.byKey(const Key('home-parent')));
     await _shot(tester, '15_parent_settings');
-    await _tap(tester, find.byKey(const Key('buy-no_ads_pass')));
-    expect(find.byKey(const Key('purchase-notice')), findsOneWidget);
-    await _shot(tester, '16_purchase_notice');
   });
 
-  _shotTest('17 family setup / 18 cover / 19 family battle', (tester) async {
+  _shotTest('17 family setup / 19 family battle', (tester) async {
     await _pump(tester);
     await _tap(tester, find.byKey(const Key('home-family')));
     await _tap(tester, find.byKey(const Key('family-pick-a')));
@@ -408,27 +388,13 @@ void main() {
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
     await tester.pumpAndSettle();
     await _shot(tester, '17_family_setup');
-    await _tap(tester, find.byKey(const Key('family-start')));
-    expect(find.byKey(const Key('family-cover')), findsOneWidget);
-    await _shot(tester, '18_family_cover');
-    // One full turn, then the next player's move choice.
-    await tester.tap(find.byKey(const Key('family-cover-continue')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('move-element')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('family-cover-continue')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('move-tackle')));
-    // The turn plays out step by step (battleStep timers), then the next
-    // cover appears.
-    final cover = find.byKey(const Key('family-cover-continue'));
-    for (var i = 0; i < 40 && cover.evaluate().isEmpty; i++) {
-      await tester.pump(const Duration(milliseconds: 500));
+    await tapNoSettle(tester, find.byKey(const Key('family-start')));
+    await settleReal(tester, rounds: 10);
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.tap(cover);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('move-element')), findsOneWidget);
-    await _shot(tester, '19_family_battle');
+    expect(find.byKey(const Key('family-controls-b')), findsOneWidget);
+    await _shot(tester, '19_family_battle', settle: false);
   });
 
   _shotTest('20 card print', (tester) async {

@@ -77,8 +77,7 @@ class _CpuBattleScreenState extends ConsumerState<CpuBattleScreen> {
 
   @override
   Widget build(BuildContext context) =>
-      _view ??
-      const Scaffold(body: Center(child: CircularProgressIndicator()));
+      _view ?? const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
 /// A real-time ATB battle against the stage's CPU on the 2.5D stage. The
