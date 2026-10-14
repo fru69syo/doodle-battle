@@ -66,7 +66,10 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
               adsSupported: ref.watch(adsSupportedProvider),
               value: settings.consents,
               serverAvailable: backend.isAvailable,
-              noAdsPass: settings.ownedProducts.contains(Product.noAdsPass.id),
+              noAdsPass: ref
+                  .watch(ownedProductsProvider)
+                  .contains(Product.noAdsPass.id),
+              showPurchases: ref.watch(iapEnabledProvider),
               crashReportsAvailable: ref
                   .watch(crashReporterProvider)
                   .isAvailable,
@@ -91,7 +94,10 @@ class _ParentSettingsScreenState extends ConsumerState<ParentSettingsScreen> {
             const ArInstallTile(),
             // In-app purchases are switched off in v2.0 (SPEC §10.2); the
             // shop code stays for when they come back.
-            if (kIapEnabled) ...[const _Section('ショップ'), const ShopSection()],
+            if (ref.watch(iapEnabledProvider)) ...[
+              const _Section('ショップ'),
+              const ShopSection(),
+            ],
             const _Section('データ'),
             if (backend.supportId != null)
               ListTile(

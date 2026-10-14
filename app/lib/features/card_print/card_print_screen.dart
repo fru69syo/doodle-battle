@@ -33,13 +33,9 @@ class _CardPrintScreenState extends ConsumerState<CardPrintScreen> {
 
   /// Card contents once the spec and every picture are loaded.
   List<CardContent>? _cards(List<CharacterV2> chars) {
-    final framesOwned =
-        ref
-            .watch(settingsProvider)
-            .value
-            ?.ownedProducts
-            .contains(Product.framePack.id) ??
-        false;
+    final framesOwned = ref
+        .watch(ownedProductsProvider)
+        .contains(Product.framePack.id);
     final out = <CardContent>[];
     for (final id in widget.characterIds) {
       final c = chars.where((x) => x.id == id).firstOrNull;

@@ -90,10 +90,16 @@ final settingsProvider = AsyncNotifierProvider<SettingsController, AppSettings>(
   SettingsController.new,
 );
 
+/// Products that count right now: the cached entitlements, or none while
+/// in-app purchases are switched off ([iapEnabledProvider]).
+final ownedProductsProvider = Provider<Set<String>>((ref) {
+  if (!ref.watch(iapEnabledProvider)) return const {};
+  return ref.watch(settingsProvider).value?.entitlements ?? const {};
+});
+
 /// Collection size limit from cached entitlements.
 final collectionLimitProvider = Provider<int>((ref) {
-  final s = ref.watch(settingsProvider).value;
-  final extra = (s?.ownedProducts.contains('slots_24') ?? false)
+  final extra = ref.watch(ownedProductsProvider).contains('slots_24')
       ? extraSlotsPerPack
       : 0;
   return freeCollectionLimit + extra;

@@ -28,14 +28,19 @@ final monetizationSyncProvider = Provider<void>((ref) {
   ref.listen(settingsProvider, (_, next) {
     final s = next.value;
     if (s == null) return;
+    // Purchases count only while in-app purchases are on (SPEC §10.2).
+    final iap = ref.read(iapEnabledProvider);
     if (!started) {
       started = true;
       unawaited(
-        service.start({for (final id in s.ownedProducts) ?Product.byId(id)}),
+        service.start({
+          if (iap)
+            for (final id in s.entitlements) ?Product.byId(id),
+        }),
       );
     }
     // こうこくなしパス: no ad is ever needed, so the ads SDK stays off.
-    final noAds = s.ownedProducts.contains(Product.noAdsPass.id);
+    final noAds = iap && s.entitlements.contains(Product.noAdsPass.id);
     unawaited(service.setAdsAllowed(s.consents.ads && !noAds));
   }, fireImmediately: true);
 

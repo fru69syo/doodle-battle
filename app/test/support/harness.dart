@@ -117,6 +117,7 @@ Future<TestApp> pumpApp(
   double devicePixelRatio = 2.75,
   double battleTimeScale = 40,
   bool adsSupported = true,
+  bool iapEnabled = false,
   String realtimeUrl = testRealtimeUrl,
   Widget Function(Widget app)? wrap,
   List<Override> overrides = const [],
@@ -163,6 +164,7 @@ Future<TestApp> pumpApp(
         cpuRosterV2Provider.overrideWithValue(AsyncData(testRoster)),
         battleTimeScaleProvider.overrideWithValue(battleTimeScale),
         adsSupportedProvider.overrideWithValue(adsSupported),
+        iapEnabledProvider.overrideWithValue(iapEnabled),
         realtimeUrlProvider.overrideWithValue(realtimeUrl),
         displayNameWordsProvider.overrideWithValue(
           AsyncData(testDisplayNameWords),

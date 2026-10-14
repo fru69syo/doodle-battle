@@ -14,7 +14,11 @@ class ConsentToggles extends StatelessWidget {
     this.crashReportsAvailable = false,
     this.noAdsPass = false,
     this.adsSupported = true,
+    this.showPurchases = false,
   });
+
+  /// In-app purchases are on in this build (off in v2.0, SPEC §10.2).
+  final bool showPurchases;
 
   /// Rewarded ads exist in this build (Android only); otherwise the ads
   /// switch is not shown at all (the iPhone build is ad-free).
@@ -72,7 +76,7 @@ class ConsentToggles extends StatelessWidget {
           set: (v) => onChanged(value.copyWith(ads: v)),
         ),
       // In-app purchases are switched off in v2.0 (SPEC §10.2).
-      if (kIapEnabled)
+      if (showPurchases)
         _tile(
           key: 'purchases',
           title: 'アプリ内課金',

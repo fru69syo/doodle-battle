@@ -39,6 +39,7 @@ Future<(InMemorySettingsRepository, int Function())> pumpAdButton(
         settingsRepositoryProvider.overrideWithValue(repo),
         monetizationServiceProvider.overrideWithValue(monetization),
         clockProvider.overrideWithValue(() => DateTime(2026, 10, 9, 10)),
+        iapEnabledProvider.overrideWithValue(true),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -225,7 +226,7 @@ void main() {
       tester,
     ) async {
       final m = FakeMonetization();
-      await pumpApp(tester, monetization: m);
+      await pumpApp(tester, iapEnabled: true, monetization: m);
       expect(m.adsAllowedCalls, [false]);
       await tapVisible(tester, find.byKey(const Key('home-parent')));
       await tapVisible(tester, find.byKey(const Key('consent-ads')));
@@ -239,6 +240,7 @@ void main() {
     ) async {
       final m = FakeMonetization();
       await pumpApp(
+        iapEnabled: true,
         tester,
         monetization: m,
         settings: withConsents(
@@ -263,6 +265,7 @@ void main() {
     testWidgets('starts with the cached entitlements', (tester) async {
       final m = FakeMonetization();
       await pumpApp(
+        iapEnabled: true,
         tester,
         monetization: m,
         settings: withConsents(
@@ -277,7 +280,7 @@ void main() {
       tester,
     ) async {
       final m = FakeMonetization();
-      final app = await pumpApp(tester, monetization: m);
+      final app = await pumpApp(tester, iapEnabled: true, monetization: m);
       expect(app.container.read(collectionLimitProvider), 12);
       m.emitOwned({Product.slots24, Product.noAdsPass});
       await tester.pumpAndSettle();
@@ -295,7 +298,7 @@ void main() {
 
     testWidgets('crash reports: unavailable without Firebase', (tester) async {
       final crash = FakeCrashReporter(isAvailable: false);
-      await pumpApp(tester, crash: crash);
+      await pumpApp(tester, iapEnabled: true, crash: crash);
       await tapVisible(tester, find.byKey(const Key('home-parent')));
       final tile = tester.widget<SwitchListTile>(
         find.byKey(const Key('consent-crashReports')),
@@ -309,7 +312,7 @@ void main() {
       tester,
     ) async {
       final crash = FakeCrashReporter();
-      final app = await pumpApp(tester, crash: crash);
+      final app = await pumpApp(tester, iapEnabled: true, crash: crash);
       expect(crash.calls, [false]);
       await tapVisible(tester, find.byKey(const Key('home-parent')));
       await tapVisible(tester, find.byKey(const Key('consent-crashReports')));
@@ -324,6 +327,7 @@ void main() {
       final crash = FakeCrashReporter();
       final m = FakeMonetization();
       await pumpApp(
+        iapEnabled: true,
         tester,
         crash: crash,
         monetization: m,
@@ -342,6 +346,7 @@ void main() {
   group('shop', () {
     Future<TestApp> openShop(WidgetTester tester, FakeMonetization m) async {
       final app = await pumpApp(
+        iapEnabled: true,
         tester,
         monetization: m,
         settings: withConsents(const ParentConsents(purchases: true)),
@@ -416,6 +421,7 @@ void main() {
       tester,
     ) async {
       final app = await pumpApp(
+        iapEnabled: true,
         tester,
         characters: [testCharacter()],
         settings: withConsents(
@@ -447,6 +453,7 @@ void main() {
       tester,
     ) async {
       final app = await pumpApp(
+        iapEnabled: true,
         tester,
         characters: [testCharacter().copyWith(cardFrame: () => 'hana')],
       );
@@ -458,6 +465,7 @@ void main() {
 
     testWidgets('ずかん cards draw the frame', (tester) async {
       await pumpApp(
+        iapEnabled: true,
         tester,
         characters: [testCharacter().copyWith(cardFrame: () => 'hana')],
         settings: withConsents(

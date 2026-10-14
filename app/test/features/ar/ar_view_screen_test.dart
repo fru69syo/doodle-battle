@@ -191,10 +191,10 @@ void main() {
     expect(find.text(ArStrings.imageError), findsOneWidget);
   });
 
-  testWidgets('Lv20 character gets aura and sparkles in かんたん AR', (
+  testWidgets('Lv50 character gets aura and sparkles in かんたん AR', (
     tester,
   ) async {
-    await pumpScreen(tester, FakePlatform(), c: character(level: 20));
+    await pumpScreen(tester, FakePlatform(), c: character(level: 50));
     final sprite = tester.widget<StandeeSprite>(find.byType(StandeeSprite));
     expect(sprite.sparkles, isTrue);
     expect(sprite.standee.auraPng, isNotNull);

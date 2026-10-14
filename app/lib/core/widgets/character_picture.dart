@@ -49,13 +49,9 @@ class CharacterPicture extends ConsumerWidget {
     }
     // フレームパック: only while the pack is owned (a refund removes it).
     final frame = CardFrame.byId(character.cardFrame);
-    final owned =
-        ref
-            .watch(settingsProvider)
-            .value
-            ?.ownedProducts
-            .contains(Product.framePack.id) ??
-        false;
+    final owned = ref
+        .watch(ownedProductsProvider)
+        .contains(Product.framePack.id);
     if (frame != null && owned) {
       return CardFrameBorder(
         frame: frame,

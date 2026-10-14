@@ -81,3 +81,7 @@ final assetBytesProvider = FutureProvider.family<Uint8List, String>(
 final adsSupportedProvider = Provider<bool>(
   (ref) => !kIsWeb && Platform.isAndroid && kAdsEnabledOnAndroid,
 );
+
+/// In-app purchases are on in this build ([kIapEnabled], SPEC §10.2: off in
+/// v2.0). Overridable in tests of the kept store code.
+final iapEnabledProvider = Provider<bool>((ref) => kIapEnabled);

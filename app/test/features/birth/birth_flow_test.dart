@@ -461,11 +461,23 @@ void main() {
     expect(app.container.read(collectionLimitProvider), 12);
   });
 
+  testWidgets('IAP off: a cached slots_24 entitlement does not count', (
+    tester,
+  ) async {
+    final app = await pumpApp(
+      tester,
+      settings: setupDone.copyWith(entitlements: {'slots_24'}),
+      characters: [for (var i = 0; i < 12; i++) testCharacter(id: 'c_$i')],
+    );
+    expect(app.container.read(collectionLimitProvider), 12);
+  });
+
   testWidgets('the slots_24 entitlement raises the limit to 36', (
     tester,
   ) async {
     final app = await pumpApp(
       tester,
+      iapEnabled: true,
       settings: setupDone.copyWith(entitlements: {'slots_24'}),
       characters: [for (var i = 0; i < 12; i++) testCharacter(id: 'c_$i')],
     );

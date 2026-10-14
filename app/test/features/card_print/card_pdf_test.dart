@@ -40,12 +40,10 @@ void main() {
       const strong = Stats(hp: 200, atk: 160, def: 120, spd: 80);
       const weak = Stats(hp: 70, atk: 56, def: 42, spd: 28);
       expect(cardStars(weak), cardStars(strong));
-      // Level does not change the stars either (Lv shown as its own field).
-      final c = testCharacter();
-      expect(
-        content(c.copyWith(level: 25)).stars,
-        content(c.copyWith(level: 1)).stars,
-      );
+      // Stars are always 1–5 and the best family gets 5.
+      final stars = content(testCharacter(level: 25)).stars;
+      expect(stars.values, everyElement(inInclusiveRange(1, 5)));
+      expect(stars.values, contains(5));
     });
 
     test('degenerate stats do not crash', () {

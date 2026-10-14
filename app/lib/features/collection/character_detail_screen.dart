@@ -216,13 +216,9 @@ class _FramePicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final owned =
-        ref
-            .watch(settingsProvider)
-            .value
-            ?.ownedProducts
-            .contains(Product.framePack.id) ??
-        false;
+    final owned = ref
+        .watch(ownedProductsProvider)
+        .contains(Product.framePack.id);
     if (!owned) return const SizedBox.shrink();
     Future<void> pick(String? id) => ref
         .read(charactersProvider.notifier)
