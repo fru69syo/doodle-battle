@@ -271,8 +271,6 @@ void main() {
             xpGained: 10,
             levelBefore: 1,
             levelAfter: 1,
-            seedsGained: 0,
-            evolutions: [],
             stage: 1,
           ),
         );

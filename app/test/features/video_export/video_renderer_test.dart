@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:doodle_battle/domain/battle/battle.dart' show BattleAction;
+import 'package:doodle_battle/domain/cosmetics.dart';
 import 'package:doodle_battle/features/video_export/video_composer.dart';
 import 'package:doodle_battle/features/video_export/video_content_loader.dart';
 import 'package:doodle_battle/features/video_export/video_frame_renderer.dart';
@@ -84,7 +84,7 @@ void main() {
   });
 
   test('drawn move effect is used as the projectile', () async {
-    expect(fallback.content.moveEffects.keys, [BattleAction.element]);
+    expect(fallback.content.moveEffects.keys, [DrawnMove.element]);
     expect(composer.content.moveEffects, isEmpty);
     // Mid-flight frame of the first hit renders with and without it.
     final tl = fallback.timeline;
@@ -97,6 +97,41 @@ void main() {
     expect(_opaque(withEffect), isTrue);
   });
 
+  test(
+    'the drawing comes alive as its 2.5D puppet (birth and battle)',
+    () async {
+      final puppet = await sampleComposer(puppet: true);
+      expect(puppet.content.puppet, isNotNull);
+      expect(puppet.content.cpuPuppet, isNotNull);
+      final tl = puppet.timeline;
+      for (final t in [
+        tl.starts[VideoScene.birth]! + 2.0, // hopping on the stage
+        tl.starts[VideoScene.battle]! + BattleBeats.intro + 0.35, // attacking
+      ]) {
+        final f = (t * tl.fps).round();
+        final withPuppet = await VideoFrameRenderer(
+          puppet,
+          width: 90,
+          height: 160,
+        ).renderRgba(f);
+        final flat = await VideoFrameRenderer(
+          composer,
+          width: 90,
+          height: 160,
+        ).renderRgba(f);
+        expect(_opaque(withPuppet), isTrue);
+        expect(withPuppet, isNot(equals(flat)), reason: 'puppet at $t s');
+      }
+      // Two frames of the hop differ: the puppet moves.
+      final r = VideoFrameRenderer(puppet, width: 90, height: 160);
+      final b = tl.starts[VideoScene.birth]! + 1.9;
+      expect(
+        await r.renderRgba((b * tl.fps).round()),
+        isNot(equals(await r.renderRgba(((b + 0.2) * tl.fps).round()))),
+      );
+    },
+  );
+
   test('display image with parts lifts off the plain paper drawing', () async {
     final shot = photographedKidDrawing();
     final cut = shot.report.result.cutoutPng;
@@ -107,7 +142,6 @@ void main() {
       displayPng: parts,
       originalPng: cut,
       before: null,
-      spec: testSpec,
       roster: testRoster,
       loadAsset: readAssetFile,
     );
