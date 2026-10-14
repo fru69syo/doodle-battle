@@ -1,7 +1,9 @@
-# App/UI（feat/ui）
+# App/UI（v2.0 統合: Integration チーム）
 
 SPEC §2 の体験を 1 本のアプリにまとめる層。画面・ナビゲーション・ローカル保存・保護者機能・各チームのモジュールの統合を担当する。
-数値やルールは持たない（バトルは `domain/battle`、解析は `features/drawing_analysis`、NG ワードは `shared/ng_words` が正）。
+数値やルールは持たない（バトル・成長・ステージは `domain/battle_v3`、キャラは `domain/character_v2.dart`、解析は `features/drawing_analysis`、2.5D は `features/puppet` と `features/battle_stage`、NG ワードは `shared/ng_words` が正）。
+
+v1 のターン制の画面（`battle_arena` など）は v2.0 で削除した。v1 のエンジン `domain/battle/` はテストとツールのために残している（アプリからは使わない）。
 
 ## 1. 構成
 
@@ -9,93 +11,72 @@ SPEC §2 の体験を 1 本のアプリにまとめる層。画面・ナビゲ�
 lib/
   main.dart                 起動: 縦固定、ライセンス登録、Firebase 初期化（未設定なら offline）、ProviderScope
   app.dart                  MaterialApp.router（テーマ、ja ロケール、文字倍率は最大 1.3）
-  firebase_options.dart     プレースホルダー（§5）
-  core/                     テーマ、router、共通ウィジェット、サービス provider
-  data/                     リポジトリ（キャラ・設定・進み具合）、app_state（Riverpod notifier）、backend/
+  core/                     テーマ、router、共通ウィジェット（AttrBadge・StatBarsV2 など）、サービス provider、config/app_config.dart（フラグ）
+  data/                     リポジトリ（CharacterV2・設定・進み具合）、app_state（Riverpod notifier）、backend/
+  domain/                   battle_v3（エンジン）、character_v2.dart、character_v2_view.dart（UI が読んでよい答え）、cost_mode.dart …
   features/
-    onboarding/ home/ draw/ birth/ collection/ battle_ui/ online/ parent/
-    parental_gate/ monetization/ ng_filter/  （+ 既存の drawing_analysis/ ar/）
+    onboarding/ home/ draw/ draw_canvas/ birth/ collection/ battle_ui/ battle_stage/ puppet/
+    online/（realtime/）family_battle/ video_export/ card_print/ drawing_loop/ ar/
+    parent/ parental_gate/ monetization/ ng_filter/ drawing_analysis/
 ```
 
-- 状態管理は Riverpod 3（`AsyncNotifier`）、画面遷移は go_router。
-- テストで差し替える seam はすべて `core/providers.dart` の provider: リポジトリ、`BackendApi`、`MonetizationService`、`ParentalGate`、解析（`DrawingAnalyzerService`）、画像入力（`DrawingImageSource`）、時計、乱数、spec/roster/NG 辞書。
+- 状態管理は Riverpod 3、画面遷移は go_router。テストで差し替える seam は `core/providers.dart` ほかの provider（リポジトリ、`BackendApi`、`MonetizationService`、`ParentalGate`、解析、画像入力、時計、乱数、CPU の絵、`adsSupportedProvider`、`battleTimeScaleProvider`、`realtimeConnectorProvider`、`realtimeUrlProvider`）。
+- **隠し要素（SPEC §3.5）**: `lib/features`・`lib/core`・`lib/data` は `isBloomer` などを読まない。必要な答え（見た目 `drawsSimpleLook`、一人用の経験値 `singlePlayerXpFor`、新しいキャラ `newCharacterV2`）は domain 層の関数が返す。`test/domain/hidden_state_guard_test.dart` が、コード・文字列・保存 JSON・送信 JSON・キャラのページで確かめる。
 
 ## 2. ルート
 
 | パス | 画面 |
 |---|---|
 | `/splash` | 設定の読み込み中 |
-| `/setup` | 初回の保護者セットアップ（ゲート → 説明と同意 → 完了）。ポリシー版が上がったときも再表示 |
-| `/` | ホーム（かく / ずかん / バトル / オンライン※ / おうちのひと） |
-| `/draw` | 撮影 or アルバム → 端末内解析 →（許可時）クラウド判定 |
-| `/birth` → `/birth/name` | 誕生演出 → 名前（オフライン NG フィルタ） |
-| `/zukan`, `/zukan/:id`, `/zukan/:id/ar` | 一覧、詳細（Lv・XP・進化・パワーのたね・わざ）、AR |
-| `/zukan/:id/joints` (`?first=1`) | うごく ところを なおそう（ジョイントエディタ。誕生直後は first=1 で、あとで／できた！のあと詳細へ。docs/PUPPET.md §3） |
-| `/debug/25d` | 2.5D パペット・ステージ・お絵かきツールのデバッグ（debug ビルドのみ） |
-| `/battle`, `/battle/:id/stages`, `/battle/:id/stage/:n`, `/battle/result` | キャラ選択、ステージ 1–30、CPU 戦、結果 |
-| `/online`, `/online/queue/:id`, `/online/match/:matchId?c=:id` | ロビー（Lv5+）、審査とマッチング、対戦 |
-| `/parent` | おうちのひと（ゲートを通ったときだけ。離れると再ロック） |
-| `/family`, `/family/battle` | かぞくで たいせん（1 台で交互に操作。docs/FAMILY.md） |
-| `/zukan/cards`, `/zukan/cards/print?ids=` | キャラカードの選択（最大 9）、プレビューと印刷・共有（保護者ゲート。docs/FAMILY.md） |
-
-すべてのルートは `/` の子なので、どこからでも戻るとホームに着く。リダイレクトは `redirectFor()`（純関数・テスト済み）。
+| `/setup` | 初回の保護者セットアップ（ゲート → 説明と同意 → 完了） |
+| `/` | ホーム（かく / ずかん / バトル / かぞくで たいせん / オンライン※ / おうちのひと） |
+| `/draw` | 撮影（主）か「アプリで かく」→ 端末内解析 →（許可時）クラウド判定 |
+| `/birth` → `/birth/name` | 誕生演出（グー/チョキ/パー・Lv1 の技 2 つ）→ 名前 |
+| `/zukan`, `/zukan/:id`, `/zukan/:id/ar` | 一覧、詳細（Lv・XP・しんか・10 の能力・技 4 枠（未解放は Lv10/Lv50 の鍵））、AR |
+| `/zukan/:id/joints` (`?first=1`) | うごく ところを なおそう（保存した骨は `CharacterV2.rig` に入る） |
+| `/battle` | キャラ選択 |
+| `/battle/:id/stages` | ワールド選択（10 ワールド、星の数、ボスを倒すと次が開く） |
+| `/battle/:id/world/:w` | ステージ選択（10 ステージ、星 0–3、10 番目はボス） |
+| `/battle/:id/stage/:n` | 一人用の ATB バトル（2.5D ステージ） |
+| `/battle/result` | 結果（`extra`: `BattleOutcome`） |
+| `/online`, `/online/queue/:id` | ロビー（Lv5+、バッジ、オンラインの なまえ）、審査 → マッチング → 対戦（1 画面） |
+| `/family`, `/family/battle` | かぞくで たいせん（1 台、ATB、2 人がそれぞれ操作） |
+| `/parent` | おうちのひと（ゲートを通ったときだけ） |
+| `/zukan/cards`, `/zukan/cards/print?ids=` | キャラカード |
+| `/debug/25d` | 2.5D のデバッグ（**debug ビルドだけ**。release のルート表には入らない） |
 
 ## 3. ローカル保存（`lib/data/`）
 
-- `CharacterRepository`（interface）/ `FileCharacterRepository`（`<documents>/characters/<id>.json` + `<id>.png`、JSON は一時ファイル→rename で書く、壊れたファイルは飛ばす、id は `[A-Za-z0-9_-]{1,64}`）/ `InMemoryCharacterRepository`。
-- `SettingsRepository`: `settings.json`（同意・プレイ時間・購入権のキャッシュ・最後にサーバーへ送った同意）と `progress.json`（クリア済みステージ、適用済みオンライン対戦 ID（最新 100 件）、今日のプレイ秒数、オンライン登録時の Lv、今日の広告ブーストの回数、オンラインの表示名）。
-- ずかんの上限: 12 体。`slots_24` の購入権があれば 36 体（`collectionLimitProvider`）。
+- `CharacterRepository` は **`CharacterV2`** を保存する（`<documents>/characters/<id>.json` + `<id>.png`）。v1 のファイル（`schema` なし）は読み込み時に `CharacterV2.fromJson` で移行し、v2 の形で 1 回だけ書き直す。v1 の `onlineId` は捨てる（オンラインに出るときに schema 2 で黙って登録し直す）。
+- `PuppetStore` にだけあった骨（v2 以前に手直ししたもの）は、起動時に `CharacterV2.rig` へ写す（`CharactersController`）。
+- `progress.json`: クリア済みステージ、**ステージごとの星**、**おまかせ**、**オンラインのバッジ**、適用済みオンライン対戦 ID、今日のプレイ秒数、オンライン登録時の Lv、今日の広告ブースト、オンラインの表示名。
+- ずかんの上限: 12 体（課金がオフのため 36 体の枠は出ない）。
 
 ## 4. 画面ごとの決定事項
 
-- **保護者ゲート**（`features/parental_gate/`）: 3 秒長押し（離すとリセット）→「23 × 7 ＝ ？（二十三 かける 七）」をテンキーで入力。左項は 11–99（10 の倍数を除く）、右項 3–9。3 回間違えると閉じる。`ParentalGate.verify(context)` を Compliance も使える。ゲートの文言は保護者向けなので漢字。
-- **同意の初期値はすべて OFF**。クラウド判定・オンラインは Firebase 未設定のとき「現在準備中」で操作不可。
-- **かく**: image_picker（最大 2048px, 品質 92）。空っぽの絵は「もうすこし かいてみよう」、読めない画像は「しゃしんが よめなかったよ」。ずかんが満杯なら撮影前に案内する。
-- **クラウド判定**: 許可済みかつサーバーありのときだけ。20 秒で打ち切り、失敗・`appropriate:false`・600KB 超は黙って端末の結果を使う（不適切判定の結果は名前候補も含めて一切使わない）。成功時は `applyCloudSkill`、`subject`・わざ名を保存、`suggestedNames` を候補の先頭に出す。
-- **たんじょう**: 4.2 秒の演出（たまごが揺れる → 登場 → ステータスが 1 本ずつ → ぞくせい・わざ → しょぼ時のメッセージ）。タップで飛ばせる。しょぼキャラは「げいじゅつか すぎて しょぼキャラに なっちゃった！」＋「そだつのが Nばい はやい」（N = spec の `shoboLevelUpStatPct / levelUpStatPct`、現在 3）。
-- **名前**: サーバーと同じ規則（NFKC、1–10 文字、ひらがな/カタカナ/ー/・/英数/漢字、数字 2 個まで）＋ NG 辞書。候補はクラウドの名前 → 画像ハッシュから決まるプリセット名（サーバーと同じ 24 語）。
-- **ずかん詳細**: HP は `hp × hpMultiplier` で表示。パワーのたねは各ステータスの「＋」で 1 個ずつ（`allocateSeed`）。「おわかれ する」は確認つき。進化: かがやき＝属性色のオーラ、でんせつ＝金の枠。
-- **AR**: `ArViewScreen(allowArCoreInstallPrompt: false)`。ARCore のインストール案内は「おうちのひと → AR の準備」だけ（ゲートの先）。
-- **CPU 戦**: ステージ表は spec、CPU は `loadCpuRoster()` + `cpuFighterSetup()`。ステージ一覧は「おすすめ Lv」（`recommendedLevel`）と強さ（よわい/ふつう/つよい）を表示し、クリア済み +1 まで開放。エンジンのイベントを順に再生（攻撃側がぴょこっと跳ねる、被弾側が揺れてダメージ数字が浮く、相性はバナー、まもるは盾アイコン、たおれると傾いて薄くなる）。乱数は seed から `deriveSeed(seed,0)`（バトル）/`(seed,2)`（CPU AI）。
-- **結果**: XP（`applyXp`）、レベルアップ、たね、進化を表示して保存。勝てば次のステージへ。
-- **オンライン**: ホームのボタンは保護者が許可したときだけ表示（未設定なら「じゅんびちゅう」で押せない）。ロビーは Lv5 以上のみ選べる。未登録・登録後に Lv が上がったキャラは `registerCharacter` で審査し直す（`SNAPSHOT_NOT_ACTIVE` でも再登録）。不合格理由は全 14 種をやさしい文に対応付け（`online_messages.dart`）、名前の不合格ではサーバーのプリセット名から選んで再審査（ローカルの名前もその名前になる）。待機中は 10 秒ごとに `joinQueue`（ハートビート）、やめると `leaveQueue`。対戦は `matches/{id}` を購読し、ターンが進んだら `turns/{n}` のイベントを再生。20 秒タイマー、0 になったら `pollMatch`、送信後は 5 秒ごとに `pollMatch`。終了時は `result[mySide].xp` を matchId 単位で 1 回だけ適用。通報は旗ボタン → 6 つの理由から選ぶ（自由入力なし）。相手の絵は Storage から読む（読めなければ属性アイコン）。
-- **おうちのひと**: 同意 5 種（クラウド判定・オンライン・広告・課金・ふぐあいの情報）、プレイ時間の目安（なし/30/60/90/120 分。超えるとホームに「そろそろ おやすみ しよう」。前面にいた時間を resume〜pause で数える。タイマーなし）、AR の準備、ショップ、サポート ID（サインイン済みのとき）、すべてのデータを削除、ポリシーとサポートのページ（外部ブラウザ、`core/config/app_config.dart` の URL）、ライセンス（フォントの OFL を `LicenseRegistry` に登録済み）。
-- **全データ削除**: 確認 → サーバーがあれば `deleteMyData`（未サインインなら何もしない）→ 失敗なら端末のデータは消さずに再試行を案内 → 端末のキャラ・設定・進み具合を削除 → セットアップに戻る。
+- **キャラの作り方**: 写真は `admitReportV2`（デジタル・印刷・画面の絵も受け付け、内部の verdict だけを保存）、アプリの絵は `DrawingSource.canvas`。画像ハッシュは **切り抜き PNG の SHA-256**（サーバーと同じ）。クラウド判定は保護者の許可 + コストモード（`config/costMode` の `cloudJudge`）のときだけ。`judgeDrawing` に `v2`（量子化した特徴）を付けて技の提案を受け取り、端末で検証し直す（不採用の枠は `generateOfflineMoves` の技）。子どもが通報した AI の技の名前は使わない。
+- **一人用（SPEC §7.1）**: ワールド → ステージ → バトル。`stageTable()` と CPU の絵 37 体（`manifest_v2.json`）。CPU の強さ（よわい/ふつう/つよい）は表示しない。星: 勝ち・HP 50 % 以上・60 秒以内。
+- **ATB バトル（SPEC §6）**: `BattleStage` の上に `FighterStatusPanel` ×2 と `BattleControls`。自分のゲージが満タンの間だけ 5 秒の輪が出て、時間切れはおまかせ。**さきどり**: ゲージがたまる間に技を押しておくと、満タンの瞬間に出る（押した技に「つぎ！」）。おまかせは一人用で覚えておく。選んでいる間も相手は止まらず、遅くもならない。子どもがするのは技を選ぶことだけ。描いた わざの え は `drawnEffects` で飛ぶ。ボタンは 48dp 以上、文字は縮小して収める。
+- **結果**: 経験値（`singlePlayerXpFor`）、星、レベルアップ、**あたらしい わざ！**（Lv10・Lv50）、**しんか！**（Lv10 かがやき / 25 きらきら / 50 でんせつ（全部の技がパワーアップ）/ 75 にじ / 100 おうかん）。Lv50 の でんせつ は全員同じ演出（隠し要素の作り直しもこの中で起き、見分けられない）。新しい技は、保護者がクラウド判定を許可していてコストモードが許せば `generateMove` で名前を作り（結果画面のあとから名前が変わる）、だめなら黙ってテンプレートの技のまま。「どうがを みて けいけんち 2ばい」は **Android のビルドだけ**（`adsSupportedProvider`）。
+- **オンライン（SPEC §7.2・§9）**: Lv5 から。ボタンは保護者の許可があり、サーバー（Firebase と `REALTIME_URL`）があるときだけ。未登録・Lv が上がった・サーバーが知らない（v1 の）キャラは `registerCharacter`（`schema: 2`、`source`、アプリの絵は `canvas` の線の要約）で審査し直し、返ってきた `imageHash` を正とする。WebSocket（`features/online/realtime/`）: `hello`（ID トークン + App Check）→ `queue` → `match` → `select`（いつでも、さきどり）→ `end`。サーバーのイベントを約 200 ms 遅らせて `translate()` で 2.5D ステージに流す。切断は `lastSeq` 付きで黙って再接続し、だめなら「ひとりで あそぶ」を出す。ゴーストでも同じ「あいてを さがしているよ」。バッジは結果とロビーに出す（レートの数字は出さない）。チャットはない。表示名はプリセットの言葉だけ。
+- **かぞくで たいせん**: ATB。あか（下）とあお（上、ボタンは向かい側の人に向けて上下逆）がそれぞれ技を選ぶ（さきどり・5 秒・おまかせも各自）。戦うレベルは `familyBattleLevel`、経験値は 0。
+- **Before/After 動画**: 絵が浮き上がって着地すると 2.5D パペットとして跳ね、バトルでは自分の骨で技を出し、CPU は当たって倒れる。台本はエンジン v3 で決まる。
+- **おうちのひと**: 同意（クラウド判定・オンライン・広告（Android のビルドだけ）・ふぐあいの情報。課金は `kIapEnabled` のときだけ）、プレイ時間、絵の取り込み、AR、（課金がオンのときだけショップ）、データ削除、ポリシー、ライセンス。保護者ゲートと注意書きは v1 のまま。
+- **コストモード（SPEC §11.3）**: `config/costMode` を読む（1 分キャッシュ、読めなければ normal）。saving / minimal ではクラウド判定と技の名前づくりを呼ばない。対人戦をゴーストにするのはサーバー。子どもには何も表示しない。
 
-## 5. Firebase（オフライン動作とセットアップ）
+## 5. Firebase
 
-- 使用パッケージ: firebase_core, firebase_auth（匿名）, cloud_functions（`asia-northeast1`）, cloud_firestore（match/turn の読み取り・同意の書き込み）, firebase_storage（相手の絵の読み取り）, firebase_app_check（Play Integrity、debug ビルドは debug provider）。
-- **google-services の Gradle プラグインは使わない**。`lib/firebase_options.dart` から `Firebase.initializeApp(options:)` する。
-- 今はプレースホルダーで、`currentPlatform` が `UnsupportedError` を投げる → `initBackend()` が `UnavailableBackendApi` を返し、オンラインとクラウド判定は「じゅんびちゅう」で無効。初期化の失敗も同じ扱いで、落ちない。
-- **サーバーに触れるタイミング（PM 決定）**: 起動時は `Firebase.initializeApp` だけ（通信なし）。App Check の有効化と匿名サインインは最初のサーバー呼び出しで行い、呼び出しは保護者がクラウド判定かオンラインを ON にしたときだけ起こる（`SettingsController.ensureConsentSynced`）。最後に送った同意を `settings.json` に保存し、同じ内容は二度と送らない。両方 OFF に戻したときは、サーバー側でオンラインのキャラを非公開にするため、撤回を **1 回だけ** 書き込む（以後は通信なし。サインアウトはしない）。
-- 本物のプロジェクトをつなぐ手順:
-  ```bash
-  dart pub global activate flutterfire_cli
-  cd app
-  flutterfire configure --project=<firebase-project-id> --platforms=android \
-    --android-package-name=com.fru69syo.doodle_battle --out=lib/firebase_options.dart
-  # flutterfire が google-services の Gradle プラグインを足そうとしたら入れない（不要）
-  ```
-  そのあと Firebase コンソールで匿名認証、App Check（Play Integrity・debug トークンの登録）、Functions/Firestore/Storage を docs/BACKEND.md §14 のとおり設定する。CI/リリースでは `scripts/write_firebase_config.sh` がシークレットからこのファイルを書く。プレースホルダーには `demo-doodle-battle` の文字が入っているので、`--require`（リリース）では弾かれる。
-- マニフェスト: Firebase が持ち込む `c2dm.permission.RECEIVE`（firebase-iid）と `READ_GSERVICES`（recaptcha）は使わないので `tools:node="remove"` で外した（`scripts/check_release.sh` の許可リストに合わせる）。
+- 匿名認証、Functions（`asia-northeast1`: `judgeDrawing`、`registerCharacter`、`generateMove`、`setDisplayName`、`reportCharacter`、`reportAiSuggestion`、`deleteMyData`）、Firestore（同意の書き込み、`config/costMode` の読み取り）、Storage（相手の絵）、App Check。v1 のターン制のマッチング（`joinQueue` など）はアプリから外した。
+- `lib/firebase_options.dart` はプレースホルダー（未設定なら全部オフラインで動く）。設定手順は docs/BACKEND.md §14、docs/LEARN_GCP.md。
 
-## 6. 収益化（Compliance が実装済み。詳細は docs/COMPLIANCE.md）
+## 6. ビルド時のフラグ（`core/config/app_config.dart`）
 
-- `MonetizationService`（`features/monetization/monetization_service.dart`、`Listenable`）: `start(cached)`、`setAdsAllowed`/`adState`/`preloadRewardedAd`/`showRewardedAd`、`refreshStore`/`priceOf`/`purchase`/`restorePurchases`、`owned`/`entitlements`。本番は `AppMonetizationService`（AdMob + Play Billing、`main.dart` で Android のときだけ）、既定とテスト以外のプラットフォームは `NoopMonetizationService`、テストは `FakeMonetization`。
-- `monetizationSyncProvider`（`app.dart` で watch）: 起動時にキャッシュした購入権で `start`、ストアの購入権 → `settings.entitlements`、広告の同意 → `setAdsAllowed`、ふぐあいの情報の同意 → `CrashReporter.setEnabled`。
-- 商品 ID: `slots_24`（ずかん 36 体）、`frame_pack_1`（ずかんのカードの枠: ほし・はな・にじ。`Character.cardFrame`）、`no_ads_pass`（こうこくなしパス: 広告の入口を消し、結果画面の「こうこくなしパスで けいけんち 2ばい」。広告と同じ 1 日 3 回まで。SPEC §11.4）。すべて買い切り。
-- 結果画面の「どうがを みて けいけんち 2ばい」: 広告の許可があるときだけ。1 日 3 回（`GameProgress.adBoostsToday`）。読み込み中は押せず、失敗時は「いまは どうがが ないみたい…」。押すと必ず注意書き → 「みる」のときだけ `showRewardedAd()`。
-- ショップ: 課金の許可があるときだけ。購入ごとに保護者ゲート → 価格と注意書きの確認 → Play。「購入を復元する」。
-- オンラインのロビー: 「オンラインの なまえ」（`features/online/display_name_picker.dart`、`setDisplayName`、語彙は `shared/names/`）。
+| `--dart-define` | 初期値 | 意味 |
+|---|---|---|
+| `IAP_ENABLED` | false | 課金（商品・ショップ・購入の同意・復元）。オフのあいだストアには一切つながらない（SPEC §10.2） |
+| `ADS_ENABLED` | true | Android のリワード広告。iPhone 版はいつも広告なし |
+| `REALTIME_URL` | 空 | 対戦サーバー（`wss://…/v2`）。空ならオンラインは「じゅんびちゅう」 |
 
-## 7. NG フィルタ（`features/ng_filter/`）
+## 7. テスト
 
-- `normalize.dart` / `ng_filter.dart` は `firebase/functions/src/ngwords/*.ts` の移植。NFKC は `unorm_dart`（Unicode 17）。
-- 辞書は `app/assets/ng_words/ng_words.json`（`shared/ng_words/ng_words.json` のバイト単位のコピー）。更新は `cd app && dart run tool/sync_ng_words.dart`。ずれるとテストが落ちる。
-- `normalize_vectors.json`（48 件）と `ng_check_vectors.json`（74 件）を `shared/` から直接読んで全件テスト。
-
-## 8. テスト
-
-`flutter test --concurrency=2`。UI 側は 193 件（NG ベクトル 128 を含む）:
-リポジトリ（ファイル/メモリ）、保護者ゲート（長押し・正解・3 回ミス・取消）、誕生フロー（通常/しょぼ/空っぽ/読めない/NG 名/クラウド成功・失敗・未許可/満杯/購入で 36 体）、CPU 戦（決定性、イベント適用、1 戦通し、ロック、広告 2 倍、しょぼの XP）、同意ゲーティング（セットアップ、オンライン・広告・ショップ・おうちのひと、同意の同期、全削除）、オンライン（不合格メッセージ全種、登録→待機→対戦→XP 1 回、通報、ハートビート）、アプリ全体のハッピーパス（実ゲート → かく → 誕生 → バトル → レベルアップ → たね）。
-ウィジェットテストは `test/support/harness.dart` の `pumpApp()` でアプリ全体をフェイク付きで起動する（端末サイズ 393×851dp）。
+`flutter test --concurrency=2`。ウィジェットテストは `test/support/harness.dart` の `pumpApp()` でアプリ全体をフェイク付きで起動する。バトルは `battleTimeScaleProvider`（テストは 40 倍）と `playBattle()` で最後まで流す。オンラインは `test/support/fake_realtime.dart` のフェイクサーバー。
