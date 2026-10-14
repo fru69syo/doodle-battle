@@ -93,10 +93,14 @@ class AtbSide {
     required this.name,
     required this.level,
     required this.puppet,
+    this.size = 1,
   });
   final String name;
   final int level;
   final PuppetSpec puppet;
+
+  /// Drawing size on the stage (`kBossSize` for a world's boss).
+  final double size;
 }
 
 /// The 2.5D stage with both status panels on top and [bottom] (controls or
@@ -135,6 +139,7 @@ class AtbStageLayout extends StatelessWidget {
       BattleStage(
         controller: controller,
         fighters: [for (final s in sides) s.puppet],
+        sizes: [for (final s in sides) s.size],
         drawnEffects: drawnEffects,
         autoStart: autoStart,
         quality: quality,

@@ -2,6 +2,7 @@ import 'package:doodle_battle/data/app_settings.dart';
 import 'package:doodle_battle/data/game_progress.dart';
 import 'package:doodle_battle/domain/battle_v3/battle_v3.dart';
 import 'package:doodle_battle/domain/cost_mode.dart';
+import 'package:doodle_battle/features/battle_stage/battle_stage.dart';
 import 'package:doodle_battle/features/battle_stage/stage_overlay.dart';
 import 'package:doodle_battle/features/battle_ui/battle_outcome.dart';
 import 'package:doodle_battle/features/monetization/monetization_service.dart';
@@ -224,6 +225,29 @@ void main() {
       }
     },
   );
+
+  testWidgets('a world\'s boss (stage 10) is drawn bigger; others are not', (
+    tester,
+  ) async {
+    for (final (stage, sizes) in [
+      (10, [1.0, kBossSize]),
+      (9, [1.0, 1.0]),
+    ]) {
+      await pumpApp(
+        tester,
+        characters: [testCharacter(level: 10)],
+        progress: const GameProgress(clearedStage: 9),
+      );
+      await openStage(tester, stage);
+      await settleReal(tester, rounds: 10);
+      await tester.pump(const Duration(milliseconds: 100));
+      final stageWidget = tester.widget<BattleStage>(find.byType(BattleStage));
+      expect(stageWidget.sizes, sizes);
+      final d = stageWidget.controller.director!;
+      expect(d.size, sizes);
+      await unmount(tester);
+    }
+  });
 
   testWidgets('rewarded ad (allowed, Android): notice first, then XP ×2', (
     tester,

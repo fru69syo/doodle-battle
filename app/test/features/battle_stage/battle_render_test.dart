@@ -29,6 +29,7 @@ void main() {
     int seed = 7,
     double until = 30,
     String? outDir,
+    double cpuSize = 1,
   }) async {
     await tester.runAsync(loadAppFonts);
     tester.view.physicalSize = const Size(393 * 2, 851 * 2);
@@ -56,6 +57,7 @@ void main() {
               theme: theme,
               quality: quality,
               autoStart: false,
+              cpuSize: cpuSize,
             ),
           ),
         ),
@@ -176,6 +178,28 @@ void main() {
         6.0: 'battle_6s',
         9.5: 'battle_9s',
       },
+    );
+  });
+
+  testWidgets('battle frames: world boss drawn bigger', (tester) async {
+    await run(
+      tester,
+      name: 'boss',
+      player: DemoSide(
+        png: samplePng(Sample.hero),
+        name: 'ぼく',
+        level: 10,
+        genomeSeed: 11,
+      ),
+      cpu: DemoSide(
+        png: samplePng(Sample.dog),
+        name: 'ボス',
+        level: 10,
+        genomeSeed: 5,
+      ),
+      cpuSize: kBossSize,
+      taps: {0.2: 0, 4.2: 1},
+      shots: {1.0: 'boss_start', 4.3: 'boss_hit', -1.0: 'boss_ko'},
     );
   });
 
