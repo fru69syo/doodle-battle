@@ -59,6 +59,29 @@ describe("generateMove (Lv10 / Lv50 AI move naming)", () => {
     expect(res).toMatchObject({ slot: 3, source: "ai", proposal: { template: "blast", attribute: "none" } });
   });
 
+  it("at Lv50 every slot can be renamed, for every character alike (no hint of the hidden form)", async () => {
+    const shapes: string[] = [];
+    for (const verdict of [undefined, "ai_generated", "digital"]) {
+      const uid = `kid_${verdict ?? "plain"}`;
+      await seedUser(uid);
+      for (const slot of [3, 0, 1, 2]) {
+        const res = await generate({ level: 50, slot, otherNames: [], ...(verdict ? { verdict } : {}) }, uid);
+        expect(res.slot).toBe(slot);
+        // Same response shape whatever the verdict: slot, source, proposal (+ reason).
+        shapes.push(Object.keys(res).sort().join(","));
+        const ctx = moveContextOf({ ...character, imageHash: "x", verdict: verdict ?? null }, { level: 50 })!;
+        expect(env.ai.generateMove).toHaveBeenLastCalledWith(expect.any(Buffer), {
+          attribute: ctx.attribute,
+          slot,
+          budget: ctx.slotBudgets[slot],
+          otherNames: [],
+        });
+      }
+    }
+    expect(new Set(shapes).size).toBeLessThanOrEqual(2); // "ai" or "template" answers only
+    expect(env.ai.generateMove).toHaveBeenCalledTimes(12);
+  });
+
   it("refuses slots that are not unlocked yet and bad input before calling the AI", async () => {
     await seedUser("kid");
     expect(await errorCode(generate({ level: 9 }))).toBe("INVALID_ARGUMENT");

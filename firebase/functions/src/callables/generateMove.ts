@@ -34,7 +34,11 @@ const Input = z
     /** The device's trust verdict, as stored in the local character (budgets only). */
     verdict: z.enum(["digital", "printed", "screen", "ai_generated"]).optional(),
     level: z.number().int().min(1).max(DEFAULT_SPEC.maxLevel),
-    /** 0-based slot: 2 = the Lv10 slot, 3 = the Lv50 slot (0/1 after a rebuild). */
+    /**
+     * 0-based slot, any slot unlocked at `level` (2 = the Lv10 slot, 3 = the Lv50 slot). The
+     * same rule for every character: at the Lv50 evolution the app may ask for slots 0-3
+     * (docs/BACKEND.md §5 generateMove), and nothing here depends on why it asks.
+     */
     slot: z.number().int().min(0).max(3),
     /** Names of the other moves (kana, 1-10 chars): the new name must differ. */
     otherNames: z.array(z.string().regex(KANA_NAME)).max(3).default([]),

@@ -32,6 +32,23 @@ describe("reportCharacter", () => {
     expect(q).toMatchObject({ reportCount: 1, state: "pending", hidden: false, reasons: { bad_picture: 1 } });
   });
 
+  it("realtime (v2) opponents can be reported once the match is settled; ghosts too", async () => {
+    const { sa, sb } = await pvpMatch();
+    await seedUser("dave");
+    expect(await errorCode(report("dave", sb))).toBe("NOT_SEEN_IN_MATCH");
+    // As written by server/realtime FirestoreStore.settleMatch (dave played bob's character as a ghost).
+    await db().collection(COL.rtMatches).doc("rt1").set({
+      mode: "ghost",
+      playerUids: ["dave"],
+      snapshotIds: ["dave_snap", sb],
+      sides: { a: { snapshotId: "dave_snap", isGhost: false }, b: { snapshotId: sb, isGhost: true } },
+      endedAtMs: 5,
+    });
+    expect(await report("dave", sb)).toEqual({ ok: true, alreadyReported: false });
+    // Only the reporter's own matches count.
+    expect(await errorCode(report("dave", sa))).toBe("NOT_SEEN_IN_MATCH");
+  });
+
   it(`auto-hides after ${LIMITS.reportHideThreshold} distinct reporters`, async () => {
     const { sb } = await pvpMatch();
     for (const u of ["r1", "r2"]) {

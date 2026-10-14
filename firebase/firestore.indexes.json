@@ -43,6 +43,14 @@
       ]
     },
     {
+      "collectionGroup": "rtMatches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "playerUids", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "endedAtMs", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "matches",
       "queryScope": "COLLECTION",
       "fields": [
