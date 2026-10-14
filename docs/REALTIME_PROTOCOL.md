@@ -1,4 +1,4 @@
-# Realtime battle protocol v1 (online rated play)
+# Realtime battle protocol v1, revision 2 (online rated play)
 
 Owner: GCP team (`server/realtime/`). Audience: the client team (Flutter / Puppet), the Engine
 team, and whoever operates the server. Product rules come from `docs/SPEC.md` §12 and
@@ -33,7 +33,7 @@ menu. Do not keep it open in the background or on the home screen.
 app                                   server
  │ ── WebSocket upgrade /v2 ───────────► │
  │ ── hello {idToken, appCheckToken} ──► │ verify ID token + App Check, users/{uid}.consent.online
- │ ◄────────────── welcome {inMatch} ─── │ (or error + close)
+ │ ◄─────────── welcome {rev, inMatch} ─ │ (or error + close)
  │ ── queue {snapshotId} ──────────────► │ snapshot must be yours, active, Lv ≥ 5 → Lv50 sync
  │ ◄──────────────────── queued ──────── │
  │        … matchmaking: PvP within the rating band, else a ghost after N s …
@@ -41,6 +41,8 @@ app                                   server
  │ ◄──── snap (2 Hz) / ev (on events) ── │  10 Hz server-authoritative ATB
  │ ── select {seq, slot} ──────────────► │  (any time: while charging = さきどり)
  │ ◄──── sel {seq, accepted, queued} ─── │  private ack, the opponent never sees it
+ │ ── omakase {on} ────────────────────► │  (rev 2) おまかせ switch: the server plays for the child
+ │ ◄──────────────────── omakase {on} ── │  private ack
  │ ◄──── end {winner, reason, you} ───── │  rating/XP/badge already saved
  │ ── queue … (play again) or close ──► │
 ```
@@ -84,6 +86,22 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
   very tick the gauge becomes full; a later `select` replaces it. When the gauge is full it is used
   in the next tick (≤ 100 ms).
 
+### `omakase` (rev 2)
+```json
+{ "t": "omakase", "on": true }
+```
+- The child's おまかせ switch (SPEC §6.1). While `on`, the server picks for this side with the
+  same AI as the 5 s timeout (`chooseMove`, ふつう), **10 ticks (1 s) after the gauge fills**
+  (SPEC §6.1: おまかせ thinks 1 s, so it is never the strongest way to play). Switching it on drops
+  a pending さきどり; `select`s sent while it is on are stored and used only after it goes off.
+- `on: false` gives the child full control again (さきどり, 5 s timer) from the next tick.
+- Only inside a match (`NOT_IN_MATCH` otherwise). The state lasts for the match, also across a
+  reconnect; apps re-send their switch after every `match` anyway. Answered with a private
+  `omakase {on}`; the opponent never learns about it (no `autoPick` event for these picks; the
+  replay logs them as `src: "omakase"`).
+- Send it only when `welcome.rev >= 2`; a rev 1 server answers `error BAD_MESSAGE` (harmless)
+  and its 5 s timeout keeps picking for an idle child.
+
 ### `ping`
 ```json
 { "t": "ping" }
@@ -93,7 +111,7 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
 
 | `t` | Fields | Meaning |
 |---|---|---|
-| `welcome` | `proto`, `serverTimeMs`, `inMatch` | Handshake accepted. `inMatch:true` means a `match` (+ missed events) follows: the child was reconnected to the running match. |
+| `welcome` | `proto`, `rev`, `serverTimeMs`, `inMatch` | Handshake accepted. `rev` = additive revision of v1 (2 = `omakase`, `deadline`, `FighterInfo.snapshotId`; absent = 1). `inMatch:true` means a `match` (+ missed events) follows: the child was reconnected to the running match. |
 | `queued` | `snapshotId` | In the queue. Show 「あいてを さがしているよ」. |
 | `cancelled` | – | Left the queue. |
 | `match` | `matchId`, `you` (`"a"`/`"b"`), `tickHz` (10), `decisionTicks` (50), `a`, `b` (`FighterInfo`), `resumed` | Battle starts (or resumes). |
@@ -101,6 +119,7 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
 | `snap` | `tick`, `a`, `b` (`SideView`), `hash` | State every 5 ticks (2 Hz) and at the end. Interpolate gauges between snaps. |
 | `sel` | `seq`, `slot`, `accepted`, `queued`, `reason?` | Private answer to `select`. `queued:true` = stored for さきどり. `accepted:false, reason:"unusable"` = the move cannot be used now (SP/cooldown): let the child pick again. |
 | `end` | `matchId`, `winner`, `reason`, `you {outcome, xp, badge, badgeUp}` | Final result, already persisted. `reason`: `ko`, `timeout` (3 min, HP ratio), `forfeit` (a side was away 30 s), `aborted` (server restart: no rating/XP change). `xp` is added to the local character by the app. |
+| `omakase` | `on` | (rev 2) Private answer to `omakase`: the switch as the server now has it. |
 | `pong` | `serverTimeMs` | Answer to `ping`. |
 | `error` | `code`, `message?` | See §6. `message` is for logs only; map `code` to a gentle kid message. |
 | `bye` | `reason`, `reconnect` | The server is about to close the socket. If `reconnect:true`, reconnect silently (see §7). |
@@ -108,6 +127,7 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
 `FighterInfo`:
 ```json
 {
+  "snapshotId": "Abc123",               // (rev 2) the registered character (snapshots/{id}): the id for reportCharacter
   "displayName": "げんきな うさぎ",      // preset words (setDisplayName), "" or "かがみ" for a mirror ghost
   "characterName": "ねこまる",
   "imagePath": "snapshotImages/Abc123/image.png",
@@ -120,6 +140,10 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
   "isGhost": false
 }
 ```
+`snapshotId` is the public Firestore document id of the character (both sides, ghosts too; a mirror
+ghost carries the child's own id, which the app must not offer to report: `CANNOT_REPORT_SELF`).
+It is random and says nothing about the character; the no-leak tests cover it.
+
 `SideView`: `{ "hp", "maxHp", "sp" (1/100 SP, 0–10000), "gauge" (0–10000), "ready", "casting" }`.
 
 Battle events (`ev.events[]`) always have `tick` and `type`, most have `side` (0 = a, 1 = b).
@@ -130,7 +154,12 @@ timeout is the separate `autoPick`), `moveStart {slot, template, attr}` (strings
 `dot {target, amount, hp}`, `heal {amount, hp, source}`, `stage {stat, stage, ticks}`,
 `status` / `statusFail {target, status[, ticks]}`, `shield {pct, ticks}`, `expire {kind}`,
 `heatUp`, `faint`, `end {winner, reason: ko|timeUp}`. Added by the server: `autoPick {slot}`
-(5 s timeout, sent right before that tick's `select`), `forfeit`. **Ignore unknown types and
+(5 s timeout, sent right before that tick's `select`), `forfeit`, and (rev 2)
+`deadline {side, at}`: sent in the tick a **child's** gauge fills (right after the engine's
+`ready`), `at` = the tick at which the 5 s timeout will pick (`ready tick + decisionTicks +
+grace − 1`, today `+ 52`). The app draws the 5 s ring from it: seconds left = `(at −
+estimated server tick) / tickHz`, where the server tick is extrapolated from the newest `ev` /
+`snap` tick with the local clock. Not sent for ghosts, nor when さきどり fires in the ready tick. **Ignore unknown types and
 fields.** (The local dev stand-in engine sends `act`, `cast`, `hit {dmg, hp, typePct}`, `ko`
 instead; it never runs on Cloud Run.)
 
@@ -142,7 +171,8 @@ Badge ids → names: `egg` たまご, `chick` ひよこ, `rabbit` うさぎ, `fo
 | Rule | Value | Source |
 |---|---|---|
 | Tick | 100 ms (10 Hz), integer state | GAME_DESIGN_V2 §6.1 |
-| Decision timeout | 50 ticks after the gauge filled **+ 3 ticks network grace** → おまかせ picks (`autoPick` event) | §6.3, §6.7 |
+| Decision timeout | 50 ticks after the gauge filled **+ 3 ticks network grace** (the ready tick counts as the first) → おまかせ picks (`autoPick` event); announced by `deadline {at}` | §6.3, §6.7 |
+| おまかせ switch | `omakase {on:true}`: the AI picks 10 ticks after ready, every time | SPEC §6.1 |
 | さきどり | a queued `select` is used in the tick the gauge fills | §6.3 |
 | Ghost / away AI | おまかせ "normal", thinks 10 ticks after ready | §6.6 |
 | Disconnect | after 10 s away おまかせ plays for the child; back within 30 s = full control again; 30 s away = loss, XP 0 (rating counts as a loss) | §6.7 |
@@ -242,4 +272,11 @@ What was done (all four steps):
 ## 10. Versioning
 
 `proto` is bumped only for breaking changes. Additive changes (new optional fields, new event
-types, new error codes) keep `proto: 1`; clients must ignore unknown fields and event types.
+types, new error codes, new client messages) keep `proto: 1` and raise `welcome.rev`; clients
+must ignore unknown fields and event types, and only send new client messages when `rev` is
+high enough.
+
+| rev | Added |
+|---|---|
+| 1 | the original v1 (`welcome` has no `rev`) |
+| 2 | `FighterInfo.snapshotId`, client `omakase {on}` + private ack, `deadline {side, at}` event, `welcome.rev` |
