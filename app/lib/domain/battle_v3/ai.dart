@@ -16,7 +16,7 @@ import 'spec.dart';
 
 enum AiTier {
   weak(40, 10, 0),
-  normal(10, 10, 1),
+  normal(25, 10, 1),
   strong(0, 4, 5);
 
   const AiTier(this.randomPct, this.thinkTicks, this.saveBars);
@@ -110,13 +110,14 @@ int bestMove(Battle b, int side, {AiTier tier = AiTier.normal}) {
 }
 
 /// One decision of the tiered AI for [side] (CPU, ghosts, the simulator):
-/// nothing until it has held a full bar for [think] ticks; then it plans
+/// nothing until it has held a full bar for [think] ticks (at least one
+/// full bar even when [think] is 0); then it plans
 /// ([chooseMove]; つよい re-plans every tick with [bestMove]; ふつう and
 /// よわい switch to a finishing blow they can afford now) and uses the plan
 /// once its bars are there.
 int? aiDecide(Battle b, int side, {required AiTier tier, required int think}) {
   final f = b.fighters[side];
-  if (f.waitTicks < think) return null;
+  if (f.bars < 1 || f.waitTicks < think) return null;
   if (tier == AiTier.strong) {
     f.aiPlan = bestMove(b, side, tier: tier);
   } else {
@@ -216,8 +217,7 @@ int scoreMove(Battle b, int side, int slot) {
       v = has ? 0 : _pts(moveValue(m), foe.maxHp);
     case MoveKind.shield:
       final threat =
-          (foe.phase == Phase.casting && foe.castLeft >= 2) ||
-          foe.bars >= 2;
+          (foe.phase == Phase.casting && foe.castLeft >= 2) || foe.bars >= 2;
       v = me.shieldPct > 0
           ? 0
           : _pts(moveValue(m), foe.maxHp) * (threat ? 20 : 3) ~/ 10;
@@ -237,10 +237,11 @@ int _secondaryValue(Move m, Fighter me, Fighter foe) => switch (m.secondary) {
   _ => 0,
 };
 
-/// Expected damage (HP, ×1) of one use of damage move [m] by [side] now:
+/// Expected damage (HP, ×1) of one use of damage move [m] by [side]:
 /// real hit and crit chances, mean variance, the target's shield and the
-/// heat-up ramp.
-int expectedDamage(Battle b, int side, Move m) {
+/// heat-up ramp — now, or [inTicks] ticks from now (a shield that will have
+/// expired no longer counts; the heat-up ramp of that tick).
+int expectedDamage(Battle b, int side, Move m, {int inTicks = 0}) {
   final s = b.spec;
   final t = 1 - side;
   final foe = b.fighters[t];
@@ -255,8 +256,15 @@ int expectedDamage(Battle b, int side, Move m) {
       (1000 + crit * (s.critMultiplierPct - 100) ~/ 100) ~/
       100000;
   e = e * meanVar ~/ 100;
-  e = e * (100 - foe.shieldPct) ~/ 100;
-  return e * b.heatPct() ~/ 100;
+  if (foe.shieldTicks > inTicks) e = e * (100 - foe.shieldPct) ~/ 100;
+  return e * _heatAt(b, b.tick + inTicks) ~/ 100;
+}
+
+int _heatAt(Battle b, int tick) {
+  final s = b.spec;
+  return tick <= s.heatUpStartTick
+      ? 100
+      : 100 + s.heatUpPctPerSecond * ((tick - s.heatUpStartTick) ~/ s.tickHz);
 }
 
 /// The most damage the opponent of [side] is expected to deal with one
@@ -307,7 +315,7 @@ int scoreMoveStrong(Battle b, int side, int slot) {
   switch (m.kind) {
     case MoveKind.physical:
     case MoveKind.special:
-      final e = expectedDamage(b, side, m);
+      final e = expectedDamage(b, side, m, inTicks: wait + m.castTicks);
       final hit = b.hitChance(side, t, m.accuracy);
       if (wait == 0) {
         // A sure KO: the lowest possible roll of every hit still finishes.
@@ -357,9 +365,11 @@ int scoreMoveStrong(Battle b, int side, int slot) {
           ? target.stages[m.stat.index] > 0
           : target.stages[m.stat.index] < 0;
       if (active || me.hp * 100 < me.maxHp * 35) return 0;
-      // Damage my next actions gain over the duration (≈ +25 % per stage
-      // on the affected side of the damage formula).
-      final actions = 1 + m.durationTicks ~/ (cycle + 5);
+      // Damage my bars gain over the duration (≈ +25 % per stage on the
+      // affected side of the damage formula): the bars I hold after paying
+      // for it plus those that fill meanwhile, at my best damage per bar.
+      final left = me.bars - m.bars < 0 ? 0 : me.bars - m.bars;
+      final actions = 1 + left + m.durationTicks ~/ (cycle + 5);
       var best = 0;
       for (final x in me.moves) {
         if (!x.isDamage) continue;

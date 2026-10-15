@@ -218,11 +218,7 @@ MoveValidation validateAiMove(
     m = m.copyWith(cooldownTicks: m.durationTicks);
   }
 
-  final fitted = fitToBudget(
-    s,
-    m,
-    slotBudget(s, slot, moveFactorPct, maxBars),
-  );
+  final fitted = fitToBudget(s, m, slotBudget(s, slot, moveFactorPct, maxBars));
   if (fitted == null) return reject('over budget');
   if (!identical(fitted, m)) w.add('scaled to budget');
   return MoveValidation(withBars(s, fitted, moveFactorPct), w);

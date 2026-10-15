@@ -6,14 +6,31 @@ void main(List<String> args) {
   final n = args.isEmpty ? 400 : int.parse(args[0]);
   for (final lv in [20, 50]) {
     for (final (ba, bb) in [(5, 2), (3, 2), (4, 2), (5, 3)]) {
-      print(runScenario(s, 'same stats bars $ba vs $bb Lv$lv', n, (r) {
-        final g = randomKid(s, r);
-        return (setupAt(s, g, lv, maxBars: ba), setupAt(s, g, lv, maxBars: bb));
-      }));
-      print(runScenario(s, 'same stats bars $ba vs $bb Lv$lv strong', n, (r) {
-        final g = randomKid(s, r);
-        return (setupAt(s, g, lv, maxBars: ba), setupAt(s, g, lv, maxBars: bb));
-      }, tierA: AiTier.strong, tierB: AiTier.strong));
+      print(
+        runScenario(s, 'same stats bars $ba vs $bb Lv$lv', n, (r) {
+          final g = randomKid(s, r);
+          return (
+            setupAt(s, g, lv, maxBars: ba),
+            setupAt(s, g, lv, maxBars: bb),
+          );
+        }),
+      );
+      print(
+        runScenario(
+          s,
+          'same stats bars $ba vs $bb Lv$lv strong',
+          n,
+          (r) {
+            final g = randomKid(s, r);
+            return (
+              setupAt(s, g, lv, maxBars: ba),
+              setupAt(s, g, lv, maxBars: bb),
+            );
+          },
+          tierA: AiTier.strong,
+          tierB: AiTier.strong,
+        ),
+      );
     }
   }
   final r = Mulberry32(3);
@@ -21,7 +38,9 @@ void main(List<String> args) {
   for (final mb in [2, 5]) {
     final f = setupAt(s, g, 50, maxBars: mb);
     for (final m in f.moves) {
-      print('mb$mb ${m.template} ${m.attr.name} pow ${m.power} hits ${m.hits} bars ${m.bars} pts ${movePoints(s, m)} cast ${m.castTicks} cd ${m.cooldownTicks} heal ${m.healPct}');
+      print(
+        'mb$mb ${m.template} ${m.attr.name} pow ${m.power} hits ${m.hits} bars ${m.bars} pts ${movePoints(s, m)} cast ${m.castTicks} cd ${m.cooldownTicks} heal ${m.healPct}',
+      );
     }
   }
 }

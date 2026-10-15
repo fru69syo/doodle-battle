@@ -112,7 +112,7 @@ class V3Spec {
     this.xpQuadNum = 3,
     this.xpQuadDen = 4,
     // --- moves ---------------------------------------------------------------
-    this.barBudgets = const [100, 210, 330, 460, 600],
+    this.barBudgets = const [100, 230, 390, 580, 800],
     this.slotMaxBars = const [1, 5, 5, 5],
     this.slotUnlockLevels = const [1, 1, 10, 50],
     this.moveFactorBasePct = 95,
@@ -132,7 +132,7 @@ class V3Spec {
     this.minBars = 2,
     this.maxBars = 5,
     // --- damage --------------------------------------------------------------
-    this.damageScalePct = 60,
+    this.damageScalePct = 57,
     this.typeAdvantagePct = 150,
     this.typeDisadvantagePct = 75,
     this.typeStrengthPct = 100,

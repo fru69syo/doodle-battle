@@ -83,10 +83,7 @@ class MoveTemplate {
 /// Largest power of a damage move (a 5-bar ひっさつ needs ~750).
 const int kMaxPower = 1200;
 
-const _common = {
-  'castTicks': R(0, 20),
-  'cooldownTicks': R(0, 150),
-};
+const _common = {'castTicks': R(0, 20), 'cooldownTicks': R(0, 150)};
 
 const Map<String, MoveTemplate> kTemplates = {
   'strike': MoveTemplate('strike', MoveKind.physical, {

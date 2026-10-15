@@ -173,6 +173,7 @@ List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
     AiTier ta = AiTier.normal,
     AiTier tb = AiTier.normal,
     int? thinkA,
+    int? thinkB,
     Controller? ca,
   }) {
     final x = runScenario(
@@ -183,6 +184,7 @@ List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
       tierA: ta,
       tierB: tb,
       thinkTicksA: thinkA,
+      thinkTicks: thinkB,
       controllerA: ca,
     );
     res.add(x);
@@ -277,11 +279,18 @@ List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
     (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
     tb: AiTier.weak,
   );
-  for (final lv in [20, 50, 100]) {
-    run('5 bars vs 2 bars (equal total), Lv$lv', (r) {
-      final g = randomKid(s, r);
-      return (withLv1Sp(s, g, lv, 55), withLv1Sp(s, g, lv, 25));
-    });
+  for (final lv in [1, 20, 50, 100]) {
+    for (final t in [AiTier.normal, AiTier.strong]) {
+      run(
+        '5 bars vs 2 bars (equal total, ${t.name}), Lv$lv',
+        (r) => (
+          withLv1Sp(s, randomKid(s, r), lv, 55),
+          withLv1Sp(s, randomKid(s, r), lv, 25),
+        ),
+        ta: t,
+        tb: t,
+      );
+    }
   }
   run(
     'おまかせ (random) vs 1 s chooser (ふつう), Lv20',
@@ -292,6 +301,13 @@ List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
     'おまかせ (random) vs 1 s chooser (ふつう), Lv50',
     (r) => (setupAt(s, randomKid(s, r), 50), setupAt(s, randomKid(s, r), 50)),
     ca: omakaseController(),
+  );
+  run(
+    'おまかせ (random) vs good 1 s chooser (つよい, 1 s), Lv20',
+    (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
+    ca: omakaseController(),
+    tb: AiTier.strong,
+    thinkB: 10,
   );
   run(
     'instant chooser (0 s) vs 1 s chooser, Lv20',

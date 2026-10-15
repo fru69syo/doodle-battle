@@ -63,8 +63,7 @@ List<Move> generateOfflineMoves(
   int? maxBars,
 }) {
   final cap =
-      maxBars ??
-      (stream == 14 ? g.maxBarsAt(s.rebirthLevel) : g.maxBarsAt(1));
+      maxBars ?? (stream == 14 ? g.maxBarsAt(s.rebirthLevel) : g.maxBarsAt(1));
   int target(int bars) => bars < cap ? bars : cap;
   int budgetFor(int bars) => barBudget(s, target(bars), moveFactorPct);
   final r = Mulberry32(deriveSeed(g.seed, stream));

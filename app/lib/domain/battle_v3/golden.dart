@@ -334,7 +334,8 @@ Map<String, Object?> goldenVectors(V3Spec s) {
       for (var t = 1; t < 1800; t += 23) [t, 0, (t ~/ 23) % 3],
       [5, 0, 7],
     ],
-    note: 'さきどり: scripted taps (one invalid), each fires when its bars are there',
+    note:
+        'さきどり: scripted taps (one invalid), each fires when its bars are there',
     full: true,
   );
   addBattle(
@@ -472,11 +473,7 @@ Map<String, Object?> goldenVectors(V3Spec s) {
         (601, 100),
         (650, 110),
       ])
-        {
-          'points': p,
-          'moveFactorPct': f,
-          'bars': barsForPoints(s, p, f),
-        },
+        {'points': p, 'moveFactorPct': f, 'bars': barsForPoints(s, p, f)},
     ],
     'ratedSetups': [
       for (final i in ratedGenomes)
