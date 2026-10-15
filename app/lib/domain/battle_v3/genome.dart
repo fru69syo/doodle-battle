@@ -106,7 +106,7 @@ class Genome {
     final budget = bloomer
         ? fullBudget * s.bloomerPreBudgetPct ~/ 100
         : fullBudget;
-    final base = _distribute(s, budget, aff);
+    final base = _spFloor(s, _distribute(s, budget, aff));
 
     final rg = Mulberry32(deriveSeed(seed, 11));
     final raw = [
@@ -128,7 +128,7 @@ class Genome {
           s.budgetDiv *
           s.rebirthBudgetPct ~/
           100;
-      rebirth = _distribute(s, b2, aff2);
+      rebirth = _spFloor(s, _distribute(s, b2, aff2));
     }
     return Genome._(
       spec: s,
@@ -166,6 +166,19 @@ class Genome {
   final int seed;
 
   bool rebornAt(int level) => isBloomer && level >= spec.rebirthLevel;
+
+  /// How many gauge bars this character can stack (2..5), from the Lv1
+  /// base SP of its form ([base]; [rebirthBase] once a hidden bloomer is
+  /// reborn at Lv50, when its whole move set is rebuilt too). Never changes
+  /// with the level otherwise, nor with the rated Lv50 sync ([preForm]
+  /// keeps a bloomer's pre-rebirth form, as [statsAt] does).
+  int maxBarsAt(int level, {bool preForm = false}) {
+    final st = rebornAt(level) && !preForm ? rebirthBase! : base;
+    return spec.maxBarsFor(st[Stat.sp.index]);
+  }
+
+  /// Max bars of the Lv1 form ([maxBarsAt] below the rebirth level).
+  int get maxBars => maxBarsAt(1);
 
   /// Rated play (§8): stats re-computed at the sync level (Lv50). A bloomer
   /// whose real level is below the rebirth level keeps its pre-rebirth form
@@ -241,6 +254,26 @@ class Genome {
           (s.affinityJitterMinPct + rj.nextUint32() % s.affinityJitterSpan) ~/
           100;
       out.add(a < s.affinityFloor ? s.affinityFloor : a);
+    }
+    return out;
+  }
+
+  /// Raises SP to [V3Spec.minLv1Sp], taking the difference from the other
+  /// nine stats in proportion to their values (largest remainder, ties →
+  /// lower index). The total is unchanged.
+  static List<int> _spFloor(V3Spec s, List<int> st) {
+    final sp = Stat.sp.index;
+    final d = s.minLv1Sp - st[sp];
+    if (d <= 0) return st;
+    final others = [
+      for (var i = 0; i < 10; i++)
+        if (i != sp) i,
+    ];
+    final take = largestRemainder(d, [for (final i in others) st[i]]);
+    final out = List.of(st);
+    out[sp] = s.minLv1Sp;
+    for (var k = 0; k < others.length; k++) {
+      out[others[k]] -= take[k];
     }
     return out;
   }

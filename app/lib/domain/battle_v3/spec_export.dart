@@ -53,12 +53,21 @@ Map<String, Object?> fullSpecJson(V3Spec s) => {
       'shield': 'shieldPct*durationTicks/30',
     },
     'discount':
-        'spCost*5/4 + castTicks*2 + max(0, cooldownTicks - freeCooldown)/2, '
-        'capped at value*maxDiscountPct/100; freeCooldown: heal 60, '
+        'castTicks*castDiscountPerTick + max(0, cooldownTicks - '
+        'freeCooldown)/cooldownDiscountDiv, capped at '
+        'value*maxDiscountPct/100; freeCooldown: heal 60, '
         'buff/debuff max(20,durationTicks), shield 40, else 20',
-    'cost': 'value - discount <= slotBudgets[slot]*moveFactorPct/100',
+    'points': 'value - discount',
+    'barBudget': 'barBudgets[n-1]*moveFactorPct/100 (n = 1..5 bars)',
+    'bars':
+        'smallest n in 1..5 with points <= barBudget(n); never set by the '
+        'AI (bars / spCost in AI JSON are ignored)',
+    'slotBudget':
+        'barBudget(min(slotMaxBars[slot], maxBars)); the validator shrinks '
+        'a move until its points fit, so its bars never exceed the slot cap '
+        'or the character\'s max bars',
     'slotRules': [
-      'slot1: damage template, attribute = own, spCost 0, cooldown 0, cast <= 5',
+      'slot1: damage template, attribute = own, 1 bar, cooldown 0, cast <= 5',
       'slot2: attribute != own (support moves: none)',
       'slot3: any template',
       'slot4 (ひっさつ): damage template, attribute none',
@@ -70,9 +79,11 @@ Map<String, Object?> fullSpecJson(V3Spec s) => {
     'randomPct': {for (final t in AiTier.values) t.name: t.randomPct},
     'thinkTicks': {for (final t in AiTier.values) t.name: t.thinkTicks},
     'note':
-        'chooseMove (ai.dart / ai.ts) is normative; the timeout auto-pick, '
-        'おまかせ and server ghosts use normal; strong scores with '
-        'scoreMoveStrong',
+        'aiDecide / chooseMove / bestMove (ai.dart / ai.ts) are normative '
+        'for CPU and ghosts (ghosts and an away player: normal); strong '
+        'scores with scoreMoveStrong. おまかせ (the kid switch) is '
+        'omakasePick: uniform among eligible moves (off cooldown, '
+        'bars <= maxBars) on the side AI stream, then wait for the bars',
   },
   'progression': {
     'evolutions': {for (final e in kEvolutions.entries) '${e.key}': e.value},

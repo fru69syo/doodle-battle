@@ -38,6 +38,7 @@ Map<String, Object?> _genomeJson(V3Spec s, Genome g) => {
   'base': g.base,
   'growthMille': g.growthMille,
   'rebirthBase': g.rebirthBase,
+  'maxBars': g.maxBars,
   'statsAt': {
     for (final l in [1, 10, 49, 50, 75, 100]) '$l': g.statsAt(l),
   },
@@ -50,9 +51,10 @@ Map<String, Object?> _genomeJson(V3Spec s, Genome g) => {
 };
 
 /// Golden battle input → battle run to the end. `controllers[i]` is null
-/// (no controller: only queued inputs and the 5 s timeout) or
-/// `{"tier": name, "think": ticks}`; `inputs` are `[tick, side, slot]`
-/// queued just before that tick is stepped.
+/// (no controller: only queued inputs; an idle side caps at its max bars),
+/// `{"tier": name, "think": ticks}` ([aiController]) or `{"omakase": true}`
+/// ([omakaseController]); `inputs` are `[tick, side, slot]` queued just
+/// before that tick is stepped.
 Battle runGoldenBattle(V3Spec s, Map<String, Object?> input) {
   final a = FighterSetup.fromJson((input['a']! as Map).cast());
   final b = FighterSetup.fromJson((input['b']! as Map).cast());
@@ -60,6 +62,7 @@ Battle runGoldenBattle(V3Spec s, Map<String, Object?> input) {
   Controller? ctl(Object? j) {
     if (j == null) return null;
     final m = (j as Map).cast<String, Object?>();
+    if (m['omakase'] == true) return omakaseController();
     return aiController(
       thinkTicks: m['think']! as int,
       tier: AiTier.fromName(m['tier']! as String),
@@ -92,8 +95,9 @@ Map<String, Object?> _battleExpected(Battle b, {bool full = false}) => {
   'eventCount': b.events.length,
   'eventsFnv1a': eventsHash(b.events),
   'stateHash': b.stateHash(),
-  // Every decision as an input: replaying these with the timer disabled
-  // (server mode) reproduces the battle (docs/REALTIME_PROTOCOL.md §9).
+  // Every decision as an input: replaying these as controller inputs at
+  // their ticks (server mode, no queue) reproduces the battle
+  // (docs/REALTIME_PROTOCOL.md §9).
   'inputLog': [
     for (final e in b.events)
       if (e.type == 'select') [e.tick, e.i('side'), e.i('slot')],
@@ -106,7 +110,7 @@ Map<String, Object?> _validation(MoveValidation v, V3Spec s) => v.rejected
     : {
         'rejected': false,
         'move': v.move!.toJson(),
-        'cost': moveCost(s, v.move!),
+        'points': movePoints(s, v.move!),
         'warnings': v.warnings,
       };
 
@@ -195,7 +199,7 @@ Map<String, Object?> goldenVectors(V3Spec s) {
             gs[i],
             moveFactorPct: gs[i].moveFactorPct(1),
           ))
-            {...m.toJson(), 'cost': moveCost(s, m)},
+            {...m.toJson(), 'points': movePoints(s, m)},
         ],
       },
     // Rebirth sets (stream 14) and an attribute override.
@@ -217,37 +221,40 @@ Map<String, Object?> goldenVectors(V3Spec s) {
             stream: stream,
             attr: attr,
           ))
-            {...m.toJson(), 'cost': moveCost(s, m)},
+            {...m.toJson(), 'points': movePoints(s, m)},
         ],
       },
   ];
 
   final validator = [
     for (final (slot, own, factor, input) in _validatorCases)
-      {
-        'slot': slot,
-        'own': own.name,
-        'moveFactorPct': factor,
-        'input': input,
-        'expected': _validation(
-          validateAiMove(
+      for (final maxBars in _validatorMaxBars(slot))
+        {
+          'slot': slot,
+          'own': own.name,
+          'moveFactorPct': factor,
+          'maxBars': maxBars,
+          'input': input,
+          'expected': _validation(
+            validateAiMove(
+              s,
+              input,
+              slot: slot,
+              own: own,
+              moveFactorPct: factor,
+              maxBars: maxBars,
+              ngCheck: goldenNgCheck,
+            ),
             s,
-            input,
-            slot: slot,
-            own: own,
-            moveFactorPct: factor,
-            ngCheck: goldenNgCheck,
           ),
-          s,
-        ),
-      },
+        },
   ];
-
   final validatorSets = [
-    for (final (own, factor, input) in _validatorSetCases)
+    for (final (own, factor, maxBars, input) in _validatorSetCases)
       {
         'own': own.name,
         'moveFactorPct': factor,
+        'maxBars': maxBars,
         'input': input,
         'expected': [
           for (final v in validateAiMoveSet(
@@ -255,6 +262,7 @@ Map<String, Object?> goldenVectors(V3Spec s) {
             input,
             own: own,
             moveFactorPct: factor,
+            maxBars: maxBars,
             ngCheck: goldenNgCheck,
           ))
             _validation(v.result, s),
@@ -295,6 +303,7 @@ Map<String, Object?> goldenVectors(V3Spec s) {
     'tier': tier,
     'think': think,
   };
+  const omakase = {'omakase': true};
   final levels = [1, 10, 50, 100, 30, 75];
   for (var i = 0; i < 6; i++) {
     final lv = levels[i];
@@ -325,13 +334,21 @@ Map<String, Object?> goldenVectors(V3Spec s) {
       for (var t = 1; t < 1800; t += 23) [t, 0, (t ~/ 23) % 3],
       [5, 0, 7],
     ],
-    note: 'さきどり: scripted taps (some invalid) + timeouts',
+    note: 'さきどり: scripted taps (one invalid), each fires when its bars are there',
     full: true,
   );
-  addBattle(setupAt(s, gs[10], 40), setupAt(s, gs[1], 40), 2004, [
-    null,
-    null,
-  ], note: 'no input at all: every move is the 5 s おまかせ');
+  addBattle(
+    setupAt(s, gs[10], 40),
+    setupAt(s, gs[1], 40),
+    2004,
+    [null, omakase],
+    inputs: [
+      [300, 0, 0],
+      [301, 0, 1],
+      [700, 0, 2],
+    ],
+    note: 'a mostly idle side caps at its max bars; おまかせ (random, wait) on b',
+  );
   addBattle(
     ratedSetup(s, gs[3], actualLevel: 20),
     ratedSetup(s, gs[0], actualLevel: 7),
@@ -375,6 +392,21 @@ Map<String, Object?> goldenVectors(V3Spec s) {
     [ai('normal', 0), ai('strong', 4)],
     note: 'stage-style CPU power 93 %',
   );
+  addBattle(
+    setupAt(s, gs[2], 60),
+    setupAt(s, gs[6], 60),
+    2010,
+    [omakase, ai('strong', 4)],
+    note: 'おまかせ vs つよい at Lv60 (ひっさつ unlocked)',
+    full: true,
+  );
+  addBattle(
+    setupAt(s, gs[8], 55, maxBars: 5),
+    setupAt(s, gs[9], 55, maxBars: 2),
+    2011,
+    [ai('strong', 4), ai('normal', 10)],
+    note: '5 bars vs 2 bars (moves capped by max bars)',
+  );
 
   final ratedGenomes = [0, 3, 7, 11];
   return {
@@ -384,17 +416,22 @@ Map<String, Object?> goldenVectors(V3Spec s) {
       'eventLine': '"<tick> <type> <k=v,...>" with keys sorted (ASCII)',
       'eventsFnv1a': "fnv1a32 of the event lines joined with '\\n'",
       'controllers':
-          'null = no controller (queued inputs + 5 s timeout only); '
-          '{tier, think}: when ready, null until readyTicks >= think, then '
-          'chooseMove(tier) on the side AI stream; the timeout auto-pick is '
-          'chooseMove(normal) on the same stream',
+          'null = no controller (queued inputs only; an idle side stops '
+          'at its max bars); {tier, think}: aiDecide (nothing until '
+          'waitTicks >= think; then a plan: chooseMove(tier) on the side AI '
+          'stream, kept until used (normal: an affordable finisher replaces '
+          'it), strong: bestMove every tick; used once affordable); '
+          '{omakase: true}: plan = omakasePick (uniform among eligible on '
+          'the side AI stream), used once affordable, re-picked after use',
       'inputs':
           '[tick, side, slot]: queueInput(side, slot) just before stepping '
-          'that tick (invalid inputs are ignored when used)',
+          'that tick (fires when usable; a slot that can never be used is '
+          'dropped with inputIgnored)',
       'setupAt':
-          'stats = statsAt(level) * powerPct / 100; moves = offline '
-          'generator (stream 12, or 14 after a bloomer rebirth) with '
-          'moveFactorPct(level), filtered by slotUnlockLevels',
+          'stats = statsAt(level) * powerPct / 100; maxBars from the Lv1 '
+          'base SP; moves = offline generator (stream 12, or 14 after a '
+          'bloomer rebirth) with moveFactorPct(level) and maxBars, filtered '
+          'by slotUnlockLevels',
       'ngCheck': 'contains any of $kGoldenNgWords',
     },
     'deriveSeed': [
@@ -406,13 +443,39 @@ Map<String, Object?> goldenVectors(V3Spec s) {
     'validator': validator,
     'validatorSets': validatorSets,
     'battles': battles,
-    'moveCost': [
-      for (final m in generateOfflineMoves(s, gs[0], moveFactorPct: 110))
+    'movePoints': [
+      for (final maxBars in [5, 2])
+        for (final m in generateOfflineMoves(
+          s,
+          gs[0],
+          moveFactorPct: 110,
+          maxBars: maxBars,
+        ))
+          {
+            'maxBars': maxBars,
+            'move': m.toJson(),
+            'value': moveValue(m),
+            'discount': moveDiscount(s, m),
+            'points': movePoints(s, m),
+            'bars': moveBars(s, m, 110),
+          },
+    ],
+    'barsForPoints': [
+      for (final (p, f) in [
+        (0, 100),
+        (100, 100),
+        (101, 100),
+        (210, 100),
+        (330, 95),
+        (461, 110),
+        (600, 100),
+        (601, 100),
+        (650, 110),
+      ])
         {
-          'move': m.toJson(),
-          'value': moveValue(m),
-          'discount': moveDiscount(s, m),
-          'cost': moveCost(s, m),
+          'points': p,
+          'moveFactorPct': f,
+          'bars': barsForPoints(s, p, f),
         },
     ],
     'ratedSetups': [
@@ -788,12 +851,48 @@ final List<(int, Attr, int, Map<String, Object?>)> _validatorCases = [
       'durationTicks': 60,
     },
   ),
+  // 23..: the bar cost model.
+  (0, Attr.gu, 100, {..._strike, 'power': 300, 'bars': 5}),
+  (
+    3,
+    Attr.pa,
+    110,
+    {
+      ..._strike,
+      'template': 'blast',
+      'attribute': 'none',
+      'name': 'にじいろビーム',
+      'atkFormula': 'INT80_DEX20',
+      'power': 800,
+      'castTicks': 20,
+      'cooldownTicks': 150,
+      'bars': 1,
+    },
+  ),
+  (1, Attr.choki, 100, {..._strike, 'attribute': 'pa', 'power': 205}),
+  (
+    2,
+    Attr.gu,
+    100,
+    {
+      'template': 'heal',
+      'name': 'ぐっすり',
+      'healPct': 40,
+      'castTicks': 10,
+      'cooldownTicks': 150,
+    },
+  ),
 ];
 
-final List<(Attr, int, Object?)> _validatorSetCases = [
+/// Max bars each validator case runs with: slots 3 and 4 (the big moves)
+/// also with 2 bars, where the cap shrinks them.
+List<int> _validatorMaxBars(int slot) => slot >= 2 ? [5, 2] : [4];
+
+final List<(Attr, int, int, Object?)> _validatorSetCases = [
   (
     Attr.gu,
     100,
+    4,
     {
       'moves': [
         _strike,
@@ -806,13 +905,14 @@ final List<(Attr, int, Object?)> _validatorSetCases = [
   (
     Attr.pa,
     70,
+    2,
     {
       'moves': [
         {..._strike, 'template': 'blast', 'atkFormula': 'INT80_DEX20'},
       ],
     },
   ),
-  (Attr.choki, 100, 'garbage'),
+  (Attr.choki, 100, 3, 'garbage'),
 ];
 
 List<num> _p(num x, num y) => [x, y];

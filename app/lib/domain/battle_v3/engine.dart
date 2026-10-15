@@ -1,11 +1,13 @@
-/// Real-time ATB battle, spec v3: a fixed 10 Hz tick and integer maths only
-/// (docs/GAME_DESIGN_V2.md §6, docs/BATTLE_V3.md). Pure Dart, no Flutter.
+/// Real-time battle with stackable gauge bars, spec v4 (engine v3): a fixed
+/// 10 Hz tick and integer maths only (docs/GAME_DESIGN_V2.md §6,
+/// docs/BATTLE_V3.md). Pure Dart, no Flutter.
 ///
 /// Usage (client, server and simulator use the same object):
 ///
 /// ```dart
 /// final b = Battle(spec, setupA, setupB, seed: seed);
-/// b.queueInput(0, 1);                    // a tap / さきどり (any time)
+/// b.queueInput(0, 1);                    // a tap / さきどり (any time;
+///                                        // fires when enough bars)
 /// final events = b.step(b: cpu);         // one 100 ms tick
 /// ```
 ///
@@ -15,7 +17,6 @@
 /// golden vectors in `shared/battle_spec_v3/golden_vectors.json`.
 library;
 
-import 'ai.dart';
 import 'genome.dart';
 import 'moves.dart';
 import 'rng.dart';
@@ -27,6 +28,7 @@ class FighterSetup {
     required this.stats,
     required this.attr,
     required this.moves,
+    required this.maxBars,
     this.label = '',
   });
 
@@ -34,22 +36,32 @@ class FighterSetup {
   final List<int> stats;
   final Attr attr;
 
-  /// Unlocked moves only (2..4). Slot 0 must be usable at any time.
+  /// Unlocked moves only (2..4). Slot 0 costs 1 bar and has no cooldown.
   final List<Move> moves;
+
+  /// Gauge bars this fighter can stack (2..5, from its Lv1 base SP).
+  final int maxBars;
   final String label;
 
-  FighterSetup withStats(List<int> s) =>
-      FighterSetup(stats: s, attr: attr, moves: moves, label: label);
+  FighterSetup withStats(List<int> s) => FighterSetup(
+    stats: s,
+    attr: attr,
+    moves: moves,
+    maxBars: maxBars,
+    label: label,
+  );
 
   Map<String, Object?> toJson() => {
     'stats': stats,
     'attribute': attr.name,
+    'maxBars': maxBars,
     'moves': [for (final m in moves) m.toJson()],
   };
 
   factory FighterSetup.fromJson(Map<String, Object?> j) => FighterSetup(
     stats: (j['stats']! as List).cast<int>(),
     attr: Attr.values.byName(j['attribute']! as String),
+    maxBars: j['maxBars']! as int,
     moves: [
       for (final m in j['moves']! as List)
         Move.fromJson((m as Map).cast<String, Object?>()),
@@ -58,8 +70,8 @@ class FighterSetup {
   );
 }
 
-/// Gauge state of a fighter.
-enum Phase { charging, ready, casting }
+/// Gauge state of a fighter: filling (or full) / casting a move.
+enum Phase { charging, casting }
 
 /// Runtime state of one side.
 class Fighter {
@@ -67,7 +79,7 @@ class Fighter {
     : stats = List.of(setup.stats),
       maxHp = maxHpOf(s, setup.stats),
       hp = maxHpOf(s, setup.stats),
-      sp = s.spStartCenti,
+      gaugePerBar = s.gaugeMax,
       cooldowns = List.filled(setup.moves.length, 0);
 
   final FighterSetup setup;
@@ -75,20 +87,26 @@ class Fighter {
   final int maxHp;
   int hp;
 
-  /// SP in centi-SP (0..10000 = 0..100 SP).
-  int sp;
+  /// Gauge units of one bar ([V3Spec.gaugeMax]).
+  final int gaugePerBar;
 
-  /// 0..gaugeMax.
+  /// 0..maxBars·gaugePerBar. Stops filling at the cap and while casting.
   int gauge = 0;
   Phase phase = Phase.charging;
 
-  /// Ticks spent ready without a decision (the 5 s timer).
-  int readyTicks = 0;
+  /// Ticks this fighter has had at least one full bar without acting
+  /// (reset when it acts). The AI's "thinking time" reads it.
+  int waitTicks = 0;
   int castSlot = -1;
   int castLeft = 0;
 
-  /// Pre-selected / submitted move (さきどり), consumed when ready.
+  /// Pre-selected / submitted move (さきどり): used on the first tick it
+  /// is usable (enough bars, no cooldown), then cleared.
   int? queued;
+
+  /// The AI's chosen next move while it saves bars for it (おまかせ / CPU
+  /// controllers only; cleared when the fighter acts). Not in [stateHash].
+  int? aiPlan;
   final List<int> cooldowns;
   final List<int> stages = List.filled(10, 0);
   final List<int> stageTicks = List.filled(10, 0);
@@ -98,30 +116,43 @@ class Fighter {
   int shieldTicks = 0;
   int healUses = 0;
   int actions = 0;
-  int autoPicks = 0;
 
   List<Move> get moves => setup.moves;
   Attr get attr => setup.attr;
+  int get maxBars => setup.maxBars;
 
+  /// Full bars right now.
+  int get bars => gauge ~/ gaugePerBar;
+
+  /// Bars a move of [slot] costs (0 for an invalid slot).
+  int costOf(int slot) =>
+      slot >= 0 && slot < moves.length ? moves[slot].bars : 0;
+
+  /// [slot] can ever be used (valid, and its cost fits the max bars):
+  /// what さきどり may queue.
+  bool canQueue(int slot) =>
+      slot >= 0 && slot < moves.length && moves[slot].bars <= maxBars;
+
+  /// [slot] can be used right now: enough bars and no cooldown (the
+  /// caller checks that the fighter is not casting).
   bool usable(int slot) =>
-      slot >= 0 &&
-      slot < moves.length &&
+      canQueue(slot) &&
       cooldowns[slot] == 0 &&
-      sp >= moves[slot].spCost * 100;
+      gauge >= moves[slot].bars * gaugePerBar;
 
-  /// Seconds-free remaining time of the decision timer (ticks).
-  int decisionTicksLeft(V3Spec s) =>
-      phase == Phase.ready ? s.decisionTicks - readyTicks : s.decisionTicks;
+  /// Not on cooldown and affordable within the max bars (what the AI may
+  /// plan to save for).
+  bool eligible(int slot) => canQueue(slot) && cooldowns[slot] == 0;
 
   Map<String, Object?> snapshot() => {
     'hp': hp,
-    'sp': sp,
     'gauge': gauge,
     'phase': phase.name,
-    'readyTicks': readyTicks,
+    'waitTicks': waitTicks,
     'castSlot': castSlot,
     'castLeft': castLeft,
     'queued': queued,
+    'aiPlan': aiPlan,
     'cooldowns': List.of(cooldowns),
     'stages': List.of(stages),
     'stageTicks': List.of(stageTicks),
@@ -131,19 +162,18 @@ class Fighter {
     'shieldTicks': shieldTicks,
     'healUses': healUses,
     'actions': actions,
-    'autoPicks': autoPicks,
   };
 
   void restore(Map<String, Object?> j) {
     List<int> li(String k) => (j[k]! as List).cast<int>();
     hp = j['hp']! as int;
-    sp = j['sp']! as int;
     gauge = j['gauge']! as int;
     phase = Phase.values.byName(j['phase']! as String);
-    readyTicks = j['readyTicks']! as int;
+    waitTicks = j['waitTicks']! as int;
     castSlot = j['castSlot']! as int;
     castLeft = j['castLeft']! as int;
     queued = j['queued'] as int?;
+    aiPlan = j['aiPlan'] as int?;
     cooldowns.setAll(0, li('cooldowns'));
     stages.setAll(0, li('stages'));
     stageTicks.setAll(0, li('stageTicks'));
@@ -153,7 +183,6 @@ class Fighter {
     shieldTicks = j['shieldTicks']! as int;
     healUses = j['healUses']! as int;
     actions = j['actions']! as int;
-    autoPicks = j['autoPicks']! as int;
   }
 }
 
@@ -161,9 +190,9 @@ class Fighter {
 ///
 /// | type | data |
 /// |---|---|
-/// | ready | side |
-/// | inputIgnored | side, slot (queued input not usable when ready) |
-/// | select | side, slot, cast, auto (1 = timeout おまかせ) |
+/// | bar | side, bars (a bar became full; bars = full bars now) |
+/// | inputIgnored | side, slot (queued input that can never be used) |
+/// | select | side, slot, cost (bars spent), cast |
 /// | moveStart | side, slot, template, attr |
 /// | effective | side, target, pct (150 / 75: triangle, once per move) |
 /// | hit | side, target, n, amount, hp, crit (0/1), pct |
@@ -208,13 +237,11 @@ class BattleEvent {
 int eventsHash(Iterable<BattleEvent> events) =>
     fnv1a32(events.map((e) => e.line).join('\n'));
 
-/// Decides a move for a ready fighter, or returns null to keep waiting
-/// (after `decisionTicks` the engine auto-picks). AI controllers live in
-/// `ai.dart`.
+/// Decides a move for a fighter that is not casting, or returns null to
+/// keep filling (there is no decision timer: an idle fighter just stops at
+/// its max bars). Called every tick unless a queued さきどり input is
+/// waiting. AI controllers live in `ai.dart`.
 typedef Controller = int? Function(Battle battle, int side);
-
-/// Auto-pick used on the 5 s timeout.
-typedef AutoPicker = int Function(Battle battle, int side, Mulberry32 rng);
 
 class Battle {
   Battle(
@@ -222,7 +249,6 @@ class Battle {
     FighterSetup a,
     FighterSetup b, {
     required this.seed,
-    this.autoPick = autoPickNormal,
     this.recordEvents = true,
   }) : fighters = [Fighter(spec, a), Fighter(spec, b)],
        rng = Mulberry32(deriveSeed(seed, 0)),
@@ -234,6 +260,14 @@ class Battle {
       if (f.moves.isEmpty || f.moves.length > 4) {
         throw ArgumentError('a fighter needs 1..4 moves');
       }
+      if (f.maxBars < spec.minBars || f.maxBars > spec.maxBars) {
+        throw ArgumentError('maxBars must be ${spec.minBars}..${spec.maxBars}');
+      }
+      for (final m in f.moves) {
+        if (m.bars < 1 || m.bars > f.maxBars) {
+          throw ArgumentError('a move costs 1..maxBars bars');
+        }
+      }
     }
   }
 
@@ -242,7 +276,6 @@ class Battle {
   final List<Fighter> fighters;
   Mulberry32 rng;
   final List<Mulberry32> aiRng;
-  final AutoPicker autoPick;
 
   /// When true every event is also appended to [events].
   final bool recordEvents;
@@ -254,9 +287,11 @@ class Battle {
 
   bool get finished => winner != null;
 
-  /// Submits a move for [side]: used as soon as the fighter is ready (in
-  /// step 4 of the next tick, or later while the gauge is still filling —
-  /// さきどり). A newer input replaces an older one. Ignored when finished.
+  /// Submits a move for [side] (a tap / さきどり, any time): used on the
+  /// first tick the fighter has enough bars and the move is off cooldown.
+  /// A newer input replaces an older one. A move that can never be used
+  /// (bad slot, cost above the max bars) is dropped with `inputIgnored`.
+  /// Ignored when finished.
   void queueInput(int side, int slot) {
     if (!finished) fighters[side].queued = slot;
   }
@@ -286,7 +321,7 @@ class Battle {
     return base * (100 * sum + weightPct * (x - y)) ~/ (100 * sum);
   }
 
-  /// Gauge fill per tick.
+  /// Gauge fill per tick (one bar = [V3Spec.gaugeMax]).
   int fillRate(int side) {
     var r = rel(
       spec.gaugeFillPerTick,
@@ -314,10 +349,11 @@ class Battle {
   }
 
   /// Advances one tick (100 ms) and returns its events. Order (normative):
-  /// 1 timers & poison (a, b) · 2 SP regen · 3 gauge fill · 4 decisions of
-  /// ready fighters (a, b; queued input, then controller, then the 5 s
-  /// timeout) · 5 resolutions due this tick (a, b; when both resolve, one
-  /// `nextInt(2)` = 1 swaps the order) · 6 the 3-minute cap (HP ratio).
+  /// 1 timers & poison (a, b) · 2 gauges fill (a, b; not while casting, up
+  /// to maxBars) · 3 decisions (a, b; casting counts down; else the queued
+  /// input when usable, else — when nothing is queued — the controller) ·
+  /// 4 resolutions due this tick (a, b; when both resolve, one `nextInt(2)`
+  /// = 1 swaps the order) · 5 the 3-minute cap (HP ratio).
   List<BattleEvent> step({Controller? a, Controller? b}) {
     _tickEvents.clear();
     if (finished) return const [];
@@ -354,31 +390,19 @@ class Battle {
       }
     }
     if (finished) return List.of(_tickEvents);
-    // 2. SP regen
-    for (var i = 0; i < 2; i++) {
-      final f = fighters[i];
-      final r = rel(
-        spec.spRegenCentiPerTick,
-        f.stats[Stat.sp.index],
-        fighters[1 - i].stats[Stat.sp.index],
-        spec.spWeightPct,
-      );
-      final v = f.sp + r;
-      f.sp = v > spec.spMaxCenti ? spec.spMaxCenti : v;
-    }
-    // 3. gauges
+    // 2. gauges
     for (var i = 0; i < 2; i++) {
       final f = fighters[i];
       if (f.phase != Phase.charging) continue;
-      f.gauge += fillRate(i);
-      if (f.gauge >= spec.gaugeMax) {
-        f.gauge = spec.gaugeMax;
-        f.phase = Phase.ready;
-        f.readyTicks = 0;
-        _ev('ready', {'side': i});
-      }
+      final cap = f.maxBars * spec.gaugeMax;
+      if (f.gauge >= cap) continue;
+      final before = f.gauge ~/ spec.gaugeMax;
+      final g = f.gauge + fillRate(i);
+      f.gauge = g > cap ? cap : g;
+      final after = f.gauge ~/ spec.gaugeMax;
+      if (after > before) _ev('bar', {'side': i, 'bars': after});
     }
-    // 4. decisions
+    // 3. decisions
     final due = <int>[];
     for (var i = 0; i < 2; i++) {
       final f = fighters[i];
@@ -386,40 +410,37 @@ class Battle {
         if (--f.castLeft <= 0) due.add(i);
         continue;
       }
-      if (f.phase != Phase.ready) continue;
       int? slot;
       final q = f.queued;
       if (q != null) {
-        f.queued = null;
-        if (f.usable(q)) {
-          slot = q;
-        } else {
+        if (!f.canQueue(q)) {
+          f.queued = null;
           _ev('inputIgnored', {'side': i, 'slot': q});
+        } else if (f.usable(q)) {
+          f.queued = null;
+          slot = q;
         }
       }
-      if (slot == null) {
+      if (slot == null && f.queued == null) {
         final c = i == 0 ? a : b;
         final s = c?.call(this, i);
         if (s != null && f.usable(s)) slot = s;
       }
-      var auto = 0;
       if (slot == null) {
-        f.readyTicks++;
-        if (f.readyTicks < spec.decisionTicks) continue;
-        slot = autoPick(this, i, aiRng[i]);
-        f.autoPicks++;
-        auto = 1;
+        f.waitTicks = f.gauge >= spec.gaugeMax ? f.waitTicks + 1 : 0;
+        continue;
       }
       final m = f.moves[slot];
-      f.sp -= m.spCost * 100;
+      f.gauge -= m.bars * spec.gaugeMax;
       f.castSlot = slot;
-      f.readyTicks = 0; // only meaningful while ready
+      f.waitTicks = 0;
+      f.aiPlan = null;
       f.actions++;
       _ev('select', {
         'side': i,
         'slot': slot,
+        'cost': m.bars,
         'cast': m.castTicks,
-        'auto': auto,
       });
       if (m.castTicks > 0) {
         f.phase = Phase.casting;
@@ -428,7 +449,7 @@ class Battle {
         due.add(i);
       }
     }
-    // 5. resolutions
+    // 4. resolutions
     if (due.length == 2 && rng.nextInt(2) == 1) {
       due.setAll(0, [due[1], due[0]]);
     }
@@ -436,7 +457,7 @@ class Battle {
       if (finished) break;
       _resolve(i);
     }
-    // 6. hard cap: higher HP ratio wins; an exact tie is a coin flip.
+    // 5. hard cap: higher HP ratio wins; an exact tie is a coin flip.
     if (!finished && tick >= spec.hardCapTick) {
       final fa = fighters[0];
       final fb = fighters[1];
@@ -471,7 +492,6 @@ class Battle {
     final slot = f.castSlot;
     final m = f.moves[slot];
     f.phase = Phase.charging;
-    f.gauge = 0;
     f.castSlot = -1;
     f.cooldowns[slot] = m.cooldownTicks;
     _ev('moveStart', {
@@ -676,10 +696,9 @@ class Battle {
       parts.add(
         [
           f.hp,
-          f.sp,
           f.gauge,
           f.phase.index,
-          f.readyTicks,
+          f.waitTicks,
           f.castSlot,
           f.castLeft,
           ...f.cooldowns,

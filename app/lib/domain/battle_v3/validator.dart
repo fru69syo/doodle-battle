@@ -36,7 +36,11 @@ final RegExp _kanaName = RegExp(r'^[ぁ-ゖァ-ヺー]{1,10}$');
 final RegExp _kanaFlavor = RegExp(r'^[ぁ-ゖァ-ヺー、。！？ 　]{0,30}$');
 
 /// Validates and normalises one move proposed by the AI for [slot] of a
-/// character with attribute [own]. Deterministic; see docs §5.6.
+/// character with attribute [own], move factor [moveFactorPct] and
+/// [maxBars] (2..5). Deterministic; see docs §5.6. The AI never sets the
+/// cost: `bars` (and a legacy `spCost`) in [json] are ignored, and the
+/// accepted move's [Move.bars] is derived from its points — never more than
+/// the slot allows or [maxBars] (the move is shrunk until it fits).
 /// [ngCheck] returns true when a string contains an NG word.
 MoveValidation validateAiMove(
   V3Spec s,
@@ -44,6 +48,7 @@ MoveValidation validateAiMove(
   required int slot,
   required Attr own,
   required int moveFactorPct,
+  required int maxBars,
   bool Function(String)? ngCheck,
 }) {
   final w = <String>[];
@@ -181,7 +186,6 @@ MoveValidation validateAiMove(
         ? numParam('accuracy', 100)
         : 100,
     critBonus: tpl.isDamage ? numParam('critBonus', 0) : 0,
-    spCost: numParam('spCost', 0),
     castTicks: numParam('castTicks', 0),
     cooldownTicks: numParam('cooldownTicks', tpl.ranges['cooldownTicks']!.min),
     secondary: secondary,
@@ -201,10 +205,9 @@ MoveValidation validateAiMove(
   );
 
   // Slot-1 "いつもの わざ" must be always usable.
-  if (slot == 0 && (m.spCost != 0 || m.cooldownTicks != 0 || m.castTicks > 5)) {
-    w.add('slot 1 made free (sp 0, cooldown 0, cast <= 5)');
+  if (slot == 0 && (m.cooldownTicks != 0 || m.castTicks > 5)) {
+    w.add('slot 1 made always usable (cooldown 0, cast <= 5)');
     m = m.copyWith(
-      spCost: 0,
       cooldownTicks: 0,
       castTicks: m.castTicks > 5 ? 5 : m.castTicks,
     );
@@ -215,10 +218,14 @@ MoveValidation validateAiMove(
     m = m.copyWith(cooldownTicks: m.durationTicks);
   }
 
-  final fitted = fitToBudget(s, m, slotBudget(s, slot, moveFactorPct));
+  final fitted = fitToBudget(
+    s,
+    m,
+    slotBudget(s, slot, moveFactorPct, maxBars),
+  );
   if (fitted == null) return reject('over budget');
   if (!identical(fitted, m)) w.add('scaled to budget');
-  return MoveValidation(fitted, w);
+  return MoveValidation(withBars(s, fitted, moveFactorPct), w);
 }
 
 /// Outcome of one slot of [validateAiMoveSet].
@@ -243,6 +250,7 @@ List<SlotValidation> validateAiMoveSet(
   Object? json, {
   required Attr own,
   required int moveFactorPct,
+  required int maxBars,
   bool Function(String)? ngCheck,
 }) {
   final raw = json is Map ? json['moves'] : null;
@@ -266,6 +274,7 @@ List<SlotValidation> validateAiMoveSet(
           slot: slot,
           own: own,
           moveFactorPct: moveFactorPct,
+          maxBars: maxBars,
           ngCheck: ngCheck,
         );
         if (v.rejected) return v;

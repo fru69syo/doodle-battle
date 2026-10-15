@@ -77,7 +77,7 @@ enum Attr {
 /// [copyWith] to explore.
 class V3Spec {
   const V3Spec({
-    this.specVersion = 3,
+    this.specVersion = 4,
     // --- character generation -------------------------------------------
     this.kidEnergyWeight = 6,
     this.kidSkillWeight = 4,
@@ -104,6 +104,7 @@ class V3Spec {
     this.hpPerHp = 3,
     this.hpPerVit = 2,
     this.hpPerAvg = 5,
+    this.minLv1Sp = 20,
     // --- levels --------------------------------------------------------------
     this.maxLevel = 100,
     this.xpBase = 60,
@@ -111,24 +112,25 @@ class V3Spec {
     this.xpQuadNum = 3,
     this.xpQuadDen = 4,
     // --- moves ---------------------------------------------------------------
-    this.slotBudgets = const [100, 100, 120, 150],
+    this.barBudgets = const [100, 210, 330, 460, 600],
+    this.slotMaxBars = const [1, 5, 5, 5],
     this.slotUnlockLevels = const [1, 1, 10, 50],
     this.moveFactorBasePct = 95,
     this.moveFactorKidDiv = 10,
     this.bloomerPreMoveFactorPct = 70,
     this.legendMoveBonusPct = 5,
     this.bloomerRebirthMoveBonusPct = 0,
-    this.maxDiscountPct = 50,
+    this.castDiscountPerTick = 2,
+    this.cooldownDiscountDiv = 4,
+    this.maxDiscountPct = 25,
     // --- ATB -----------------------------------------------------------------
     this.tickHz = 10,
     this.gaugeMax = 10000,
     this.gaugeFillPerTick = 280,
     this.agiWeightPct = 30,
-    this.decisionTicks = 50,
-    this.spMaxCenti = 10000,
-    this.spStartCenti = 4000,
-    this.spRegenCentiPerTick = 25,
-    this.spWeightPct = 50,
+    this.spPerBar = 10,
+    this.minBars = 2,
+    this.maxBars = 5,
     // --- damage --------------------------------------------------------------
     this.damageScalePct = 60,
     this.typeAdvantagePct = 150,
@@ -199,6 +201,11 @@ class V3Spec {
   final int hpPerVit;
   final int hpPerAvg;
 
+  /// Every character's Lv1 SP (both forms of a hidden bloomer) is at least
+  /// this; the difference is taken from the other nine stats in proportion
+  /// to their size (largest remainder), so the budget is unchanged.
+  final int minLv1Sp;
+
   final int maxLevel;
 
   /// xpToNext(L) = xpBase + xpPerLevel·L + floor(xpQuadNum·L² / xpQuadDen).
@@ -207,7 +214,15 @@ class V3Spec {
   final int xpQuadNum;
   final int xpQuadDen;
 
-  final List<int> slotBudgets;
+  /// Budget points a move may be worth for a cost of n bars
+  /// (`barBudgets[n - 1]`, before the move factor). A move costs the
+  /// smallest n whose budget holds its points; roughly n one-bar moves plus
+  /// a small premium for the risk of saving up.
+  final List<int> barBudgets;
+
+  /// Most bars a slot's move may cost (also capped by the character's max
+  /// bars): slot 1 is the always-usable 1-bar move, slot 4 the ひっさつ.
+  final List<int> slotMaxBars;
   final List<int> slotUnlockLevels;
 
   /// moveFactorPct = moveFactorBasePct + kid / moveFactorKidDiv (95..105).
@@ -217,18 +232,21 @@ class V3Spec {
   final int legendMoveBonusPct;
   final int bloomerRebirthMoveBonusPct;
 
-  /// Discounts (SP, cast, cooldown) may not exceed this % of a move's value.
+  /// Discount = castTicks·castDiscountPerTick + (cooldown beyond the free
+  /// part) / cooldownDiscountDiv, at most maxDiscountPct % of the value.
+  final int castDiscountPerTick;
+  final int cooldownDiscountDiv;
   final int maxDiscountPct;
 
   final int tickHz;
   final int gaugeMax;
   final int gaugeFillPerTick;
   final int agiWeightPct;
-  final int decisionTicks;
-  final int spMaxCenti;
-  final int spStartCenti;
-  final int spRegenCentiPerTick;
-  final int spWeightPct;
+
+  /// Max bars = Lv1 base SP / spPerBar, clamped to minBars..maxBars.
+  final int spPerBar;
+  final int minBars;
+  final int maxBars;
 
   final int damageScalePct;
   final int typeAdvantagePct;
@@ -269,7 +287,9 @@ class V3Spec {
     int? bloomerPostGrowthBoostPct,
     int? rebirthKid,
     int? rebirthBudgetPct,
-    int? spRegenCentiPerTick,
+    List<int>? barBudgets,
+    List<int>? slotMaxBars,
+    int? maxDiscountPct,
     int? budgetPerKid,
     int? moveFactorBasePct,
     int? moveFactorKidDiv,
@@ -289,7 +309,9 @@ class V3Spec {
         bloomerPostGrowthBoostPct ?? this.bloomerPostGrowthBoostPct,
     rebirthKid: rebirthKid ?? this.rebirthKid,
     rebirthBudgetPct: rebirthBudgetPct ?? this.rebirthBudgetPct,
-    spRegenCentiPerTick: spRegenCentiPerTick ?? this.spRegenCentiPerTick,
+    barBudgets: barBudgets ?? this.barBudgets,
+    slotMaxBars: slotMaxBars ?? this.slotMaxBars,
+    maxDiscountPct: maxDiscountPct ?? this.maxDiscountPct,
     budgetPerKid: budgetPerKid ?? this.budgetPerKid,
     moveFactorBasePct: moveFactorBasePct ?? this.moveFactorBasePct,
     moveFactorKidDiv: moveFactorKidDiv ?? this.moveFactorKidDiv,
@@ -301,12 +323,20 @@ class V3Spec {
     critBaseMille: critBaseMille ?? this.critBaseMille,
   );
 
+  /// Max bars of a character whose Lv1 base SP is [lv1Sp].
+  int maxBarsFor(int lv1Sp) {
+    final n = lv1Sp ~/ spPerBar;
+    return n < minBars ? minBars : (n > maxBars ? maxBars : n);
+  }
+
   /// Effective type multiplier (%) after [typeStrengthPct].
   int typePct(int rawPct) => 100 + (rawPct - 100) * typeStrengthPct ~/ 100;
 
   Map<String, Object?> toJson() => {
     'specVersion': specVersion,
-    'release': 'v3.0 production (engine v3). Tuned in docs/GAME_DESIGN_V2.md §10, re-run in docs/BATTLE_V3.md',
+    'release':
+        'v4 (engine v3, stackable gauge bars, 2026-10-14). Tuned in '
+        'docs/GAME_DESIGN_V2.md §10, re-run in docs/BATTLE_V3.md',
     'integerMath':
         'All values are integers. Every division is floor division of '
         'non-negative integers; every intermediate stays below 2^53.',
@@ -372,6 +402,13 @@ class V3Spec {
         'formula':
             'maxHp = perHp*HP + perVit*VIT + perAvg*(sum of 10 stats)/10',
       },
+      'minLv1Sp': {
+        'value': minLv1Sp,
+        'rule':
+            'after the split (and for the bloomer rebirth split): if '
+            'SP < minLv1Sp, d = minLv1Sp - SP is taken from the other nine '
+            'stats by largestRemainder(d, their values) and SP = minLv1Sp',
+      },
       'attribute': kAttributeRule,
     },
     'levels': {
@@ -384,13 +421,16 @@ class V3Spec {
       },
     },
     'moves': {
-      'slotBudgets': slotBudgets,
+      'barBudgets': barBudgets,
+      'slotMaxBars': slotMaxBars,
       'slotUnlockLevels': slotUnlockLevels,
       'moveFactorBasePct': moveFactorBasePct,
       'moveFactorKidDiv': moveFactorKidDiv,
       'bloomerPreMoveFactorPct': bloomerPreMoveFactorPct,
       'legendMoveBonusPct': legendMoveBonusPct,
       'bloomerRebirthMoveBonusPct': bloomerRebirthMoveBonusPct,
+      'castDiscountPerTick': castDiscountPerTick,
+      'cooldownDiscountDiv': cooldownDiscountDiv,
       'maxDiscountPct': maxDiscountPct,
     },
     'atb': {
@@ -398,11 +438,17 @@ class V3Spec {
       'gaugeMax': gaugeMax,
       'gaugeFillPerTick': gaugeFillPerTick,
       'agiWeightPct': agiWeightPct,
-      'decisionTicks': decisionTicks,
-      'spMaxCenti': spMaxCenti,
-      'spStartCenti': spStartCenti,
-      'spRegenCentiPerTick': spRegenCentiPerTick,
-      'spWeightPct': spWeightPct,
+      'gaugePerBar': gaugeMax,
+      'spPerBar': spPerBar,
+      'minBars': minBars,
+      'maxBars': maxBars,
+      'maxBarsFormula':
+          'clamp(lv1BaseSP / spPerBar, minBars, maxBars) from the Lv1 base '
+          'stats (Genome.base), stable across levels, rebirth and rated sync',
+      'gauge':
+          '0..maxBars*gaugePerBar; fills while not casting and below the '
+          'cap; a move costs bars*gaugePerBar when selected; no decision '
+          'timer',
     },
     'damage': {
       'scalePct': damageScalePct,
