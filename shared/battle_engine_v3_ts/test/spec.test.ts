@@ -64,26 +64,30 @@ describe('constants match shared/battle_spec_v3/battle_spec_v3.json', () => {
       xpToNext: { base: s.xpBase, perLevel: s.xpPerLevel, quadNum: s.xpQuadNum, quadDen: s.xpQuadDen },
     });
     expect(j.moves).toEqual({
-      slotBudgets: s.slotBudgets,
+      barBudgets: s.barBudgets,
+      slotMaxBars: s.slotMaxBars,
       slotUnlockLevels: s.slotUnlockLevels,
       moveFactorBasePct: s.moveFactorBasePct,
       moveFactorKidDiv: s.moveFactorKidDiv,
       bloomerPreMoveFactorPct: s.bloomerPreMoveFactorPct,
       legendMoveBonusPct: s.legendMoveBonusPct,
       bloomerRebirthMoveBonusPct: s.bloomerRebirthMoveBonusPct,
+      castDiscountPerTick: s.castDiscountPerTick,
+      cooldownDiscountDiv: s.cooldownDiscountDiv,
       maxDiscountPct: s.maxDiscountPct,
     });
-    expect(j.atb).toEqual({
+    expect(j.atb).toMatchObject({
       tickHz: s.tickHz,
       gaugeMax: s.gaugeMax,
       gaugeFillPerTick: s.gaugeFillPerTick,
       agiWeightPct: s.agiWeightPct,
-      decisionTicks: s.decisionTicks,
-      spMaxCenti: s.spMaxCenti,
-      spStartCenti: s.spStartCenti,
-      spRegenCentiPerTick: s.spRegenCentiPerTick,
-      spWeightPct: s.spWeightPct,
+      gaugePerBar: s.gaugeMax,
+      spPerBar: s.spPerBar,
+      minBars: s.minBars,
+      maxBars: s.maxBars,
     });
+    expect(j.atb.decisionTicks).toBeUndefined();
+    expect(j.character.minLv1Sp.value).toBe(s.minLv1Sp);
     expect(j.damage).toMatchObject({
       scalePct: s.damageScalePct,
       typeAdvantagePct: s.typeAdvantagePct,
@@ -128,6 +132,7 @@ describe('constants match shared/battle_spec_v3/battle_spec_v3.json', () => {
     for (const [t, v] of Object.entries(AI_TIERS)) {
       expect(j.ai.randomPct[t]).toBe(v.randomPct);
       expect(j.ai.thinkTicks[t]).toBe(v.thinkTicks);
+      expect(j.ai.saveBars[t]).toBe(v.saveBars);
     }
     expect(j.progression.stages.worlds).toEqual([...WORLD_NAMES]);
     expect(j.progression.stages.powerPctByPosition).toEqual([...STAGE_POWER_PCT]);

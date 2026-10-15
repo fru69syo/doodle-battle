@@ -11,6 +11,7 @@ import { BLOOMER_ORIGINS, Genome, maxHpOf, parseFeatures, type FeatureVector } f
 import { setupToJson } from './engine';
 import { ratedSetup, setupAt } from './loadout';
 import { moveToJson } from './moves';
+import { barBudget, slotMaxBarsFor } from './moves';
 import { unlockedSlots, xpToNext } from './progression';
 import { rigProblem, validateRigJson } from './rig';
 import { type Attr, DEFAULT_SPEC, type V3Spec } from './spec';
@@ -136,7 +137,7 @@ export function validateCharacterClaimV2(
       moveLog.push(`${slot}:stale`);
       return null;
     }
-    const v = validateAiMove(s, p, { slot, own: g.attr, moveFactorPct: factor, ...(opts.ngCheck ? { ngCheck: opts.ngCheck } : {}) });
+    const v = validateAiMove(s, p, { slot, own: g.attr, moveFactorPct: factor, maxBars: g.maxBarsAt(lv), ...(opts.ngCheck ? { ngCheck: opts.ngCheck } : {}) });
     if (v.rejected) {
       moveLog.push(`${slot}:rejected:${v.reason}`);
       return null;
@@ -175,7 +176,17 @@ export function validateCharacterClaimV2(
 export function moveContextOf(
   claim: Pick<CharacterClaimV2, 'features' | 'energy10' | 'skill10' | 'imageHash' | 'verdict'>,
   opts: { spec?: V3Spec; serverOrigin?: string | null; level?: number } = {},
-): { attribute: Attr; moveFactorPct: number; slotBudgets: number[] } | null {
+): {
+  attribute: Attr;
+  moveFactorPct: number;
+  maxBars: number;
+  /** Points a move may be worth per cost in bars (index = bars − 1, up to maxBars). */
+  barBudgets: number[];
+  /** Most bars per slot (slot 1 = 1; others capped by maxBars). */
+  slotMaxBars: number[];
+  /** Points budget per slot (= barBudgets[slotMaxBars − 1]). */
+  slotBudgets: number[];
+} | null {
   const s = opts.spec ?? DEFAULT_SPEC;
   const features = parseFeatures(claim.features);
   if (
@@ -196,10 +207,16 @@ export function moveContextOf(
     imageHash: claim.imageHash,
     origin,
   });
-  const factor = g.moveFactorPct(opts.level ?? 1);
+  const lv = opts.level ?? 1;
+  const factor = g.moveFactorPct(lv);
+  const maxBars = g.maxBarsAt(lv);
+  const slotMax = [0, 1, 2, 3].map((slot) => slotMaxBarsFor(s, slot, maxBars));
   return {
     attribute: g.attr,
     moveFactorPct: factor,
-    slotBudgets: s.slotBudgets.map((b) => Math.floor((b * factor) / 100)),
+    maxBars,
+    barBudgets: Array.from({ length: maxBars }, (_, i) => barBudget(s, i + 1, factor)),
+    slotMaxBars: slotMax,
+    slotBudgets: slotMax.map((b) => barBudget(s, b, factor)),
   };
 }

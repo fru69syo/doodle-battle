@@ -696,13 +696,18 @@
   "ai": {
     "randomPct": {
       "weak": 40,
-      "normal": 25,
+      "normal": 20,
       "strong": 0
     },
     "thinkTicks": {
       "weak": 10,
       "normal": 10,
       "strong": 4
+    },
+    "saveBars": {
+      "weak": 0,
+      "normal": 1,
+      "strong": 5
     },
     "note": "aiDecide / chooseMove / bestMove (ai.dart / ai.ts) are normative for CPU and ghosts (ghosts and an away player: normal); strong scores with scoreMoveStrong. おまかせ (the kid switch) is omakasePick: uniform among eligible moves (off cooldown, bars <= maxBars) on the side AI stream, then wait for the bars"
   },

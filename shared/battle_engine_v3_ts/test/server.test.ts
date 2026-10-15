@@ -92,20 +92,22 @@ describe('realtime wrapper', () => {
     let guard = 0;
     while (!rt.finished && guard++ < 5000) {
       // never auto-picks: a side only acts when the server passes an input
-      const inp: [number | null, number | null] = [
-        rt.isReady(0) ? rt.chooseMove(0, 'normal') : null,
-        rt.isReady(1) ? rt.chooseMove(1, 'strong') : null,
-      ];
+      const inp: [number | null, number | null] = [rt.omakaseInput(0), rt.aiInput(1, 'strong', 4)];
       const r = rt.step(inp);
       if (inp[0] !== null) expect(r.acted[0]).toBe(true);
+      if (inp[1] !== null) expect(r.acted[1]).toBe(true);
     }
     expect(rt.finished).toBe(true);
     expect(['ko', 'timeout']).toContain(rt.endReason);
     expect(rt.stateHash()).toMatch(/^[0-9a-f]{8}$/);
     const idle = new RealtimeBattle(a.setup, b.setup, 1);
-    for (let t = 0; t < 200; t++) idle.step([null, null]);
-    expect(idle.isReady(0)).toBe(true);
+    for (let t = 0; t < 400; t++) idle.step([null, null]);
+    // An idle side caps at its max bars; nothing is picked for it.
+    expect(idle.view(0).bars).toBe(a.setup.maxBars);
+    expect(idle.view(0).gauge).toBe(a.setup.maxBars * 10000);
+    expect(idle.canUse(0, 0)).toBe(true);
     expect(idle.battle.fighters[0].actions).toBe(0);
+    expect(publicMoves(a.setup).every((m) => m.bars >= 1 && m.bars <= a.setup.maxBars)).toBe(true);
     expect(ratedFighterFromSnapshot({}, 5)).toBeNull();
   });
 });

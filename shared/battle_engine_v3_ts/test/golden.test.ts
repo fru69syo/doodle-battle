@@ -17,9 +17,12 @@ import {
   fnv1a32,
   generateOfflineMoves,
   Genome,
+  barsForPoints,
   maxHpOf,
-  moveCost,
+  moveBars,
   moveDiscount,
+  movePoints,
+  omakaseController,
   moveFromJson,
   moveToJson,
   moveValue,
@@ -64,7 +67,7 @@ const genomes: Genome[] = (golden.genomes as Any[]).map(genomeOf);
 function runGolden(input: Any): Battle {
   const b = new Battle(s, setupFromJson(input.a), setupFromJson(input.b), input.seed);
   const ctl = (j: Any): Controller | null =>
-    j === null ? null : aiController({ thinkTicks: j.think, tier: j.tier as AiTier });
+    j === null ? null : j.omakase === true ? omakaseController() : aiController({ thinkTicks: j.think, tier: j.tier as AiTier });
   const ca = ctl(input.controllers[0]);
   const cb = ctl(input.controllers[1]);
   const inputs = (input.inputs ?? []) as number[][];
@@ -107,6 +110,7 @@ describe('golden vectors (shared with the Dart engine)', () => {
       for (const l of [1, 10, 49, 50, 75, 100]) expect(g.statsAt(l)).toEqual(e.statsAt[`${l}`]);
       for (const l of [1, 50, 100]) expect(maxHpOf(s, g.statsAt(l))).toBe(e.maxHpAt[`${l}`]);
       for (const l of [1, 49, 50]) expect(g.moveFactorPct(l)).toBe(e.moveFactorPct[`${l}`]);
+      expect(g.maxBars).toBe(e.maxBars);
     });
   });
 
@@ -117,20 +121,20 @@ describe('golden vectors (shared with the Dart engine)', () => {
         stream: v.stream,
         attr: v.attribute as Attr | null,
       });
-      expect(ms.map((m) => ({ ...moveToJson(m), cost: moveCost(s, m) }))).toEqual(v.expected);
+      expect(ms.map((m) => ({ ...moveToJson(m), points: movePoints(s, m) }))).toEqual(v.expected);
     });
   });
 
   (golden.validator as Any[]).forEach((v, idx) => {
     it(`validator ${idx}`, () => {
-      const r = validateAiMove(s, v.input, { slot: v.slot, own: v.own as Attr, moveFactorPct: v.moveFactorPct, ngCheck });
+      const r = validateAiMove(s, v.input, { slot: v.slot, own: v.own as Attr, moveFactorPct: v.moveFactorPct, maxBars: v.maxBars, ngCheck });
       expect(validationToJson(s, r)).toEqual(v.expected);
     });
   });
 
   (golden.validatorSets as Any[]).forEach((v, idx) => {
     it(`validator set ${idx}`, () => {
-      const r = validateAiMoveSet(s, v.input, { own: v.own as Attr, moveFactorPct: v.moveFactorPct, ngCheck });
+      const r = validateAiMoveSet(s, v.input, { own: v.own as Attr, moveFactorPct: v.moveFactorPct, maxBars: v.maxBars, ngCheck });
       expect(r.map((x) => validationToJson(s, x.result))).toEqual(v.expected);
     });
   });
@@ -167,11 +171,18 @@ describe('golden vectors (shared with the Dart engine)', () => {
     });
   });
 
-  it('move cost', () => {
-    for (const v of golden.moveCost) {
+  it('move points and bars', () => {
+    for (const v of golden.movePoints) {
       const m = moveFromJson(v.move);
-      expect([moveValue(m), moveDiscount(s, m), moveCost(s, m)]).toEqual([v.value, v.discount, v.cost]);
+      expect([moveValue(m), moveDiscount(s, m), movePoints(s, m), moveBars(s, m, 110)]).toEqual([
+        v.value,
+        v.discount,
+        v.points,
+        v.bars,
+      ]);
+      expect(m.bars).toBe(v.bars);
     }
+    for (const v of golden.barsForPoints) expect(barsForPoints(s, v.points, v.moveFactorPct)).toBe(v.bars);
   });
 
   it('rated setups', () => {

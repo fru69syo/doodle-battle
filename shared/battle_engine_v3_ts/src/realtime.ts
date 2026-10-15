@@ -3,33 +3,37 @@
  * docs/REALTIME_PROTOCOL.md §9). Shapes follow `server/realtime/src/engine.ts`
  * so the server's `engines/v3Engine.ts` adapter is a thin pass-through:
  *
- * - `step([slotA, slotB])` advances one tick; an input is used only in the
- *   decision phase, only if that side is ready and the move is usable.
- * - The engine never auto-picks (`decisionTicks` disabled): the server owns
- *   the 5 s timer and passes the おまかせ choice (`chooseMove`) as an input.
- *   A replay is therefore seed + the logged `(tick, side, slot)` inputs
- *   (golden battles carry theirs as `expected.inputLog`).
- * - `chooseMove` consumes only the side's AI stream.
+ * - `step([slotA, slotB])` advances one tick; an input is used only if that
+ *   side is not casting and the move is usable now (enough bars, no
+ *   cooldown); otherwise it is ignored. The server keeps a child's さきどり
+ *   and passes it every tick, so it fires on the tick its bars are there.
+ * - There is no decision timer: an idle side just caps at its max bars.
+ * - `aiInput` (ghosts, an away child: the tiered AI) and `omakaseInput`
+ *   (the child's おまかせ switch: random move, wait for its bars) consume only
+ *   the side's AI stream. A replay is seed + the logged `(tick, side, slot)`
+ *   inputs (golden battles carry theirs as `expected.inputLog`).
  */
-import { chooseMove, type AiTier } from './ai';
+import { aiDecide, type AiTier, omakasePick } from './ai';
 import { Battle, type BattleEvent, type FighterSetup } from './engine';
 import { Genome, maxHpOf, parseFeatures } from './genome';
 import { ratedSetup } from './loadout';
 import { DEFAULT_SPEC, type V3Spec } from './spec';
 
-export const ENGINE_ID = 'v3.0';
+export const ENGINE_ID = 'v3.1';
 
-/** The spec the server runs: the normative one with the timer disabled. */
+/** The spec the server runs (the normative one; there is no timer to disable). */
 export function serverSpec(s: V3Spec = DEFAULT_SPEC): V3Spec {
-  return { ...s, decisionTicks: Number.MAX_SAFE_INTEGER };
+  return s;
 }
 
 export interface SideView {
   hp: number;
   maxHp: number;
-  sp: number;
+  /** 0..maxBars·10000 (one bar = 10000). */
   gauge: number;
-  ready: boolean;
+  /** Full bars now. */
+  bars: number;
+  maxBars: number;
   casting: boolean;
 }
 
@@ -71,21 +75,40 @@ export class RealtimeBattle {
     return { events: ev.map((e) => ({ ...e.data, tick: e.tick, type: e.type })), acted };
   }
 
-  isReady(side: 0 | 1): boolean {
-    return this.battle.fighters[side].phase === 'ready';
-  }
-
+  /** The move can be used right now (not casting, enough bars, no cooldown). */
   canUse(side: 0 | 1, slot: number): boolean {
-    return this.battle.fighters[side].usable(slot);
+    const f = this.battle.fighters[side];
+    return f.phase !== 'casting' && f.usable(slot);
   }
 
-  chooseMove(side: 0 | 1, tier: AiTier): number {
-    return chooseMove(this.battle, side, this.battle.aiRng[side], tier);
+  /** The move can ever be used (valid slot, cost ≤ max bars): may be queued. */
+  canQueue(side: 0 | 1, slot: number): boolean {
+    return this.battle.fighters[side].canQueue(slot);
+  }
+
+  /** Tiered AI (ghost / away child): the slot to use this tick, or null. */
+  aiInput(side: 0 | 1, tier: AiTier, thinkTicks: number): number | null {
+    const f = this.battle.fighters[side];
+    if (f.phase === 'casting') return null;
+    return aiDecide(this.battle, side, tier, thinkTicks);
+  }
+
+  /** おまかせ switch: random eligible plan, used once its bars are there. */
+  omakaseInput(side: 0 | 1): number | null {
+    const f = this.battle.fighters[side];
+    if (f.phase === 'casting') return null;
+    if (f.aiPlan === null) f.aiPlan = omakasePick(this.battle, side, this.battle.aiRng[side]);
+    return f.usable(f.aiPlan) ? f.aiPlan : null;
+  }
+
+  /** Forgets an AI plan (when the child takes control back). */
+  clearPlan(side: 0 | 1): void {
+    this.battle.fighters[side].aiPlan = null;
   }
 
   view(side: 0 | 1): SideView {
     const f = this.battle.fighters[side];
-    return { hp: f.hp, maxHp: f.maxHp, sp: f.sp, gauge: f.gauge, ready: f.phase === 'ready', casting: f.phase === 'casting' };
+    return { hp: f.hp, maxHp: f.maxHp, gauge: f.gauge, bars: f.bars, maxBars: f.maxBars, casting: f.phase === 'casting' };
   }
 
   stateHash(): string {
@@ -93,9 +116,9 @@ export class RealtimeBattle {
   }
 }
 
-/** Kid-visible part of a fighter's move list. */
-export function publicMoves(f: FighterSetup): { slot: number; name: string; templateId: string; attr: string; spCost: number }[] {
-  return f.moves.map((m, slot) => ({ slot, name: m.name, templateId: m.template, attr: m.attr, spCost: m.spCost }));
+/** Kid-visible part of a fighter's move list (the cost in bars included). */
+export function publicMoves(f: FighterSetup): { slot: number; name: string; templateId: string; attr: string; bars: number }[] {
+  return f.moves.map((m, slot) => ({ slot, name: m.name, templateId: m.template, attr: m.attr, bars: m.bars }));
 }
 
 /**

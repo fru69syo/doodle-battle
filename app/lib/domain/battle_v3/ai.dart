@@ -16,7 +16,7 @@ import 'spec.dart';
 
 enum AiTier {
   weak(40, 10, 0),
-  normal(25, 10, 1),
+  normal(20, 10, 1),
   strong(0, 4, 5);
 
   const AiTier(this.randomPct, this.thinkTicks, this.saveBars);

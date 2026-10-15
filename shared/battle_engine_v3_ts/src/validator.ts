@@ -12,8 +12,9 @@ import {
   fitToBudget,
   makeMove,
   type Move,
-  moveCost,
+  movePoints,
   moveToJson,
+  withBars,
   SECONDARY_RANGES,
   type SecondaryType,
   slotBudget,
@@ -50,7 +51,7 @@ export type NgCheck = (s: string) => boolean;
 export function validateAiMove(
   s: V3Spec,
   json: Record<string, unknown>,
-  opts: { slot: number; own: Attr; moveFactorPct: number; ngCheck?: NgCheck },
+  opts: { slot: number; own: Attr; moveFactorPct: number; maxBars: number; ngCheck?: NgCheck },
 ): MoveValidation {
   const { slot, own } = opts;
   const w: string[] = [];
@@ -161,7 +162,6 @@ export function validateAiMove(
   const hits = dmg ? numParam('hits', tpl.ranges.hits![0]) : 1;
   const accuracy = has('accuracy') ? numParam('accuracy', 100) : 100;
   const critBonus = dmg ? numParam('critBonus', 0) : 0;
-  const spCost = numParam('spCost', 0);
   const castTicks = numParam('castTicks', 0);
   const cooldownTicks = numParam('cooldownTicks', tpl.ranges.cooldownTicks![0]);
   const healPct = tpl.kind === 'heal' ? numParam('healPct', 10) : 0;
@@ -182,7 +182,6 @@ export function validateAiMove(
     hits,
     accuracy,
     critBonus,
-    spCost,
     castTicks,
     cooldownTicks,
     secondary,
@@ -197,18 +196,18 @@ export function validateAiMove(
     shieldPct,
   });
 
-  if (slot === 0 && (m.spCost !== 0 || m.cooldownTicks !== 0 || m.castTicks > 5)) {
-    w.push('slot 1 made free (sp 0, cooldown 0, cast <= 5)');
-    m = { ...m, spCost: 0, cooldownTicks: 0, castTicks: m.castTicks > 5 ? 5 : m.castTicks };
+  if (slot === 0 && (m.cooldownTicks !== 0 || m.castTicks > 5)) {
+    w.push('slot 1 made always usable (cooldown 0, cast <= 5)');
+    m = { ...m, cooldownTicks: 0, castTicks: m.castTicks > 5 ? 5 : m.castTicks };
   }
   if ((tpl.kind === 'buff' || tpl.kind === 'debuff') && m.cooldownTicks < m.durationTicks) {
     m = { ...m, cooldownTicks: m.durationTicks };
   }
 
-  const fitted = fitToBudget(s, m, slotBudget(s, slot, opts.moveFactorPct));
+  const fitted = fitToBudget(s, m, slotBudget(s, slot, opts.moveFactorPct, opts.maxBars));
   if (fitted === null) return reject('over budget');
   if (fitted !== m) w.push('scaled to budget');
-  return { move: fitted, warnings: w, rejected: false, reason: null };
+  return { move: withBars(s, fitted, opts.moveFactorPct), warnings: w, rejected: false, reason: null };
 }
 
 export interface SlotValidation {
@@ -227,7 +226,7 @@ export interface SlotValidation {
 export function validateAiMoveSet(
   s: V3Spec,
   json: unknown,
-  opts: { own: Attr; moveFactorPct: number; ngCheck?: NgCheck },
+  opts: { own: Attr; moveFactorPct: number; maxBars: number; ngCheck?: NgCheck },
 ): SlotValidation[] {
   const raw = typeof json === 'object' && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>).moves : null;
   const list: unknown[] = Array.isArray(raw) ? raw : [];
@@ -267,5 +266,5 @@ export function resolveWithOffline(offline: readonly Move[], v: readonly SlotVal
 export function validationToJson(s: V3Spec, v: MoveValidation): Record<string, unknown> {
   return v.rejected
     ? { rejected: true, reason: v.reason }
-    : { rejected: false, move: moveToJson(v.move!), cost: moveCost(s, v.move!), warnings: v.warnings };
+    : { rejected: false, move: moveToJson(v.move!), points: movePoints(s, v.move!), warnings: v.warnings };
 }

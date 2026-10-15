@@ -73,28 +73,30 @@ export interface V3Spec {
   hpPerHp: number;
   hpPerVit: number;
   hpPerAvg: number;
+  minLv1Sp: number;
   maxLevel: number;
   xpBase: number;
   xpPerLevel: number;
   xpQuadNum: number;
   xpQuadDen: number;
-  slotBudgets: readonly number[];
+  barBudgets: readonly number[];
+  slotMaxBars: readonly number[];
   slotUnlockLevels: readonly number[];
   moveFactorBasePct: number;
   moveFactorKidDiv: number;
   bloomerPreMoveFactorPct: number;
   legendMoveBonusPct: number;
   bloomerRebirthMoveBonusPct: number;
+  castDiscountPerTick: number;
+  cooldownDiscountDiv: number;
   maxDiscountPct: number;
   tickHz: number;
   gaugeMax: number;
   gaugeFillPerTick: number;
   agiWeightPct: number;
-  decisionTicks: number;
-  spMaxCenti: number;
-  spStartCenti: number;
-  spRegenCentiPerTick: number;
-  spWeightPct: number;
+  spPerBar: number;
+  minBars: number;
+  maxBars: number;
   damageScalePct: number;
   typeAdvantagePct: number;
   typeDisadvantagePct: number;
@@ -120,7 +122,7 @@ export interface V3Spec {
 }
 
 export const DEFAULT_SPEC: Readonly<V3Spec> = Object.freeze({
-  specVersion: 3,
+  specVersion: 4,
   kidEnergyWeight: 6,
   kidSkillWeight: 4,
   budgetBase: 1400,
@@ -146,29 +148,31 @@ export const DEFAULT_SPEC: Readonly<V3Spec> = Object.freeze({
   hpPerHp: 3,
   hpPerVit: 2,
   hpPerAvg: 5,
+  minLv1Sp: 20,
   maxLevel: 100,
   xpBase: 60,
   xpPerLevel: 20,
   xpQuadNum: 3,
   xpQuadDen: 4,
-  slotBudgets: [100, 100, 120, 150],
+  barBudgets: [100, 230, 390, 580, 800],
+  slotMaxBars: [1, 5, 5, 5],
   slotUnlockLevels: [1, 1, 10, 50],
   moveFactorBasePct: 95,
   moveFactorKidDiv: 10,
   bloomerPreMoveFactorPct: 70,
   legendMoveBonusPct: 5,
   bloomerRebirthMoveBonusPct: 0,
-  maxDiscountPct: 50,
+  castDiscountPerTick: 2,
+  cooldownDiscountDiv: 4,
+  maxDiscountPct: 25,
   tickHz: 10,
   gaugeMax: 10000,
   gaugeFillPerTick: 280,
   agiWeightPct: 30,
-  decisionTicks: 50,
-  spMaxCenti: 10000,
-  spStartCenti: 4000,
-  spRegenCentiPerTick: 25,
-  spWeightPct: 50,
-  damageScalePct: 60,
+  spPerBar: 10,
+  minBars: 2,
+  maxBars: 5,
+  damageScalePct: 57,
   typeAdvantagePct: 150,
   typeDisadvantagePct: 75,
   typeStrengthPct: 100,
@@ -200,6 +204,12 @@ export function idiv(a: number, b: number): number {
 /** Dart `~/` (truncation toward zero), for the few signed divisions. */
 export function tdiv(a: number, b: number): number {
   return Math.trunc(a / b);
+}
+
+/** Max bars of a character whose Lv1 base SP is `lv1Sp` (SP / spPerBar, clamped). */
+export function maxBarsFor(s: V3Spec, lv1Sp: number): number {
+  const n = idiv(lv1Sp, s.spPerBar);
+  return n < s.minBars ? s.minBars : n > s.maxBars ? s.maxBars : n;
 }
 
 /** Effective type multiplier (%) after `typeStrengthPct`. */

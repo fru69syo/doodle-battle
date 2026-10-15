@@ -20,6 +20,8 @@ export interface MoveOptions {
   nameOverrides?: readonly (string | null | undefined)[];
   preForm?: boolean;
   ngCheck?: NgCheck;
+  /** Overrides the genome's max bars (simulator / tests). */
+  maxBars?: number | null;
 }
 
 /** The four slot moves at `level` (AI proposals re-validated, else offline). */
@@ -27,12 +29,13 @@ export function movesAt(s: V3Spec, g: Genome, level: number, o: MoveOptions = {}
   const factor = o.preForm ? s.bloomerPreMoveFactorPct : g.moveFactorPct(level);
   const stream = o.preForm ? 12 : moveStreamAt(g, level);
   const own = o.attr ?? g.attr;
-  const offline = generateOfflineMoves(s, g, { moveFactorPct: factor, stream, attr: own });
+  const bars = o.maxBars ?? g.maxBarsAt(level, o.preForm ?? false);
+  const offline = generateOfflineMoves(s, g, { moveFactorPct: factor, stream, attr: own, maxBars: bars });
   return offline.map((m0, i) => {
     let m = m0;
     const p = o.aiProposals?.[i];
     if (p) {
-      const v = validateAiMove(s, p, { slot: i, own, moveFactorPct: factor, ...(o.ngCheck ? { ngCheck: o.ngCheck } : {}) });
+      const v = validateAiMove(s, p, { slot: i, own, moveFactorPct: factor, maxBars: bars, ...(o.ngCheck ? { ngCheck: o.ngCheck } : {}) });
       if (!v.rejected) m = v.move!;
     }
     const n = o.nameOverrides?.[i];
@@ -52,6 +55,7 @@ export function setupAt(
   return {
     stats: g.statsAt(level).map((v) => idiv(v * pct, 100)),
     attr: o.attr ?? g.attr,
+    maxBars: o.maxBars ?? g.maxBarsAt(level),
     moves: moves.slice(0, unlockedSlots(s, level)),
     label: o.label ?? '',
   };
@@ -64,6 +68,7 @@ export function ratedSetup(s: V3Spec, g: Genome, actualLevel: number, o: MoveOpt
   return {
     stats: g.statsAt(r.statLevel, r.preForm),
     attr: g.attr,
+    maxBars: g.maxBarsAt(r.statLevel, r.preForm),
     moves: moves.slice(0, r.slotCount),
     label: o.label ?? '',
   };
@@ -82,6 +87,7 @@ export function familySetup(
   return {
     stats: g.statsAt(battleLevel, pre),
     attr: g.attr,
+    maxBars: g.maxBarsAt(battleLevel, pre),
     moves: moves.slice(0, unlockedSlots(s, battleLevel)),
     label: o.label ?? '',
   };

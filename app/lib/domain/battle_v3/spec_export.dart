@@ -78,6 +78,7 @@ Map<String, Object?> fullSpecJson(V3Spec s) => {
   'ai': {
     'randomPct': {for (final t in AiTier.values) t.name: t.randomPct},
     'thinkTicks': {for (final t in AiTier.values) t.name: t.thinkTicks},
+    'saveBars': {for (final t in AiTier.values) t.name: t.saveBars},
     'note':
         'aiDecide / chooseMove / bestMove (ai.dart / ai.ts) are normative '
         'for CPU and ghosts (ghosts and an away player: normal); strong '

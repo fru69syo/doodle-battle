@@ -5490,7 +5490,7 @@
         "endReason": "ko",
         "ticks": 546,
         "hp": [
-          105,
+          78,
           0
         ],
         "maxHp": [
@@ -5502,8 +5502,8 @@
           11
         ],
         "eventCount": 106,
-        "eventsFnv1a": 187236975,
-        "stateHash": 353631243,
+        "eventsFnv1a": 481821217,
+        "stateHash": 1940595012,
         "inputLog": [
           [
             46,
@@ -5576,13 +5576,13 @@
             0
           ],
           [
-            358,
-            0,
-            1
+            332,
+            1,
+            0
           ],
           [
-            393,
-            1,
+            358,
+            0,
             1
           ],
           [
@@ -5591,9 +5591,9 @@
             0
           ],
           [
-            439,
+            429,
             1,
-            0
+            1
           ],
           [
             465,
@@ -5688,43 +5688,43 @@
           "296 hit amount=26,crit=0,hp=140,n=0,pct=100,side=0,target=1",
           "322 bar bars=1,side=0",
           "322 bar bars=1,side=1",
+          "332 select cast=0,cost=1,side=1,slot=0",
+          "332 moveStart attr=pa,side=1,slot=0,template=blast",
+          "332 hit amount=27,crit=0,hp=214,n=0,pct=100,side=1,target=0",
           "358 bar bars=2,side=0",
-          "358 bar bars=2,side=1",
+          "358 bar bars=1,side=1",
           "358 select cast=0,cost=2,side=0,slot=1",
           "358 moveStart attr=gu,side=0,slot=1,template=blast",
           "358 effective pct=75,side=0,target=1",
-          "358 hit amount=41,crit=0,hp=99,n=0,pct=75,side=0,target=1",
+          "358 hit amount=43,crit=0,hp=97,n=0,pct=75,side=0,target=1",
           "393 bar bars=1,side=0",
-          "393 bar bars=3,side=1",
-          "393 select cast=0,cost=3,side=1,slot=1",
-          "393 moveStart attr=gu,side=1,slot=1,template=blast",
-          "393 effective pct=75,side=1,target=0",
-          "393 hit amount=78,crit=0,hp=163,n=0,pct=75,side=1,target=0",
+          "393 bar bars=2,side=1",
           "403 select cast=0,cost=1,side=0,slot=0",
           "403 moveStart attr=pa,side=0,slot=0,template=blast",
-          "403 hit amount=25,crit=0,hp=74,n=0,pct=100,side=0,target=1",
+          "403 hit amount=25,crit=0,hp=72,n=0,pct=100,side=0,target=1",
           "429 bar bars=1,side=0",
-          "429 bar bars=1,side=1",
-          "439 select cast=0,cost=1,side=1,slot=0",
-          "439 moveStart attr=pa,side=1,slot=0,template=blast",
-          "439 miss n=0,side=1,target=0",
+          "429 bar bars=3,side=1",
+          "429 select cast=0,cost=3,side=1,slot=1",
+          "429 moveStart attr=gu,side=1,slot=1,template=blast",
+          "429 effective pct=75,side=1,target=0",
+          "429 hit amount=78,crit=0,hp=136,n=0,pct=75,side=1,target=0",
           "465 bar bars=2,side=0",
           "465 bar bars=1,side=1",
           "465 select cast=0,cost=2,side=0,slot=1",
           "465 moveStart attr=gu,side=0,slot=1,template=blast",
           "465 effective pct=75,side=0,target=1",
-          "465 hit amount=42,crit=0,hp=32,n=0,pct=75,side=0,target=1",
+          "465 hit amount=42,crit=0,hp=30,n=0,pct=75,side=0,target=1",
           "475 select cast=0,cost=1,side=1,slot=0",
           "475 moveStart attr=pa,side=1,slot=0,template=blast",
-          "475 hit amount=29,crit=0,hp=134,n=0,pct=100,side=1,target=0",
+          "475 hit amount=29,crit=0,hp=107,n=0,pct=100,side=1,target=0",
           "500 bar bars=1,side=0",
           "500 bar bars=1,side=1",
           "510 select cast=0,cost=1,side=0,slot=0",
           "510 select cast=0,cost=1,side=1,slot=0",
           "510 moveStart attr=pa,side=0,slot=0,template=blast",
-          "510 hit amount=23,crit=0,hp=9,n=0,pct=100,side=0,target=1",
+          "510 hit amount=23,crit=0,hp=7,n=0,pct=100,side=0,target=1",
           "510 moveStart attr=pa,side=1,slot=0,template=blast",
-          "510 hit amount=29,crit=0,hp=105,n=0,pct=100,side=1,target=0",
+          "510 hit amount=29,crit=0,hp=78,n=0,pct=100,side=1,target=0",
           "536 bar bars=1,side=0",
           "536 bar bars=1,side=1",
           "546 select cast=0,cost=1,side=0,slot=0",
@@ -5900,7 +5900,7 @@
       "expected": {
         "winner": 0,
         "endReason": "ko",
-        "ticks": 174,
+        "ticks": 168,
         "hp": [
           550,
           0
@@ -5910,12 +5910,12 @@
           270
         ],
         "actions": [
-          3,
+          5,
           3
         ],
-        "eventCount": 34,
-        "eventsFnv1a": 4134186439,
-        "stateHash": 994968523,
+        "eventCount": 43,
+        "eventsFnv1a": 2697786924,
+        "stateHash": 4220808254,
         "inputLog": [
           [
             42,
@@ -5928,14 +5928,19 @@
             0
           ],
           [
+            73,
+            0,
+            0
+          ],
+          [
             93,
             1,
             0
           ],
           [
-            126,
+            105,
             0,
-            2
+            0
           ],
           [
             135,
@@ -5943,7 +5948,12 @@
             0
           ],
           [
-            174,
+            136,
+            0,
+            0
+          ],
+          [
+            168,
             0,
             0
           ]
@@ -5960,29 +5970,38 @@
           "52 effective pct=75,side=1,target=0",
           "52 hit amount=4,crit=0,hp=558,n=0,pct=75,side=1,target=0",
           "63 bar bars=1,side=0",
+          "73 select cast=0,cost=1,side=0,slot=0",
+          "73 moveStart attr=pa,side=0,slot=0,template=strike",
+          "73 effective pct=150,side=0,target=1",
+          "73 hit amount=86,crit=1,hp=125,n=0,pct=150,side=0,target=1",
           "83 bar bars=1,side=1",
           "93 select cast=0,cost=1,side=1,slot=0",
           "93 moveStart attr=gu,side=1,slot=0,template=blast",
           "93 effective pct=75,side=1,target=0",
           "93 hit amount=4,crit=0,hp=554,n=0,pct=75,side=1,target=0",
-          "95 bar bars=2,side=0",
+          "95 bar bars=1,side=0",
+          "105 select cast=0,cost=1,side=0,slot=0",
+          "105 moveStart attr=pa,side=0,slot=0,template=strike",
+          "105 effective pct=150,side=0,target=1",
+          "105 hit amount=58,crit=0,hp=67,n=0,pct=150,side=0,target=1",
           "125 bar bars=1,side=1",
-          "126 bar bars=3,side=0",
-          "126 select cast=6,cost=3,side=0,slot=2",
-          "132 moveStart attr=gu,side=0,slot=2,template=strike",
-          "132 hit amount=170,crit=0,hp=41,n=0,pct=100,side=0,target=1",
+          "126 bar bars=1,side=0",
           "135 select cast=0,cost=1,side=1,slot=0",
           "135 moveStart attr=gu,side=1,slot=0,template=blast",
           "135 effective pct=75,side=1,target=0",
           "135 hit amount=4,crit=0,hp=550,n=0,pct=75,side=1,target=0",
-          "164 bar bars=1,side=0",
+          "136 select cast=0,cost=1,side=0,slot=0",
+          "136 moveStart attr=pa,side=0,slot=0,template=strike",
+          "136 effective pct=150,side=0,target=1",
+          "136 hit amount=56,crit=0,hp=11,n=0,pct=150,side=0,target=1",
+          "158 bar bars=1,side=0",
           "166 bar bars=1,side=1",
-          "174 select cast=0,cost=1,side=0,slot=0",
-          "174 moveStart attr=pa,side=0,slot=0,template=strike",
-          "174 effective pct=150,side=0,target=1",
-          "174 hit amount=59,crit=0,hp=0,n=0,pct=150,side=0,target=1",
-          "174 faint side=1",
-          "174 end reason=ko,winner=0"
+          "168 select cast=0,cost=1,side=0,slot=0",
+          "168 moveStart attr=pa,side=0,slot=0,template=strike",
+          "168 effective pct=150,side=0,target=1",
+          "168 hit amount=61,crit=0,hp=0,n=0,pct=150,side=0,target=1",
+          "168 faint side=1",
+          "168 end reason=ko,winner=0"
         ]
       }
     },
@@ -6480,10 +6499,10 @@
       "expected": {
         "winner": 1,
         "endReason": "ko",
-        "ticks": 361,
+        "ticks": 392,
         "hp": [
           0,
-          1024
+          1016
         ],
         "maxHp": [
           2128,
@@ -6493,9 +6512,9 @@
           5,
           4
         ],
-        "eventCount": 56,
-        "eventsFnv1a": 3018995117,
-        "stateHash": 263775964,
+        "eventCount": 59,
+        "eventsFnv1a": 3529456025,
+        "stateHash": 1404413853,
         "inputLog": [
           [
             71,
@@ -6503,9 +6522,9 @@
             1
           ],
           [
-            97,
+            109,
             1,
-            0
+            2
           ],
           [
             142,
@@ -6513,17 +6532,12 @@
             1
           ],
           [
-            158,
-            1,
-            2
-          ],
-          [
             213,
             0,
             1
           ],
           [
-            259,
+            223,
             1,
             2
           ],
@@ -6533,14 +6547,19 @@
             1
           ],
           [
+            325,
+            1,
+            0
+          ],
+          [
             355,
             0,
             1
           ],
           [
-            361,
+            386,
             1,
-            1
+            2
           ]
         ]
       }
@@ -6710,10 +6729,10 @@
       "expected": {
         "winner": 1,
         "endReason": "ko",
-        "ticks": 618,
+        "ticks": 631,
         "hp": [
           0,
-          354
+          299
         ],
         "maxHp": [
           715,
@@ -6721,11 +6740,11 @@
         ],
         "actions": [
           9,
-          13
+          14
         ],
-        "eventCount": 112,
-        "eventsFnv1a": 1263010101,
-        "stateHash": 2926375112,
+        "eventCount": 116,
+        "eventsFnv1a": 1145404053,
+        "stateHash": 1371753497,
         "inputLog": [
           [
             45,
@@ -6805,25 +6824,25 @@
           [
             455,
             0,
-            1
+            2
           ],
           [
-            498,
+            485,
+            1,
+            0
+          ],
+          [
+            521,
             1,
             0
           ],
           [
             525,
             0,
-            2
+            1
           ],
           [
-            545,
-            1,
-            0
-          ],
-          [
-            582,
+            558,
             1,
             0
           ],
@@ -6833,7 +6852,12 @@
             1
           ],
           [
-            618,
+            595,
+            1,
+            0
+          ],
+          [
+            631,
             1,
             0
           ]
@@ -9267,23 +9291,28 @@
       "expected": {
         "winner": 1,
         "endReason": "ko",
-        "ticks": 730,
+        "ticks": 828,
         "hp": [
           0,
-          79
+          152
         ],
         "maxHp": [
           1211,
           1241
         ],
         "actions": [
-          11,
-          11
+          13,
+          16
         ],
-        "eventCount": 138,
-        "eventsFnv1a": 3020609798,
-        "stateHash": 3974571702,
+        "eventCount": 172,
+        "eventsFnv1a": 66270805,
+        "stateHash": 3008460513,
         "inputLog": [
+          [
+            70,
+            0,
+            1
+          ],
           [
             111,
             1,
@@ -9292,15 +9321,20 @@
           [
             139,
             0,
-            3
-          ],
-          [
-            191,
-            1,
             1
           ],
           [
-            221,
+            164,
+            1,
+            0
+          ],
+          [
+            201,
+            1,
+            0
+          ],
+          [
+            209,
             0,
             1
           ],
@@ -9310,87 +9344,112 @@
             0
           ],
           [
-            275,
-            1,
-            0
-          ],
-          [
-            290,
-            0,
-            1
-          ],
-          [
-            312,
-            1,
-            0
-          ],
-          [
-            335,
+            254,
             0,
             0
           ],
           [
-            376,
+            288,
+            0,
+            0
+          ],
+          [
+            302,
             1,
             1
           ],
           [
-            395,
+            348,
             0,
             1
           ],
           [
-            464,
-            0,
-            1
-          ],
-          [
-            523,
+            349,
             1,
-            3
+            0
+          ],
+          [
+            386,
+            1,
+            0
+          ],
+          [
+            417,
+            0,
+            1
+          ],
+          [
+            449,
+            1,
+            1
+          ],
+          [
+            462,
+            0,
+            0
+          ],
+          [
+            496,
+            1,
+            0
+          ],
+          [
+            521,
+            0,
+            1
           ],
           [
             533,
-            0,
-            1
-          ],
-          [
-            578,
-            0,
-            0
-          ],
-          [
-            609,
-            1,
-            1
-          ],
-          [
-            613,
-            0,
-            0
-          ],
-          [
-            656,
             1,
             0
           ],
           [
-            672,
+            566,
+            0,
+            0
+          ],
+          [
+            597,
+            1,
+            1
+          ],
+          [
+            625,
             0,
             1
           ],
           [
-            693,
+            644,
             1,
             0
           ],
           [
-            717,
-            0,
+            681,
+            1,
             0
           ],
           [
-            730,
+            695,
+            0,
+            1
+          ],
+          [
+            745,
+            1,
+            1
+          ],
+          [
+            764,
+            0,
+            1
+          ],
+          [
+            791,
+            1,
+            0
+          ],
+          [
+            828,
             1,
             0
           ]
@@ -9602,19 +9661,19 @@
         "ticks": 139,
         "hp": [
           0,
-          1021
+          957
         ],
         "maxHp": [
           634,
           1021
         ],
         "actions": [
-          1,
+          2,
           2
         ],
-        "eventCount": 20,
-        "eventsFnv1a": 1483984471,
-        "stateHash": 1074110454,
+        "eventCount": 24,
+        "eventsFnv1a": 3155929031,
+        "stateHash": 3218678809,
         "inputLog": [
           [
             70,
@@ -9625,6 +9684,11 @@
             74,
             0,
             1
+          ],
+          [
+            121,
+            0,
+            0
           ],
           [
             139,
@@ -9838,20 +9902,20 @@
         "endReason": "timeUp",
         "ticks": 1800,
         "hp": [
-          2321,
-          1630
+          2339,
+          1695
         ],
         "maxHp": [
           2544,
           2651
         ],
         "actions": [
-          24,
-          31
+          25,
+          36
         ],
-        "eventCount": 310,
-        "eventsFnv1a": 2544857177,
-        "stateHash": 940475565,
+        "eventCount": 338,
+        "eventsFnv1a": 983821750,
+        "stateHash": 4204117452,
         "inputLog": [
           [
             47,
@@ -9956,7 +10020,7 @@
           [
             667,
             0,
-            2
+            1
           ],
           [
             692,
@@ -9971,10 +10035,15 @@
           [
             737,
             0,
-            1
+            2
           ],
           [
             765,
+            1,
+            0
+          ],
+          [
+            801,
             1,
             0
           ],
@@ -9984,147 +10053,172 @@
             2
           ],
           [
-            878,
-            0,
-            2
+            838,
+            1,
+            0
           ],
           [
-            901,
+            874,
             1,
-            3
+            0
+          ],
+          [
+            878,
+            0,
+            1
+          ],
+          [
+            911,
+            1,
+            0
+          ],
+          [
+            947,
+            1,
+            0
           ],
           [
             948,
             0,
-            1
+            2
           ],
           [
-            960,
+            984,
             1,
             0
           ],
           [
-            996,
-            1,
-            0
-          ],
-          [
-            1033,
-            1,
-            0
-          ],
-          [
-            1053,
-            0,
-            3
-          ],
-          [
-            1069,
-            1,
-            0
-          ],
-          [
-            1106,
-            1,
-            0
-          ],
-          [
-            1136,
-            0,
-            1
-          ],
-          [
-            1142,
-            1,
-            0
-          ],
-          [
-            1179,
-            1,
-            0
-          ],
-          [
-            1206,
+            1018,
             0,
             2
           ],
           [
-            1276,
-            0,
-            2
-          ],
-          [
-            1315,
-            1,
-            3
-          ],
-          [
-            1374,
+            1020,
             1,
             0
           ],
           [
-            1381,
-            0,
-            3
-          ],
-          [
-            1410,
+            1057,
             1,
             0
           ],
           [
-            1464,
+            1063,
+            0,
+            0
+          ],
+          [
+            1093,
+            1,
+            0
+          ],
+          [
+            1123,
             0,
             1
           ],
           [
-            1510,
-            1,
+            1193,
+            0,
             2
           ],
           [
-            1562,
+            1229,
+            1,
+            3
+          ],
+          [
+            1264,
+            0,
+            2
+          ],
+          [
+            1288,
             1,
             0
           ],
           [
-            1569,
+            1324,
+            1,
+            0
+          ],
+          [
+            1361,
+            1,
+            0
+          ],
+          [
+            1369,
             0,
             3
           ],
           [
-            1599,
+            1397,
             1,
             0
           ],
           [
-            1635,
+            1434,
             1,
             0
           ],
           [
-            1652,
+            1452,
             0,
             1
           ],
           [
-            1722,
-            0,
-            2
-          ],
-          [
-            1735,
-            1,
-            2
-          ],
-          [
-            1787,
+            1470,
             1,
             0
           ],
           [
-            1792,
+            1507,
+            1,
+            0
+          ],
+          [
+            1557,
+            0,
+            3
+          ],
+          [
+            1606,
+            1,
+            2
+          ],
+          [
+            1640,
+            0,
+            1
+          ],
+          [
+            1659,
+            1,
+            0
+          ],
+          [
+            1695,
+            1,
+            0
+          ],
+          [
+            1710,
+            0,
+            2
+          ],
+          [
+            1732,
+            1,
+            0
+          ],
+          [
+            1768,
+            1,
+            0
+          ],
+          [
+            1780,
             0,
             2
           ]
