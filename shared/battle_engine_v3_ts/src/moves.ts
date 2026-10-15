@@ -1,6 +1,8 @@
 /**
- * Move templates, budget points and shrink-to-fit. Bit-exact port of
- * app/lib/domain/battle_v3/moves.dart (docs/GAME_DESIGN_V2.md §5).
+ * Move templates, budget points, the cost in gauge bars and shrink-to-fit.
+ * Bit-exact port of app/lib/domain/battle_v3/moves.dart
+ * (docs/GAME_DESIGN_V2.md §5). The AI never sets the cost: `bars` is
+ * derived from a move's points.
  */
 import { type Attr, idiv, Stat, type StatIndex, STATS, statIndex, type V3Spec } from './spec';
 
@@ -51,21 +53,24 @@ export interface MoveTemplate {
   ranges: Readonly<Record<string, Range>>;
 }
 
-const COMMON: Record<string, Range> = { spCost: [0, 50], castTicks: [0, 20], cooldownTicks: [0, 150] };
-const DAMAGE1: Record<string, Range> = { power: [40, 200], hits: [1, 1], accuracy: [60, 100], critBonus: [0, 20], ...COMMON };
-const DAMAGEN: Record<string, Range> = { power: [40, 200], hits: [2, 3], accuracy: [60, 100], critBonus: [0, 20], ...COMMON };
+/** Largest power of a damage move (a 5-bar ひっさつ needs it). */
+export const MAX_POWER = 1200;
+
+const COMMON: Record<string, Range> = { castTicks: [0, 20], cooldownTicks: [0, 150] };
+const DAMAGE1: Record<string, Range> = { power: [40, MAX_POWER], hits: [1, 1], accuracy: [60, 100], critBonus: [0, 20], ...COMMON };
+const DAMAGEN: Record<string, Range> = { power: [40, MAX_POWER], hits: [2, 3], accuracy: [60, 100], critBonus: [0, 20], ...COMMON };
 
 export const TEMPLATES: Readonly<Record<string, MoveTemplate>> = {
   strike: { id: 'strike', kind: 'physical', ranges: DAMAGE1 },
   combo: { id: 'combo', kind: 'physical', ranges: DAMAGEN },
   blast: { id: 'blast', kind: 'special', ranges: DAMAGE1 },
   barrage: { id: 'barrage', kind: 'special', ranges: DAMAGEN },
-  heal: { id: 'heal', kind: 'heal', ranges: { healPct: [10, 40], spCost: [0, 50], castTicks: [0, 20], cooldownTicks: [60, 150] } },
+  heal: { id: 'heal', kind: 'heal', ranges: { healPct: [10, 40], castTicks: [0, 20], cooldownTicks: [60, 150] } },
   power_up: { id: 'power_up', kind: 'buff', ranges: { stages: [1, 2], durationTicks: [40, 120], ...COMMON } },
   weaken: { id: 'weaken', kind: 'debuff', ranges: { stages: [1, 2], durationTicks: [40, 120], accuracy: [60, 100], ...COMMON } },
   poison: { id: 'poison', kind: 'status', ranges: { chance: [30, 100], accuracy: [60, 100], ...COMMON } },
   paralyze: { id: 'paralyze', kind: 'status', ranges: { chance: [30, 100], accuracy: [60, 100], ...COMMON } },
-  barrier: { id: 'barrier', kind: 'shield', ranges: { shieldPct: [20, 60], durationTicks: [20, 60], spCost: [0, 50], castTicks: [0, 5], cooldownTicks: [40, 150] } },
+  barrier: { id: 'barrier', kind: 'shield', ranges: { shieldPct: [20, 60], durationTicks: [20, 60], castTicks: [0, 5], cooldownTicks: [40, 150] } },
 };
 
 export const SECONDARY_RANGES: Readonly<Record<'chance' | 'drainPct', Range>> = { chance: [10, 50], drainPct: [10, 50] };
@@ -93,7 +98,8 @@ export interface Move {
   hits: number;
   accuracy: number;
   critBonus: number;
-  spCost: number;
+  /** Cost in gauge bars (1..5), derived from the points. */
+  bars: number;
   castTicks: number;
   cooldownTicks: number;
   secondary: SecondaryType;
@@ -119,7 +125,7 @@ export function makeMove(p: Partial<Move> & { template: string; attr: Attr }): M
     hits: 1,
     accuracy: 100,
     critBonus: 0,
-    spCost: 0,
+    bars: 1,
     castTicks: 0,
     cooldownTicks: 0,
     secondary: 'none',
@@ -177,7 +183,7 @@ export function moveToJson(m: Move): Record<string, unknown> {
     o.shieldPct = m.shieldPct;
     o.durationTicks = m.durationTicks;
   }
-  o.spCost = m.spCost;
+  o.bars = m.bars;
   o.castTicks = m.castTicks;
   o.cooldownTicks = m.cooldownTicks;
   return o;
@@ -200,7 +206,7 @@ export function moveFromJson(j: Record<string, unknown>): Move {
     hits: i('hits', 1),
     accuracy: i('accuracy', 100),
     critBonus: i('critBonus'),
-    spCost: i('spCost'),
+    bars: i('bars', 1),
     castTicks: i('castTicks'),
     cooldownTicks: i('cooldownTicks'),
     secondary: sec === null ? 'none' : (sec.type as SecondaryType),
@@ -270,28 +276,56 @@ export function moveValue(m: Move): number {
   }
 }
 
-/** Discount for SP, cast time and extra cooldown (capped). */
+/** Discount for cast time and a quarter of the extra cooldown (capped). */
 export function moveDiscount(s: V3Spec, m: Move): number {
   const free = freeCooldown(m);
-  const d = idiv(m.spCost * 5, 4) + m.castTicks * 2 + (m.cooldownTicks > free ? idiv(m.cooldownTicks - free, 2) : 0);
+  const d = m.castTicks * s.castDiscountPerTick + (m.cooldownTicks > free ? idiv(m.cooldownTicks - free, s.cooldownDiscountDiv) : 0);
   const cap = idiv(moveValue(m) * s.maxDiscountPct, 100);
   return d < cap ? d : cap;
 }
 
-export function moveCost(s: V3Spec, m: Move): number {
+/** Net strength in budget points (value − discount). */
+export function movePoints(s: V3Spec, m: Move): number {
   return moveValue(m) - moveDiscount(s, m);
 }
 
-/** Budget of `slot` (0..3) at `moveFactorPct`. */
-export function slotBudget(s: V3Spec, slot: number, moveFactorPct: number): number {
-  return idiv(s.slotBudgets[slot]! * moveFactorPct, 100);
+/** Points a move may be worth for a cost of `bars` (1..5). */
+export function barBudget(s: V3Spec, bars: number, moveFactorPct: number): number {
+  return idiv(s.barBudgets[bars - 1]! * moveFactorPct, 100);
+}
+
+/** Smallest n (1..5) whose bar budget holds `points`; 0 when none. */
+export function barsForPoints(s: V3Spec, points: number, moveFactorPct: number): number {
+  for (let n = 1; n <= s.barBudgets.length; n++) if (points <= barBudget(s, n, moveFactorPct)) return n;
+  return 0;
+}
+
+export function moveBars(s: V3Spec, m: Move, moveFactorPct: number): number {
+  return barsForPoints(s, movePoints(s, m), moveFactorPct);
+}
+
+/** The most bars the move of `slot` may cost for a character with `maxBars`. */
+export function slotMaxBarsFor(s: V3Spec, slot: number, maxBars: number): number {
+  const b = s.slotMaxBars[slot]!;
+  return b < maxBars ? b : maxBars;
+}
+
+/** Budget (points) of `slot` (0..3) at `moveFactorPct` for `maxBars`. */
+export function slotBudget(s: V3Spec, slot: number, moveFactorPct: number, maxBars: number): number {
+  return barBudget(s, slotMaxBarsFor(s, slot, maxBars), moveFactorPct);
+}
+
+/** `m` with its bars derived from its points. */
+export function withBars(s: V3Spec, m: Move, moveFactorPct: number): Move {
+  const b = moveBars(s, m, moveFactorPct);
+  return { ...m, bars: b < 1 ? 1 : b };
 }
 
 /** Shrinks the primary magnitude until the move fits; null when impossible. */
 export function fitToBudget(s: V3Spec, m0: Move, budget: number): Move | null {
   let m = m0;
   for (let guard = 0; guard < 400; guard++) {
-    if (moveCost(s, m) <= budget) return m;
+    if (movePoints(s, m) <= budget) return m;
     const r = templateOf(m).ranges;
     switch (kindOf(m)) {
       case 'physical':

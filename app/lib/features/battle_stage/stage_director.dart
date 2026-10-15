@@ -208,7 +208,7 @@ class StageDirector {
       fighters[i].poisoned = f.poisoned;
       fighters[i].paralyzed = f.paralyzed;
       fighters[i].shield = f.shield;
-      fighters[i].ready = f.ready;
+      fighters[i].ready = f.full; // hops while every bar is full
     }
   }
 

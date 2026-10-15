@@ -33,9 +33,9 @@ export class MemoryStore implements Store {
         attr: "gu",
         statsLv1: stat(40),
         moves: [
-          { name: "ぱんち", templateId: "strike", kind: "physical", power: opts.power ?? 150, spCost: 0, castTicks: 0, cooldownTicks: 0 },
-          { name: "びーむ", templateId: "blast", kind: "special", power: (opts.power ?? 150) + 20, spCost: 10, castTicks: 3, cooldownTicks: 20 },
-          { name: "げんき", templateId: "heal", kind: "heal", power: 200, spCost: 30, castTicks: 0, cooldownTicks: 100 },
+          { name: "ぱんち", templateId: "strike", kind: "physical", power: opts.power ?? 150, bars: 1, castTicks: 0, cooldownTicks: 0 },
+          { name: "びーむ", templateId: "blast", kind: "special", power: (opts.power ?? 150) + 20, bars: 2, castTicks: 3, cooldownTicks: 20 },
+          { name: "げんき", templateId: "heal", kind: "heal", power: 200, bars: 2, castTicks: 0, cooldownTicks: 100 },
         ],
       },
     });

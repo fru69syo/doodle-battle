@@ -260,6 +260,10 @@ void main() {
       settings: setupDone.copyWith(consents: const ParentConsents(ads: true)),
     );
     await openStage(tester, 1);
+    await settleReal(tester, rounds: 10);
+    // No decision timer: an idle child would never act, so おまかせ plays.
+    await tester.tap(find.byType(OmakaseToggle));
+    await tester.pump();
     await playBattle(tester);
     await tapVisible(tester, find.byKey(const Key('ad-double-xp')));
     expect(find.textContaining('おうちのひとに きいてから みてね'), findsOneWidget);

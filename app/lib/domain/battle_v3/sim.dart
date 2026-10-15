@@ -95,11 +95,15 @@ SimStats runScenario(
   int? thinkTicksA,
   AiTier tierA = AiTier.normal,
   AiTier tierB = AiTier.normal,
+  Controller? controllerA,
+  Controller? controllerB,
 }) {
   final r = Mulberry32(fnv1a32('$name/$seed'));
   final out = SimStats(name);
-  final ca = aiController(thinkTicks: thinkTicksA ?? thinkTicks, tier: tierA);
-  final cb = aiController(thinkTicks: thinkTicks, tier: tierB);
+  final ca =
+      controllerA ??
+      aiController(thinkTicks: thinkTicksA ?? thinkTicks, tier: tierA);
+  final cb = controllerB ?? aiController(thinkTicks: thinkTicks, tier: tierB);
   for (var i = 0; i < n; i++) {
     final (a, b) = make(r);
     final battle = Battle(s, a, b, seed: r.nextUint32(), recordEvents: false);
@@ -135,6 +139,31 @@ List<int> reshape(List<int> st, Stat which, int pct) {
 
 FighterSetup withStats(FighterSetup f, List<int> st) => f.withStats(st);
 
+/// [g] at [level] as if its Lv1 SP were [lv1Sp] (max bars from it), the
+/// difference taken from / given to the other nine stats in proportion so
+/// the total budget is unchanged.
+FighterSetup withLv1Sp(V3Spec s, Genome g, int level, int lv1Sp) {
+  final st = g.statsAt(level);
+  final sp = Stat.sp.index;
+  final target = lv1Sp + lv1Sp * g.growthMille[sp] * (level - 1) ~/ 1000;
+  final delta = target - st[sp];
+  final out = List.of(st);
+  out[sp] = target;
+  final others = [
+    for (var i = 0; i < 10; i++)
+      if (i != sp) i,
+  ];
+  final neg = delta < 0;
+  final share = largestRemainder(neg ? -delta : delta, [
+    for (final i in others) st[i],
+  ]);
+  for (var k = 0; k < others.length; k++) {
+    out[others[k]] += neg ? share[k] : -share[k];
+    if (out[others[k]] < 1) out[others[k]] = 1;
+  }
+  return setupAt(s, g, level, maxBars: s.maxBarsFor(lv1Sp)).withStats(out);
+}
+
 /// The standard scenario list (docs §10). [n] battles each.
 List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
   final res = <SimStats>[];
@@ -144,6 +173,8 @@ List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
     AiTier ta = AiTier.normal,
     AiTier tb = AiTier.normal,
     int? thinkA,
+    int? thinkB,
+    Controller? ca,
   }) {
     final x = runScenario(
       s,
@@ -153,6 +184,8 @@ List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
       tierA: ta,
       tierB: tb,
       thinkTicksA: thinkA,
+      thinkTicks: thinkB,
+      controllerA: ca,
     );
     res.add(x);
     return x;
@@ -246,20 +279,50 @@ List<SimStats> standardScenarios(V3Spec s, {int n = 4000}) {
     (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
     tb: AiTier.weak,
   );
+  for (final lv in [1, 20, 50, 100]) {
+    for (final t in [AiTier.normal, AiTier.strong]) {
+      run(
+        '5 bars vs 2 bars (equal total, ${t.name}), Lv$lv',
+        (r) => (
+          withLv1Sp(s, randomKid(s, r), lv, 55),
+          withLv1Sp(s, randomKid(s, r), lv, 25),
+        ),
+        ta: t,
+        tb: t,
+      );
+    }
+  }
   run(
-    'pre-selecting kid (0 s) vs おまかせ (1 s), Lv20',
+    'おまかせ (random) vs 1 s chooser (ふつう), Lv20',
+    (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
+    ca: omakaseController(),
+  );
+  run(
+    'おまかせ (random) vs 1 s chooser (ふつう), Lv50',
+    (r) => (setupAt(s, randomKid(s, r), 50), setupAt(s, randomKid(s, r), 50)),
+    ca: omakaseController(),
+  );
+  run(
+    'おまかせ (random) vs good 1 s chooser (つよい, 1 s), Lv20',
+    (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
+    ca: omakaseController(),
+    tb: AiTier.strong,
+    thinkB: 10,
+  );
+  run(
+    'instant chooser (0 s) vs 1 s chooser, Lv20',
     (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
     thinkA: 0,
   );
   run(
-    'slow chooser (3 s) vs fast (1 s), Lv20',
+    'slow chooser (3 s) vs 1 s chooser, Lv20',
     (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
     thinkA: 30,
   );
   return res;
 }
 
-/// Player = random kid at the recommended level (ふつう おまかせ, 1 s), CPU
+/// Player = random kid at the recommended level (ふつう AI, 1 s), CPU
 /// = the stage's bundled doodle from [cpuGenomes] (or a random kid when the
 /// id is missing) at the stage's CPU level, power % and AI tier.
 SimStats simulateStage(

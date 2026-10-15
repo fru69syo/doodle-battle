@@ -57,20 +57,20 @@ sealed class StageEvent {
   const StageEvent();
 }
 
-/// [side]'s gauge is full (the player may choose).
+/// One more of [side]'s gauge bars became full ([bars] = full bars now).
 class StageReady extends StageEvent {
-  const StageReady(this.side);
+  const StageReady(this.side, {this.bars = 1});
   final int side;
+  final int bars;
 }
 
-/// [side] picked a move; [castSeconds] > 0 means it charges first.
+/// [side] picked a move costing [cost] bars; [castSeconds] > 0 means it
+/// charges first.
 class StageChoose extends StageEvent {
-  const StageChoose(this.side, {this.castSeconds = 0, this.auto = false});
+  const StageChoose(this.side, {this.castSeconds = 0, this.cost = 1});
   final int side;
   final double castSeconds;
-
-  /// Picked by おまかせ / the 5 s timeout.
-  final bool auto;
+  final int cost;
 }
 
 /// One hit of an action (or a miss when [amount] is null).
@@ -157,29 +157,38 @@ class StageFighterState {
   const StageFighterState({
     required this.maxHp,
     this.gauge = 0,
-    this.ready = false,
+    this.maxBars = 2,
     this.casting = false,
     this.poisoned = false,
     this.paralyzed = false,
     this.shield = 0,
     this.statUp = false,
     this.statDown = false,
-    this.sp = 0,
   });
 
   final int maxHp;
 
-  /// 0..1.
+  /// Gauge in bars, 0..[maxBars] (2.4 = two full bars and 40 % of the
+  /// third).
   final double gauge;
-  final bool ready, casting;
+
+  /// Bars this fighter can stack (2..5).
+  final int maxBars;
+  final bool casting;
+
+  /// Full bars right now.
+  int get bars => gauge.floor().clamp(0, maxBars);
+
+  /// At least one full bar (a move can be used).
+  bool get ready => bars >= 1;
+
+  /// Every bar is full (the gauge stopped filling).
+  bool get full => bars >= maxBars;
   final bool poisoned, paralyzed;
 
   /// 0..1 damage reduction while a shield is up.
   final double shield;
   final bool statUp, statDown;
-
-  /// 0..100.
-  final int sp;
 }
 
 /// The adapter interface between an engine and the stage.

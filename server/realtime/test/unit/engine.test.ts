@@ -12,12 +12,12 @@ async function source(id: string, level = 20): Promise<FighterSource> {
   return s;
 }
 
-/** Plays a battle where both sides use おまかせ, returns the accepted inputs. */
+/** Plays a battle where the AI plays both sides, returns the accepted inputs. */
 function autoplay(sim: BattleSim): { tick: number; side: Side; slot: number }[] {
   const log: { tick: number; side: Side; slot: number }[] = [];
   while (!sim.finished) {
     const inputs: [number | null, number | null] = [null, null];
-    for (const s of [0, 1] as const) if (sim.isReady(s)) inputs[s] = sim.chooseMove(s, "normal");
+    for (const s of [0, 1] as const) inputs[s] = s === 0 ? sim.aiInput(s, "normal", 10) : sim.omakaseInput(s);
     const r = sim.step(inputs);
     for (const s of [0, 1] as const) if (r.acted[s]) log.push({ tick: sim.tick, side: s, slot: inputs[s] ?? -1 });
   }
@@ -63,12 +63,13 @@ describe("DevEngine (stand-in)", () => {
     expect(sim2.winner).toBe(sim1.winner);
   });
 
-  it("never auto-picks by itself (the server owns the 5 s timer)", async () => {
+  it("never picks by itself: an idle side caps at its max bars", async () => {
     const e = new DevEngine();
     const a = e.ratedFighter(await source("a"), 50);
     const sim = e.createBattle(a, a, { seed: 1 });
     for (let t = 0; t < 400; t++) sim.step([null, null]);
-    expect(sim.isReady(0)).toBe(true);
+    expect(sim.view(0).bars).toBe(a.maxBars);
+    expect(sim.view(0).gauge).toBe(a.maxBars * 10_000);
     expect(sim.view(0).hp).toBe(sim.view(0).maxHp);
   });
 

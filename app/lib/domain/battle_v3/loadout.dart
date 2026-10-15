@@ -22,7 +22,9 @@ int moveStreamAt(Genome g, int level) => g.rebornAt(level) ? 14 : 12;
 /// are the normalised AI moves stored with the character: each is
 /// re-validated against the slot budget at this level, and a rejected one
 /// falls back to the offline move. [nameOverrides] (index = slot) rename a
-/// move without touching its numbers (legacy v1 move names).
+/// move without touching its numbers (legacy v1 move names). Every move
+/// costs at most the character's max bars ([Genome.maxBars]; [maxBars]
+/// overrides it for the simulator).
 List<Move> movesAt(
   V3Spec s,
   Genome g,
@@ -32,16 +34,19 @@ List<Move> movesAt(
   List<String?> nameOverrides = const [],
   bool preForm = false,
   bool Function(String)? ngCheck,
+  int? maxBars,
 }) {
   final factor = preForm ? s.bloomerPreMoveFactorPct : g.moveFactorPct(level);
   final stream = preForm ? 12 : moveStreamAt(g, level);
   final own = attr ?? g.attr;
+  final bars = maxBars ?? g.maxBars;
   final offline = generateOfflineMoves(
     s,
     g,
     moveFactorPct: factor,
     stream: stream,
     attr: own,
+    maxBars: bars,
   );
   final out = <Move>[];
   for (var i = 0; i < 4; i++) {
@@ -54,6 +59,7 @@ List<Move> movesAt(
         slot: i,
         own: own,
         moveFactorPct: factor,
+        maxBars: bars,
         ngCheck: ngCheck,
       );
       if (!v.rejected) m = v.move!;
@@ -76,6 +82,7 @@ FighterSetup setupAt(
   List<String?> nameOverrides = const [],
   String label = '',
   int powerPct = 100,
+  int? maxBars,
 }) {
   final moves = movesAt(
     s,
@@ -84,11 +91,13 @@ FighterSetup setupAt(
     attr: attr,
     aiProposals: aiProposals,
     nameOverrides: nameOverrides,
+    maxBars: maxBars,
   );
   final stats = g.statsAt(level);
   return FighterSetup(
     stats: [for (final v in stats) v * powerPct ~/ 100],
     attr: attr ?? g.attr,
+    maxBars: maxBars ?? g.maxBars,
     moves: moves.sublist(0, unlockedSlots(s, level)),
     label: label,
   );
@@ -118,6 +127,7 @@ FighterSetup ratedSetup(
   return FighterSetup(
     stats: stats,
     attr: g.attr,
+    maxBars: g.maxBars,
     moves: moves.sublist(0, r.slotCount),
     label: label,
   );
@@ -148,6 +158,7 @@ FighterSetup familySetup(
   return FighterSetup(
     stats: stats,
     attr: g.attr,
+    maxBars: g.maxBars,
     moves: moves.sublist(0, unlockedSlots(s, battleLevel)),
     label: label,
   );

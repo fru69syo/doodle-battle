@@ -3,11 +3,10 @@
 /// newest server tick, translated with the same [translate] as local
 /// battles. The child's character is always side 0 on the stage.
 ///
-/// It also owns the child's decision state in real time (not delayed): the
-/// server's `deadline` event (protocol rev 2) gives the exact tick of the 5 s
-/// timeout pick, and the current server tick is extrapolated from the newest
-/// message with the local clock, so the 5 s ring is not guessed from 2 Hz
-/// snapshots.
+/// Protocol rev 3 (stackable gauge bars): there is no decision timer; the
+/// gauge shown is the snapshot's bars, interpolated between 2 Hz snapshots.
+/// The current server tick is extrapolated from the newest message with the
+/// local clock.
 library;
 
 import '../../../domain/battle_v3/battle_v3.dart';
@@ -22,7 +21,7 @@ Move displayMove(PublicMove m) {
     template: template,
     attr: Attr.tryParse(m.attr) ?? Attr.none,
     name: m.name,
-    spCost: m.spCost,
+    bars: m.bars,
     hits: m.hits,
     vfx: m.vfx ?? _defaultVfx(template),
     colour: m.colour ?? 'yellow',
@@ -77,13 +76,9 @@ class OnlineFeed implements StageFeed {
 
   final Duration Function() _now;
 
-  /// Called when the child's move went out (its `select` / `autoPick`
-  /// arrived from the server), in real time.
+  /// Called when the child's move went out (its `select` arrived from the
+  /// server), in real time.
   void Function()? onMyAction;
-
-  // Decision state of the child's side (real time, from the server).
-  int? _deadlineAt;
-  int? _readyTick;
 
   // Server tick estimate: the newest tick seen and when it arrived.
   int _anchorTick = 0;
@@ -107,26 +102,6 @@ class OnlineFeed implements StageFeed {
     }
   }
 
-  /// The child's gauge is full and the server waits for a move (from the
-  /// `deadline` event until the move goes out).
-  bool get waiting => _deadlineAt != null;
-
-  /// Seconds left before the server's おまかせ picks (null while not waiting).
-  double? get choiceLeft {
-    final at = _deadlineAt;
-    if (at == null) return null;
-    return ((at - serverTick) / match.tickHz).clamp(0.0, decisionSeconds);
-  }
-
-  /// Length of the whole choice window (the ring's full circle).
-  double get decisionSeconds {
-    final at = _deadlineAt, from = _readyTick;
-    if (at != null && from != null && at > from) {
-      return (at - from) / match.tickHz;
-    }
-    return (match.decisionTicks + 3) / match.tickHz;
-  }
-
   int _side(Object? s) {
     final i = s is num ? s.toInt() : 0;
     return _swap ? 1 - i : i;
@@ -140,18 +115,7 @@ class OnlineFeed implements StageFeed {
       if (type is! String) continue;
       final tick = raw['tick'] is num ? (raw['tick']! as num).toInt() : m.tick;
       final mine = raw['side'] == match.you;
-      if (type == 'deadline') {
-        // Server-only timing cue: not a stage event.
-        if (mine && raw['at'] is num) {
-          _deadlineAt = (raw['at']! as num).toInt();
-          _readyTick = tick;
-        }
-        continue;
-      }
-      if (mine && (type == 'select' || type == 'autoPick')) {
-        _deadlineAt = null;
-        onMyAction?.call();
-      }
+      if (mine && type == 'select') onMyAction?.call();
       final data = <String, Object>{};
       for (final e in raw.entries) {
         if (e.key == 'tick' || e.key == 'type') continue;
@@ -185,7 +149,6 @@ class OnlineFeed implements StageFeed {
   /// engine `end` event).
   void finish(int? winner) {
     _flush = true;
-    _deadlineAt = null;
     if (_ended || winner == null || _buffer.any((e) => e.type == 'end')) {
       return;
     }
@@ -255,22 +218,23 @@ class OnlineFeed implements StageFeed {
     final v = _views[side];
     final maxHp = match.fighters[_swap ? 1 - side : side].maxHp;
     final s = _status[side];
+    final maxBars =
+        v?.maxBars ?? match.fighters[_swap ? 1 - side : side].maxBars;
     var gauge = (v?.gauge ?? 0) / 10000;
-    if (v != null && !v.ready && !v.casting) {
+    if (v != null && !v.casting && v.bars < maxBars) {
       // Interpolate between snaps (≈ 280 per tick at equal speed).
       gauge += (_clock - _snapTick).clamp(0, 5) * 280 / 10000;
     }
     return StageFighterState(
       maxHp: v?.maxHp ?? maxHp,
-      gauge: gauge.clamp(0.0, 1.0),
-      ready: v?.ready ?? false,
+      gauge: gauge.clamp(0.0, maxBars.toDouble()),
+      maxBars: maxBars,
       casting: v?.casting ?? false,
       poisoned: s.contains('poison'),
       paralyzed: s.contains('paralyze'),
       shield: s.contains('shield') ? 0.3 : 0,
       statUp: s.contains('up'),
       statDown: s.contains('down'),
-      sp: (v?.sp ?? 0) ~/ 100,
     );
   }
 }

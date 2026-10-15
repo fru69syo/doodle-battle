@@ -95,4 +95,30 @@ void main() {
     );
     expect(r.winRateA, greaterThan(0.5));
   });
+
+  test('おまかせ (random) is weaker than a 1 s chooser, not hopeless', () {
+    final r = runScenario(
+      s,
+      'omakase',
+      n,
+      (r) => (setupAt(s, randomKid(s, r), 20), setupAt(s, randomKid(s, r), 20)),
+      controllerA: omakaseController(),
+    );
+    expect(r.winRateA, inInclusiveRange(0.30, 0.49));
+  });
+
+  test('more bars at the same stats help players who save (つよい)', () {
+    final r = runScenario(
+      s,
+      'bars',
+      n,
+      (r) {
+        final g = randomKid(s, r);
+        return (setupAt(s, g, 50, maxBars: 5), setupAt(s, g, 50, maxBars: 2));
+      },
+      tierA: AiTier.strong,
+      tierB: AiTier.strong,
+    );
+    expect(r.winRateA, greaterThanOrEqualTo(0.6));
+  });
 }

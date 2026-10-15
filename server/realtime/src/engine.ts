@@ -1,24 +1,20 @@
 /**
  * The narrow battle-engine interface the server is written against.
  *
- * The normative engine is Engine v3 (`shared/battle_engine_v3_ts/`, written by the Engine team,
- * bit-exact with `shared/battle_spec_v3/` and the Dart prototype in
- * `app/lib/domain/battle_v2/atb_engine.dart`). Until it lands the server runs with
- * `engines/devEngine.ts`, a simplified stand-in. Swapping = writing `engines/v3Engine.ts`, an
- * adapter of ~50 lines from Engine v3 to this interface (docs/REALTIME_PROTOCOL.md §9).
+ * The normative engine is Engine v3 (`shared/battle_engine_v3_ts/`, bit-exact with
+ * `shared/battle_spec_v3/` and the app's Dart engine `app/lib/domain/battle_v3/`), adapted by
+ * `engines/v3Engine.ts`. `engines/devEngine.ts` is a simplified local stand-in.
  *
- * Contract (mirrors the prototype's `step(Controller a, Controller b)` at a fixed 10 Hz tick):
+ * Contract (stackable gauge bars, spec v4; GAME_DESIGN_V2 §6):
  * - `step(inputs)` advances exactly one tick. `inputs[side]` is the slot the side wants to use,
- *   or null. The engine uses an input only in the tick's decision phase and only if that side
- *   is ready and the move is usable; otherwise it is ignored (GAME_DESIGN_V2 §6.1 step 4).
- *   Because the server passes a queued slot on every tick, a pre-selected move (さきどり) is used
- *   in the very tick the gauge fills.
- * - The engine must NOT auto-pick on its own: the server owns the 5 s timer (+3 tick network
- *   grace, GAME_DESIGN_V2 §6.7) and passes the おまかせ choice as a normal input. Engine v3's
- *   `decisionTicks` must therefore be disabled (e.g. Number.MAX_SAFE_INTEGER) in createBattle.
- *   Replays use the same setting, so a replay = seed + logged inputs.
- * - `chooseMove` is the shared おまかせ AI (`chooseMove` in ai_v2.dart). It consumes only the
- *   side's AI random stream, never the battle stream, so calling it does not change the battle.
+ *   or null. The engine uses an input only if that side is not casting and the move is usable
+ *   now (enough full bars, no cooldown); otherwise it is ignored. The server keeps a child's
+ *   さきどり and passes it every tick, so it fires in the very tick its bars are there.
+ * - There is no decision timer: an idle side just stops filling at its max bars.
+ * - `aiInput` (ghosts, an away child: the tiered AI) and `omakaseInput` (the child's おまかせ
+ *   switch: a random move, then wait for its bars) consume only the side's AI random stream,
+ *   never the battle stream, so calling them does not change the battle. A replay = seed +
+ *   logged inputs.
  */
 
 export type Side = 0 | 1;
@@ -46,7 +42,8 @@ export interface MovePublic {
   name: string;
   templateId: string;
   attr: string;
-  spCost: number;
+  /** Cost in gauge bars (1..5, never above the fighter's maxBars). */
+  bars: number;
 }
 
 /** A fighter ready for battle (stats already synced). Opaque except for what clients may see. */
@@ -54,6 +51,8 @@ export interface FighterSetup {
   readonly attr: string;
   readonly moves: readonly MovePublic[];
   readonly maxHp: number;
+  /** Gauge bars this fighter can stack (2..5). */
+  readonly maxBars: number;
   readonly engineData: unknown;
 }
 
@@ -67,11 +66,11 @@ export interface BattleEvent {
 export interface SideView {
   hp: number;
   maxHp: number;
-  /** SP in 1/100 units (0..10000). */
-  sp: number;
-  /** Gauge 0..10000. */
+  /** Gauge 0..maxBars·10000 (one bar = 10000; partial fill included). */
   gauge: number;
-  ready: boolean;
+  /** Full bars now. */
+  bars: number;
+  maxBars: number;
   casting: boolean;
 }
 
@@ -88,9 +87,16 @@ export interface BattleSim {
   /** Why the engine ended the battle: KO, or the 3 minute cap decided by HP ratio. */
   readonly endReason: "ko" | "timeout" | null;
   step(inputs: readonly [number | null, number | null]): StepResult;
-  isReady(side: Side): boolean;
+  /** The move can be used right now (enough bars, no cooldown, not casting). */
   canUse(side: Side, slot: number): boolean;
-  chooseMove(side: Side, tier: AiTier): number;
+  /** The move can ever be used (its cost fits the side's max bars): it may be queued. */
+  canQueue(side: Side, slot: number): boolean;
+  /** Tiered AI (ghost / away child): the slot to use this tick, or null (keep filling). */
+  aiInput(side: Side, tier: AiTier, thinkTicks: number): number | null;
+  /** The おまかせ switch: random eligible move, used once its bars are there; or null. */
+  omakaseInput(side: Side): number | null;
+  /** Drops an AI plan (when control of a side changes hands). */
+  clearPlan(side: Side): void;
   view(side: Side): SideView;
   /** Short hash of the full state (clients can detect desync; replays are checked with it). */
   stateHash(): string;

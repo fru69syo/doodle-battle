@@ -7,17 +7,19 @@ import type { Genome } from './genome';
 import {
   ATK_FORMULAS,
   type AtkFormula,
+  barBudget,
   fitToBudget,
   kindOf,
   makeMove,
+  MAX_POWER,
   type Move,
   type MoveKind,
-  moveCost,
+  movePoints,
   type SecondaryType,
-  slotBudget,
+  withBars,
 } from './moves';
 import { deriveSeed, Mulberry32 } from './rng';
-import { type Attr, beatenBy, beats, Stat, type V3Spec } from './spec';
+import { type Attr, beatenBy, beats, idiv, Stat, type V3Spec } from './spec';
 
 const PREFIX: Record<Attr, readonly string[]> = {
   gu: ['ごつごつ', 'どすん', 'ぐるぐる', 'がっちり', 'ドカン'],
@@ -51,9 +53,9 @@ function moveName(r: Mulberry32, a: Attr, k: MoveKind): string {
 }
 
 function maxPower(s: V3Spec, m: Move, budget: number): Move | null {
-  for (let p = 200; p >= 40; p -= 5) {
+  for (let p = MAX_POWER; p >= 40; p -= 5) {
     const c = { ...m, power: p };
-    if (moveCost(s, c) <= budget) return c;
+    if (movePoints(s, c) <= budget) return c;
   }
   return null;
 }
@@ -72,13 +74,20 @@ function bestFormula(st: readonly number[], physical: boolean): AtkFormula {
   return best!;
 }
 
-/** The four slot moves; `stream` 12 normally, 14 for the rebirth set. */
+/**
+ * The four slot moves; `stream` 12 normally, 14 for the rebirth set. Bars
+ * per slot grow with the max bars M (default the genome's): 1; (M+1)/2
+ * (support up to max(2, (M+1)/2)); charged max(2, M−1) or multi max(2, M−2);
+ * ひっさつ M.
+ */
 export function generateOfflineMoves(
   s: V3Spec,
   g: Genome,
-  opts: { moveFactorPct: number; stream?: number; attr?: Attr | null },
+  opts: { moveFactorPct: number; stream?: number; attr?: Attr | null; maxBars?: number | null },
 ): Move[] {
   const stream = opts.stream ?? 12;
+  const cap = opts.maxBars ?? g.maxBars;
+  const target = (bars: number) => (bars < cap ? bars : cap);
   const r = new Mulberry32(deriveSeed(g.seed, stream));
   const st = stream === 14 && g.rebirthBase !== null ? g.rebirthBase : g.base;
   const physical = st[Stat.str]! >= st[Stat.intl]!;
@@ -103,9 +112,9 @@ export function generateOfflineMoves(
   const factor = opts.moveFactorPct;
 
   const damage = (
-    slot: number,
+    bars: number,
     a: Attr,
-    o: { multi?: boolean; sp?: number; cast?: number; cd?: number; acc?: number; sec?: SecondaryType; secChance?: number } = {},
+    o: { multi?: boolean; cast?: number; cd?: number; acc?: number; sec?: SecondaryType; secChance?: number } = {},
   ): Move => {
     const multi = o.multi ?? false;
     // Draw order = Dart constructor argument order: name, vfx, colour, hits.
@@ -123,43 +132,44 @@ export function generateOfflineMoves(
       power: 40,
       hits,
       accuracy: o.acc ?? 100,
-      spCost: o.sp ?? 0,
       castTicks: o.cast ?? 0,
       cooldownTicks: o.cd ?? 0,
       secondary: o.sec ?? 'none',
       secondaryChance: o.secChance ?? 0,
       secondaryStat: physical ? Stat.def : Stat.res,
     });
-    return maxPower(s, base, slotBudget(s, slot, factor)) ?? { ...base, secondary: 'none' };
+    const m = maxPower(s, base, barBudget(s, target(bars), factor)) ?? { ...base, secondary: 'none' as const };
+    return withBars(s, m, factor);
   };
 
   const roll1 = r.nextInt(100);
   const m0 =
     roll1 < 30
-      ? damage(0, own, { acc: 90 })
+      ? damage(1, own, { acc: 90 })
       : roll1 < 50
-        ? damage(0, own, { sec: 'debuff', secChance: 20 })
-        : damage(0, own);
+        ? damage(1, own, { sec: 'debuff', secChance: 20 })
+        : damage(1, own);
 
   const cover = beatenBy(beatenBy(own)!)!;
   const roll2 = r.nextInt(100);
   let m1: Move;
+  const half = idiv(cap + 1, 2);
   if (roll2 < 35) {
-    m1 = damage(1, cover, { cd: 30, sp: 10 });
+    m1 = damage(half, cover, { cd: 30 });
   } else if (roll2 < 65) {
     const sec: SecondaryType = r.nextInt(2) === 0 ? 'poison' : 'paralyze';
-    m1 = damage(1, 'none', { sec, secChance: 30, sp: 10 });
+    m1 = damage(half, 'none', { sec, secChance: 30 });
   } else {
-    m1 = support(s, r, st, own, slotBudget(s, 1, factor), vfxFor);
+    m1 = withBars(s, support(s, r, st, own, barBudget(s, half < 2 ? 2 : half, factor), vfxFor), factor);
   }
 
   const roll3 = r.nextInt(100);
   const m2 =
     roll3 < 50
-      ? damage(2, roll3 < 25 ? own : cover, { sp: 20, cast: 6, cd: 40 })
-      : damage(2, beats(own) === m1.attr ? own : 'none', { multi: true, sp: 15, cd: 30 });
+      ? damage(cap > 2 ? cap - 1 : 2, roll3 < 25 ? own : cover, { cast: 6, cd: 40 })
+      : damage(cap > 4 ? cap - 2 : 2, beats(own) === m1.attr ? own : 'none', { multi: true, cd: 30 });
 
-  const m3 = damage(3, 'none', { sp: 40, cast: 12, cd: 80 });
+  const m3 = damage(5, 'none', { cast: 12, cd: 80 });
   return [m0, m1, m2, m3];
 }
 
@@ -183,10 +193,10 @@ function support(
   let m: Move;
   switch (k) {
     case 0:
-      m = makeMove({ template: 'heal', attr: 'none', healPct: 40, spCost: 25, cooldownTicks: 100 });
+      m = makeMove({ template: 'heal', attr: 'none', healPct: 40, cooldownTicks: 100 });
       break;
     case 1:
-      m = makeMove({ template: 'barrier', attr: 'none', shieldPct: 60, durationTicks: 40, spCost: 10, cooldownTicks: 60 });
+      m = makeMove({ template: 'barrier', attr: 'none', shieldPct: 60, durationTicks: 40, cooldownTicks: 60 });
       break;
     case 2:
       m = makeMove({
@@ -194,7 +204,6 @@ function support(
         attr: beats(own)!,
         chance: 100,
         accuracy: 90,
-        spCost: 10,
         cooldownTicks: 60,
       });
       break;
@@ -205,7 +214,6 @@ function support(
         stat: physical ? Stat.str : Stat.intl,
         stages: 2,
         durationTicks: 120,
-        spCost: 15,
         cooldownTicks: 120,
       });
   }

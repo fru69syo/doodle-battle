@@ -149,7 +149,6 @@ void main() {
               'crit': 0,
               'pct': 150,
             },
-            {'tick': 10, 'type': 'autoPick', 'side': 1, 'slot': 0},
             {'tick': 10, 'type': 'somethingNew', 'side': 1},
           ],
         ),
@@ -159,7 +158,7 @@ void main() {
         SnapMsg(
           tick: 12,
           sides: [
-            SideView.fromJson(sideView(ready: true, gauge: 10000)),
+            SideView.fromJson(sideView(gauge: 12400)),
             SideView.fromJson(sideView(hp: 850)),
           ],
         ),
@@ -168,65 +167,62 @@ void main() {
       final action = out.whereType<StageAction>().single;
       expect(action.side, 0);
       expect(action.move.name, 'ねこまるパンチ');
+      expect(action.move.name, isNotEmpty);
       expect(action.hits.single.effectiveness, StageEffectiveness.strong);
       expect(feed.fighter(0).ready, isTrue);
+      expect(feed.fighter(0).bars, 1);
+      expect(feed.fighter(0).maxBars, 3);
+      expect(feed.fighter(0).gauge, greaterThanOrEqualTo(1.24));
       expect(feed.fighter(1).maxHp, 900);
+      expect(feed.moves[0][1].bars, 2);
     });
 
-    test('the 5 s ring follows the server deadline in real time', () {
-      var now = Duration.zero;
-      final feed = OnlineFeed(
-        ServerMsg.parse(jsonEncode(matchMsg(you: 'b')))! as MatchMsg,
-        clock: () => now,
-      );
-      var acted = 0;
-      feed.onMyAction = () => acted++;
-      expect((feed.waiting, feed.choiceLeft), (false, null));
-      feed.addEvents(
-        const EvMsg(
-          seq: 1,
-          tick: 40,
-          events: [
-            {'tick': 40, 'type': 'ready', 'side': 1},
-            {'tick': 40, 'type': 'deadline', 'side': 1, 'at': 92},
-            // The foe's deadline is not the child's.
-            {'tick': 40, 'type': 'deadline', 'side': 0, 'at': 80},
-          ],
-        ),
-      );
-      expect(feed.waiting, isTrue);
-      expect(feed.decisionSeconds, closeTo(5.2, 1e-9));
-      expect(feed.choiceLeft, closeTo(5.2, 1e-9));
-      now = const Duration(milliseconds: 1500); // no message for 1.5 s
-      expect(feed.choiceLeft, closeTo(3.7, 1e-9));
-      // A snap a little behind the local estimate does not move the ring up.
-      feed.addSnap(
-        SnapMsg(
-          tick: 54,
-          sides: [
-            SideView.fromJson(sideView()),
-            SideView.fromJson(sideView(ready: true, gauge: 10000)),
-          ],
-        ),
-      );
-      expect(feed.choiceLeft, closeTo(3.7, 1e-9));
-      now = const Duration(seconds: 9);
-      expect(feed.choiceLeft, 0);
-      // `deadline` is a timing cue, never a stage event.
-      expect(feed.advance(1).whereType<StageReady>().single.side, 0);
-      feed.addEvents(
-        const EvMsg(
-          seq: 2,
-          tick: 92,
-          events: [
-            {'tick': 92, 'type': 'autoPick', 'side': 1, 'slot': 0},
-            {'tick': 92, 'type': 'select', 'side': 1, 'slot': 0, 'auto': 0},
-          ],
-        ),
-      );
-      expect((feed.waiting, feed.choiceLeft), (false, null));
-      expect(acted, 2);
-    });
+    test(
+      'rev 3: bars from snaps (no timer); my select is reported at once',
+      () {
+        var now = Duration.zero;
+        final feed = OnlineFeed(
+          ServerMsg.parse(jsonEncode(matchMsg(you: 'b')))! as MatchMsg,
+          clock: () => now,
+        );
+        var acted = 0;
+        feed.onMyAction = () => acted++;
+        feed.addEvents(
+          const EvMsg(
+            seq: 1,
+            tick: 40,
+            events: [
+              {'tick': 40, 'type': 'bar', 'side': 1, 'bars': 1},
+              {'tick': 40, 'type': 'bar', 'side': 0, 'bars': 1},
+            ],
+          ),
+        );
+        feed.addSnap(
+          SnapMsg(
+            tick: 45,
+            sides: [
+              SideView.fromJson(sideView()),
+              SideView.fromJson(sideView(gauge: 30000)),
+            ],
+          ),
+        );
+        // The child (b) is stage side 0: all three bars full, no interpolation.
+        expect(feed.fighter(0).gauge, 3);
+        expect(feed.fighter(0).full, isTrue);
+        final adv = feed.advance(1).whereType<StageReady>().toList();
+        expect([for (final r in adv) r.side]..sort(), [0, 1]);
+        feed.addEvents(
+          const EvMsg(
+            seq: 2,
+            tick: 92,
+            events: [
+              {'tick': 92, 'type': 'select', 'side': 1, 'slot': 0, 'cost': 1},
+            ],
+          ),
+        );
+        expect(acted, 1);
+      },
+    );
 
     test('the child is always side 0 on the stage (you = b)', () {
       final feed = OnlineFeed(
@@ -599,30 +595,25 @@ void main() {
         ..push({'t': 'omakase', 'on': true})
         ..push(
           ev(1, 10, const [
-            {'tick': 10, 'type': 'ready', 'side': 0},
-            {'tick': 10, 'type': 'deadline', 'side': 0, 'at': 62},
+            {'tick': 10, 'type': 'bar', 'side': 0, 'bars': 1},
           ]),
         );
       await settle(tester, frames: 4);
-      expect(find.byType(DecisionTimerRing), findsNothing);
       expect(server.sentTypes.where((t) => t == 'select'), isEmpty);
 
-      // Off: manual control again, the ring counts down from the deadline.
+      // Off: manual control again; no countdown anywhere (rev 3).
       await tester.tap(find.byKey(const Key('omakase')));
       await tester.pump();
       expect(server.sent.last, {'t': 'omakase', 'on': false});
       server.push(
         ev(2, 30, const [
-          {'tick': 20, 'type': 'select', 'side': 0, 'slot': 0, 'auto': 0},
-          {'tick': 30, 'type': 'ready', 'side': 0},
-          {'tick': 30, 'type': 'deadline', 'side': 0, 'at': 82},
+          {'tick': 20, 'type': 'select', 'side': 0, 'slot': 0, 'cost': 1},
+          {'tick': 30, 'type': 'bar', 'side': 0, 'bars': 1},
         ]),
       );
       await settle(tester, frames: 2);
-      final ring = tester.widget<DecisionTimerRing>(
-        find.byType(DecisionTimerRing),
-      );
-      expect(ring.secondsLeft, inInclusiveRange(4.0, 5.2));
+      expect(find.byKey(const Key('decision-ring')), findsNothing);
+      // A 2-bar move with one bar: dimmed but still tappable (さきどり).
       await tester.tap(find.byKey(const Key('move-1')));
       await tester.pump();
       expect(server.sent.last, {'t': 'select', 'seq': 1, 'slot': 1});

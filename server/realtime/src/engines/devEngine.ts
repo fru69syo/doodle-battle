@@ -1,8 +1,9 @@
 /**
  * DEV STAND-IN ENGINE — not the game rules.
  *
- * A small deterministic ATB engine that follows the *shape* of GAME_DESIGN_V2 §6 (10 Hz tick,
- * gauge 0..10000 filled by the AGI ratio, SP in 1/100, casts, cooldowns, heat-up, 3 minute cap)
+ * A small deterministic engine that follows the *shape* of GAME_DESIGN_V2 §6 (10 Hz tick,
+ * stackable gauge bars of 10000 filled by the AGI ratio up to max bars, moves that cost bars,
+ * casts, cooldowns, heat-up, 3 minute cap)
  * so the server, the protocol and the client can be developed before Engine v3 lands. Damage,
  * AI and Lv50 sync are simplified. Production must run Engine v3 (`BATTLE_ENGINE=v3`); see
  * docs/REALTIME_PROTOCOL.md §9.
@@ -34,6 +35,7 @@ interface DevMove extends MovePublic {
 interface DevFighter {
   stats: Record<Stat, number>;
   moves: DevMove[];
+  maxBars: number;
 }
 
 const TICK_HZ = 10;
@@ -57,7 +59,7 @@ export function unlockedMoveCount(level: number): number {
   return level >= 50 ? 4 : level >= 10 ? 3 : 2;
 }
 
-function parseMoves(raw: unknown, count: number): DevMove[] {
+function parseMoves(raw: unknown, count: number, maxBars: number): DevMove[] {
   const list = Array.isArray(raw) ? raw : [];
   const moves: DevMove[] = [];
   for (let i = 0; i < Math.min(count, list.length); i++) {
@@ -68,7 +70,7 @@ function parseMoves(raw: unknown, count: number): DevMove[] {
       name: typeof m.name === "string" ? m.name.slice(0, 20) : `わざ${i + 1}`,
       templateId: typeof m.templateId === "string" ? m.templateId : "strike",
       attr: typeof m.attr === "string" ? m.attr : "none",
-      spCost: int(m.spCost, 0, 0, 50),
+      bars: i === 0 ? 1 : int(m.bars, 1, 1, maxBars),
       kind,
       power: int(m.power, 80, 1, 300),
       castTicks: int(m.castTicks, 0, 0, 20),
@@ -76,7 +78,7 @@ function parseMoves(raw: unknown, count: number): DevMove[] {
     });
   }
   if (moves.length === 0) {
-    moves.push({ slot: 0, name: "たいあたり", templateId: "strike", attr: "none", spCost: 0, kind: "physical", power: 60, castTicks: 0, cooldownTicks: 0 });
+    moves.push({ slot: 0, name: "たいあたり", templateId: "strike", attr: "none", bars: 1, kind: "physical", power: 60, castTicks: 0, cooldownTicks: 0 });
   }
   return moves;
 }
@@ -92,11 +94,13 @@ export class DevEngine implements BattleEngine {
     const stats = {} as Record<Stat, number>;
     // Simplified sync: +4 % of the Lv1 value per level (GAME_DESIGN_V2 §4.1 averages 4 %).
     for (const s of STATS) stats[s] = Math.floor((int(raw[s], 40, 1, 10_000) * (100 + 4 * (syncLevel - 1))) / 100);
-    const moves = parseMoves(d.moves, unlockedMoveCount(source.level));
+    // Max bars from the Lv1 SP (SP / 10, clamped to 2..5), as in the real engine.
+    const maxBars = Math.min(5, Math.max(2, Math.floor(int(raw.SP, 40, 1, 10_000) / 10)));
+    const moves = parseMoves(d.moves, unlockedMoveCount(source.level), maxBars);
     const attr = d.attr === "gu" || d.attr === "choki" || d.attr === "pa" ? d.attr : "gu";
-    const fighter: DevFighter = { stats, moves };
-    const pub: MovePublic[] = moves.map((m) => ({ slot: m.slot, name: m.name, templateId: m.templateId, attr: m.attr, spCost: m.spCost }));
-    return { attr, moves: pub, maxHp: maxHpOf(stats), engineData: fighter };
+    const fighter: DevFighter = { stats, moves, maxBars };
+    const pub: MovePublic[] = moves.map((m) => ({ slot: m.slot, name: m.name, templateId: m.templateId, attr: m.attr, bars: m.bars }));
+    return { attr, moves: pub, maxHp: maxHpOf(stats), maxBars, engineData: fighter };
   }
 
   createBattle(a: FighterSetup, b: FighterSetup, opts: { seed: number }): BattleSim {
@@ -117,12 +121,11 @@ function maxHpOf(s: Record<Stat, number>): number {
 interface State {
   hp: number;
   maxHp: number;
-  sp: number;
   gauge: number;
-  ready: boolean;
   castSlot: number;
   castLeft: number;
   cooldowns: number[];
+  plan: number | null;
 }
 
 class DevBattle implements BattleSim {
@@ -140,7 +143,7 @@ class DevBattle implements BattleSim {
     this.attr = [a.attr, b.attr];
     const mk = (x: DevFighter): State => {
       const maxHp = maxHpOf(x.stats);
-      return { hp: maxHp, maxHp, sp: 4000, gauge: 0, ready: false, castSlot: -1, castLeft: 0, cooldowns: x.moves.map(() => 0) };
+      return { hp: maxHp, maxHp, gauge: 0, castSlot: -1, castLeft: 0, cooldowns: x.moves.map(() => 0), plan: null };
     };
     this.st = [mk(this.f[0]), mk(this.f[1])];
     this.rng = new Mulberry32(deriveSeed(seed, 0));
@@ -155,43 +158,70 @@ class DevBattle implements BattleSim {
     return this.winner !== null;
   }
 
-  isReady(side: Side): boolean {
-    return this.st[side].ready && this.winner === null;
+  canQueue(side: Side, slot: number): boolean {
+    const m = this.f[side].moves[slot];
+    return m !== undefined && m.bars <= this.f[side].maxBars;
   }
 
   canUse(side: Side, slot: number): boolean {
     const m = this.f[side].moves[slot];
     const s = this.st[side];
-    return m !== undefined && s.cooldowns[slot] === 0 && s.sp >= m.spCost * 100;
+    return m !== undefined && s.castLeft === 0 && s.cooldowns[slot] === 0 && s.gauge >= m.bars * GAUGE_MAX;
   }
 
   view(side: Side): SideView {
     const s = this.st[side];
-    return { hp: s.hp, maxHp: s.maxHp, sp: s.sp, gauge: s.gauge, ready: s.ready, casting: s.castLeft > 0 };
+    const maxBars = this.f[side].maxBars;
+    return { hp: s.hp, maxHp: s.maxHp, gauge: s.gauge, bars: Math.floor(s.gauge / GAUGE_MAX), maxBars, casting: s.castLeft > 0 };
   }
 
   stateHash(): string {
-    return fnv1a32(JSON.stringify([this.tick, this.st])).toString(16).padStart(8, "0");
+    return fnv1a32(JSON.stringify([this.tick, this.st.map((x) => ({ ...x, plan: null }))])).toString(16).padStart(8, "0");
   }
 
-  chooseMove(side: Side, tier: AiTier): number {
-    const usable = this.f[side].moves.filter((m) => this.canUse(side, m.slot));
-    if (usable.length === 0) return 0;
-    const rnd = this.aiRng[side];
-    const randomPct = tier === "weak" ? 40 : tier === "normal" ? 10 : 0;
-    if (rnd.nextInt(100) < randomPct) return usable[rnd.nextInt(usable.length)]?.slot ?? 0;
+  private eligible(side: Side): DevMove[] {
+    return this.f[side].moves.filter((m) => this.st[side].cooldowns[m.slot] === 0 && m.bars <= this.f[side].maxBars);
+  }
+
+  /** The stand-in ignores `_thinkTicks` (no thinking time). */
+  aiInput(side: Side, tier: AiTier, _thinkTicks: number): number | null {
     const me = this.st[side];
-    let best = usable[0];
-    let bestScore = -Infinity;
-    for (const m of usable) {
-      const value = m.kind === "heal" ? (me.hp * 2 < me.maxHp ? m.power * 1.2 : 0) : m.power;
-      const score = value - m.spCost * 0.75 - m.castTicks;
-      if (score > bestScore) {
-        bestScore = score;
-        best = m;
+    if (me.castLeft > 0 || me.gauge < GAUGE_MAX) return null;
+    if (me.plan === null) {
+      const options = this.eligible(side);
+      const rnd = this.aiRng[side];
+      const randomPct = tier === "weak" ? 40 : tier === "normal" ? 20 : 0;
+      if (rnd.nextInt(100) < randomPct) {
+        me.plan = options[rnd.nextInt(options.length)]?.slot ?? 0;
+      } else {
+        let best = options[0];
+        let bestScore = -Infinity;
+        for (const m of options) {
+          const value = m.kind === "heal" ? (me.hp * 2 < me.maxHp ? m.power * 1.2 : 0) : m.power;
+          const score = value / m.bars - m.castTicks;
+          if (score > bestScore) {
+            bestScore = score;
+            best = m;
+          }
+        }
+        me.plan = best?.slot ?? 0;
       }
     }
-    return best?.slot ?? 0;
+    return this.canUse(side, me.plan) ? me.plan : null;
+  }
+
+  omakaseInput(side: Side): number | null {
+    const me = this.st[side];
+    if (me.castLeft > 0) return null;
+    if (me.plan === null) {
+      const options = this.eligible(side);
+      me.plan = options[this.aiRng[side].nextInt(options.length)]?.slot ?? 0;
+    }
+    return this.canUse(side, me.plan) ? me.plan : null;
+  }
+
+  clearPlan(side: Side): void {
+    this.st[side].plan = null;
   }
 
   step(inputs: readonly [number | null, number | null]): StepResult {
@@ -206,23 +236,17 @@ class DevBattle implements BattleSim {
       const cd = this.st[i].cooldowns;
       for (let k = 0; k < cd.length; k++) if ((cd[k] ?? 0) > 0) cd[k] = (cd[k] ?? 0) - 1;
     }
-    // 2. SP regen
+    // 2. gauges (stackable bars; not while casting, up to max bars)
     for (const i of sides) {
       const me = this.st[i];
-      const r = rel(25, this.f[i].stats.SP, this.f[other(i)].stats.SP, 50);
-      me.sp = Math.min(10_000, me.sp + r);
+      const cap = this.f[i].maxBars * GAUGE_MAX;
+      if (me.castLeft > 0 || me.gauge >= cap) continue;
+      const before = Math.floor(me.gauge / GAUGE_MAX);
+      me.gauge = Math.min(cap, me.gauge + rel(280, this.f[i].stats.AGI, this.f[other(i)].stats.AGI, 30));
+      const after = Math.floor(me.gauge / GAUGE_MAX);
+      if (after > before) events.push({ tick: t, type: "bar", side: i, bars: after });
     }
-    // 3. gauges (charging sides only)
-    for (const i of sides) {
-      const me = this.st[i];
-      if (me.ready || me.castLeft > 0) continue;
-      me.gauge = Math.min(GAUGE_MAX, me.gauge + rel(280, this.f[i].stats.AGI, this.f[other(i)].stats.AGI, 30));
-      if (me.gauge >= GAUGE_MAX) {
-        me.ready = true;
-        events.push({ tick: t, type: "ready", side: i });
-      }
-    }
-    // 4. decisions + cast countdown
+    // 3. decisions + cast countdown
     const resolve: Side[] = [];
     for (const i of sides) {
       const me = this.st[i];
@@ -232,15 +256,14 @@ class DevBattle implements BattleSim {
         continue;
       }
       const slot = inputs[i];
-      if (!me.ready || slot === null || !this.canUse(i, slot)) continue;
+      if (slot === null || !this.canUse(i, slot)) continue;
       const m = this.f[i].moves[slot];
       if (!m) continue;
-      me.sp -= m.spCost * 100;
-      me.ready = false;
-      me.gauge = 0;
+      me.gauge -= m.bars * GAUGE_MAX;
       me.castSlot = slot;
+      me.plan = null;
       acted[i] = true;
-      events.push({ tick: t, type: "act", side: i, slot });
+      events.push({ tick: t, type: "act", side: i, slot, cost: m.bars });
       if (m.castTicks > 0) {
         me.castLeft = m.castTicks;
         events.push({ tick: t, type: "cast", side: i, slot, ticks: m.castTicks });
@@ -248,13 +271,13 @@ class DevBattle implements BattleSim {
         resolve.push(i);
       }
     }
-    // 5. resolutions (a then b; when both resolve in the same tick one coin flip decides)
+    // 4. resolutions (a then b; when both resolve in the same tick one coin flip decides)
     if (resolve.length === 2 && this.rng.nextInt(2) === 1) resolve.reverse();
     for (const i of resolve) {
       if (this.isOver() || this.st[i].hp <= 0) break;
       this.resolveMove(i, events);
     }
-    // 6. hard cap
+    // 5. hard cap
     if (!this.isOver() && t >= HARD_CAP) {
       const [a, b] = this.st;
       const l = a.hp * b.maxHp;

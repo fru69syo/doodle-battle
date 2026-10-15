@@ -70,16 +70,24 @@ class V3Sim implements BattleSim {
     return { events: r.events, acted: r.acted };
   }
 
-  isReady(side: Side): boolean {
-    return this.rt.isReady(side);
-  }
-
   canUse(side: Side, slot: number): boolean {
     return this.rt.canUse(side, slot);
   }
 
-  chooseMove(side: Side, tier: AiTier): number {
-    return this.rt.chooseMove(side, tier);
+  canQueue(side: Side, slot: number): boolean {
+    return this.rt.canQueue(side, slot);
+  }
+
+  aiInput(side: Side, tier: AiTier, thinkTicks: number): number | null {
+    return this.rt.aiInput(side, tier, thinkTicks);
+  }
+
+  omakaseInput(side: Side): number | null {
+    return this.rt.omakaseInput(side);
+  }
+
+  clearPlan(side: Side): void {
+    this.rt.clearPlan(side);
   }
 
   view(side: Side): SideView {
@@ -109,7 +117,7 @@ export class V3Engine implements BattleEngine {
     if (syncLevel !== RATED_SYNC_LEVEL) throw new Error(`engine v3 syncs rated play to Lv${RATED_SYNC_LEVEL}, not Lv${syncLevel}`);
     const f = ratedFighterFromSnapshot(engineInput(source), source.level, this.spec);
     if (!f) throw new UnsupportedFighterError(`snapshot ${source.snapshotId} has invalid engine data`);
-    return { attr: f.setup.attr, moves: publicMoves(f.setup), maxHp: f.maxHp, engineData: f.setup };
+    return { attr: f.setup.attr, moves: publicMoves(f.setup), maxHp: f.maxHp, maxBars: f.setup.maxBars, engineData: f.setup };
   }
 
   createBattle(a: FighterSetup, b: FighterSetup, opts: { seed: number }): BattleSim {

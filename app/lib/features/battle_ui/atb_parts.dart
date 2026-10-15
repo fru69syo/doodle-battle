@@ -29,7 +29,7 @@ MoveButtonData moveButtonData(Move m, int slot) => MoveButtonData(
           Attr.pa => MoveTint.pa,
           Attr.none => MoveTint.none,
         },
-  spCost: m.spCost,
+  bars: m.bars,
   icon: moveIconFor(m.vfx),
 );
 
@@ -184,14 +184,14 @@ class AtbStageLayout extends StatelessWidget {
 }
 
 /// The player's controls over a local engine feed ([BattleV3Feed]-like):
-/// さきどり taps, the 5 s ring, おまかせ. Rebuilt with the controller.
+/// さきどり taps (an unaffordable move is dimmed but still tappable when it
+/// fits the max bars), おまかせ. Rebuilt with the controller.
 class LocalControls extends StatelessWidget {
   const LocalControls({
     super.key,
     required this.engine,
     required this.side,
     required this.selected,
-    required this.choiceLeft,
     required this.omakase,
     required this.onOmakase,
     required this.onTap,
@@ -200,7 +200,6 @@ class LocalControls extends StatelessWidget {
   final Battle engine;
   final int side;
   final int? selected;
-  final double? choiceLeft;
   final bool omakase;
   final ValueChanged<bool> onOmakase;
   final ValueChanged<int> onTap;
@@ -211,13 +210,14 @@ class LocalControls extends StatelessWidget {
     return BattleControls(
       moves: [for (final (i, m) in f.moves.indexed) moveButtonData(m, i)],
       selected: selected,
-      choiceLeft: choiceLeft,
-      decisionSeconds: engine.spec.decisionTicks / engine.spec.tickHz,
+      bars: f.bars,
+      full: f.bars >= f.maxBars,
       casting: f.phase == Phase.casting,
       omakase: omakase,
       onOmakase: onOmakase,
       onTap: onTap,
       usable: f.usable,
+      queueable: f.canQueue,
       cooldownSeconds: (i) => f.cooldowns[i] / engine.spec.tickHz,
     );
   }

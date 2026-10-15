@@ -161,7 +161,7 @@ void main() {
       s.advance(0.05);
     }
     final ready = e.events.firstWhere(
-      (x) => x.type == 'ready' && x.data['side'] == 0,
+      (x) => x.type == 'bar' && x.data['side'] == 0,
     );
     final choose = e.events.firstWhere(
       (x) => x.type == 'select' && x.data['side'] == 0,
@@ -170,35 +170,22 @@ void main() {
     expect(feed.pending, isNull);
   });
 
-  test('time-out: no tap → おまかせ after 5 s of a full gauge', () {
+  test('no timer: an idle player caps at max bars, nothing is picked', () {
     final (s, feed) = stage(auto: false);
     final e = feed.engine;
-    double? maxLeft;
-    while (e.events
-        .where(
-          (x) =>
-              x.type == 'select' && x.data['side'] == 0 && x.data['auto'] == 1,
-        )
-        .isEmpty) {
+    while (e.tick < 300) {
       s.advance(0.1);
-      final left = feed.choiceLeft;
-      if (left != null) maxLeft = left;
-      expect(e.tick, lessThan(600));
     }
-    final ready = e.events.firstWhere(
-      (x) => x.type == 'ready' && x.data['side'] == 0,
-    );
-    final auto = e.events.firstWhere(
-      (x) => x.type == 'select' && x.data['side'] == 0 && x.data['auto'] == 1,
-    );
     expect(
-      auto.tick - ready.tick,
-      inInclusiveRange(e.spec.decisionTicks - 1, e.spec.decisionTicks),
+      e.events.where((x) => x.type == 'select' && x.data['side'] == 0),
+      isEmpty,
     );
-    expect(maxLeft, isNotNull);
+    final f = e.fighters[0];
+    expect(f.bars, f.maxBars);
+    expect(feed.fighter(0).full, isTrue);
     expect(
-      s.log.whereType<StageChoose>().where((c) => c.side == 0).first.auto,
-      isTrue,
+      s.log.whereType<StageReady>().where((r) => r.side == 0).length,
+      f.maxBars,
     );
   });
 

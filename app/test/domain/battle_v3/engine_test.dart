@@ -21,63 +21,116 @@ void main() {
     expect(x.stateHash(), y.stateHash());
   });
 
-  test('a full gauge waits for the choice; the foe keeps charging', () {
+  test('bars keep filling up to max bars, then stop; the foe never waits', () {
     final r = Mulberry32(2);
     final a = setupAt(s, randomKid(s, r), 10);
     final b = setupAt(s, randomKid(s, r), 10);
     final x = Battle(s, a, b, seed: 5);
-    while (x.fighters[0].phase != Phase.ready) {
-      x.step(a: never, b: aiController());
+    final f = x.fighters[0];
+    var bars = 0;
+    var steps = 0;
+    while (f.bars < f.maxBars) {
+      final ev = x.step(a: never, b: aiController());
+      steps++;
+      for (final e in ev.where((e) => e.type == 'bar' && e.i('side') == 0)) {
+        expect(e.i('bars'), ++bars);
+      }
     }
-    // The ready tick itself counts as the first of the decisionTicks.
-    final g = x.fighters[0].gauge;
-    expect(x.fighters[0].decisionTicksLeft(s), s.decisionTicks - 1);
-    for (var i = 0; i < s.decisionTicks - 2; i++) {
-      x.step(a: never, b: aiController());
-      expect(x.fighters[0].gauge, g);
-      expect(x.fighters[0].autoPicks, 0);
-    }
+    expect(bars, f.maxBars);
+    expect(f.gauge, f.maxBars * s.gaugeMax);
+    expect(steps, greaterThan(f.maxBars * 30));
     expect(x.fighters[1].actions, greaterThan(0));
-    final ev = x.step(a: never, b: aiController()); // 50th tick → おまかせ
-    expect(x.fighters[0].autoPicks, 1);
-    expect(
-      ev.where((e) => e.type == 'select' && e.i('side') == 0).single.i('auto'),
-      1,
-    );
+    // Idle at the cap: nothing more fills, nothing is picked for the kid.
+    for (var i = 0; i < 80 && !x.finished; i++) {
+      final ev = x.step(a: never, b: aiController());
+      expect(f.gauge, f.maxBars * s.gaugeMax);
+      expect(ev.where((e) => e.type == 'select' && e.i('side') == 0), isEmpty);
+    }
+    expect(f.actions, 0);
+    expect(f.waitTicks, greaterThan(80));
   });
 
-  test('さきどり: a queued move fires on the tick the gauge fills', () {
-    final r = Mulberry32(6);
-    final a = setupAt(s, randomKid(s, r), 10);
-    final b = setupAt(s, randomKid(s, r), 10);
-    final x = Battle(s, a, b, seed: 8);
-    x.queueInput(0, 0); // tapped while charging
-    List<BattleEvent> ev = const [];
-    while (x.fighters[0].actions == 0) {
-      ev = x.step(b: aiController());
+  test('a move costs its bars; the rest of the gauge stays', () {
+    final r = Mulberry32(14);
+    final a = setupAt(s, randomKid(s, r), 20);
+    final x = Battle(s, a, a, seed: 3);
+    final f = x.fighters[0];
+    while (f.bars < 2) {
+      x.step(a: never, b: never);
     }
-    final ready = ev.where((e) => e.type == 'ready' && e.i('side') == 0);
-    final select = ev.where((e) => e.type == 'select' && e.i('side') == 0);
-    expect(ready, hasLength(1));
-    expect(select.single.i('slot'), 0);
-    expect(select.single.i('auto'), 0);
+    final before = f.gauge;
+    x.queueInput(0, 0); // slot 0 costs 1 bar
+    final ev = x.step(a: never, b: never);
+    final sel = ev.where((e) => e.type == 'select' && e.i('side') == 0).single;
+    expect(sel.i('cost'), 1);
+    expect(f.gauge, before + x.fillRate(0) - s.gaugeMax);
+  });
+
+  test('さきどり: a queued move fires on the tick its bars are there', () {
+    final r = Mulberry32(6);
+    final g = randomKid(s, r);
+    final a = setupAt(s, g, 60);
+    final x = Battle(s, a, setupAt(s, randomKid(s, r), 60), seed: 8);
+    final big = a.moves.length - 1; // ひっさつ: costs max bars
+    expect(a.moves[big].bars, a.maxBars);
+    x.queueInput(0, big); // tapped with an empty gauge
+    while (x.fighters[0].actions == 0) {
+      final ev = x.step(b: aiController());
+      final sel = ev.where((e) => e.type == 'select' && e.i('side') == 0);
+      if (sel.isNotEmpty) {
+        expect(sel.single.i('slot'), big);
+        expect(
+          ev.where((e) => e.type == 'bar' && e.i('side') == 0),
+          isNotEmpty,
+        );
+        expect(x.fighters[0].gauge, lessThan(s.gaugeMax));
+      }
+    }
     expect(x.fighters[0].queued, isNull);
   });
 
-  test('a later tap replaces the queued one; an unusable one is ignored', () {
+  test('a later tap replaces the queued one; an impossible one is dropped', () {
     final r = Mulberry32(7);
     final a = setupAt(s, randomKid(s, r), 50);
     final x = Battle(s, a, a, seed: 9);
     x.queueInput(0, 3);
     x.queueInput(0, 9); // replaces slot 3; out of range
-    while (x.fighters[0].phase == Phase.charging) {
+    x.step(b: aiController());
+    expect(x.events.where((e) => e.type == 'inputIgnored'), hasLength(1));
+    expect(x.fighters[0].queued, isNull);
+    x.queueInput(0, 1);
+    x.queueInput(0, 0); // the newer input wins
+    while (x.fighters[0].actions == 0) {
       x.step(b: aiController());
     }
-    expect(x.events.where((e) => e.type == 'inputIgnored'), hasLength(1));
-    expect(x.fighters[0].phase, Phase.ready); // still waiting for a choice
+    expect(
+      x.events
+          .firstWhere((e) => e.type == 'select' && e.i('side') == 0)
+          .i('slot'),
+      0,
+    );
   });
 
-  test('invalid controller answers are ignored (timeout picks)', () {
+  test('a move costing more than max bars can never be queued or used', () {
+    final r = Mulberry32(8);
+    final f = setupAt(s, randomKid(s, r), 20);
+    expect(
+      () => Battle(
+        s,
+        FighterSetup(
+          stats: f.stats,
+          attr: f.attr,
+          maxBars: 2,
+          moves: [f.moves[0], f.moves[1].copyWith(bars: 3)],
+        ),
+        f,
+        seed: 1,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('invalid controller answers are ignored; no timer picks for anyone', () {
     final r = Mulberry32(3);
     final a = setupAt(s, randomKid(s, r), 50);
     final x = Battle(s, a, a, seed: 9);
@@ -85,7 +138,26 @@ void main() {
     while (!x.finished && x.tick < 400) {
       x.step(a: bad, b: bad);
     }
-    expect(x.fighters[0].autoPicks, greaterThan(0));
+    expect(x.fighters[0].actions, 0);
+    expect(x.fighters[1].actions, 0);
+  });
+
+  test('おまかせ: random eligible plan, waits for its bars, picks again', () {
+    final r = Mulberry32(15);
+    final a = setupAt(s, randomKid(s, r), 60);
+    final x = Battle(s, a, setupAt(s, randomKid(s, r), 60), seed: 4);
+    final om = omakaseController();
+    final used = <int>{};
+    while (!x.finished && x.tick < 1200) {
+      final plan = x.fighters[0].aiPlan;
+      final ev = x.step(a: om, b: aiController());
+      for (final e in ev.where((e) => e.type == 'select' && e.i('side') == 0)) {
+        expect(e.i('slot'), plan ?? e.i('slot'));
+        used.add(e.i('slot')!);
+        expect(x.fighters[0].aiPlan, isNull);
+      }
+    }
+    expect(used.length, greaterThan(1));
   });
 
   test('renderer events carry hits, misses, crits, effectiveness and KO', () {
@@ -114,7 +186,7 @@ void main() {
     expect(
       types,
       containsAll([
-        'ready',
+        'bar',
         'select',
         'moveStart',
         'hit',

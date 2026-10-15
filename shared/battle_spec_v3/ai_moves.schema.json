@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://doodle-battle.invalid/battle_spec_v3/ai_moves.schema.json",
-  "title": "AI-proposed moves for one character (battle spec v3 DRAFT)",
-  "description": "Output of the cloud judge (Claude) when the parent allowed cloud features. The AI only chooses names, flavour, visual effect and a template with parameters; the server/app validator (docs/GAME_DESIGN_V2.md §5.6) clamps every number, enforces slot rules and scales the move down to the slot budget, or rejects it and substitutes the offline move for that slot. Numbers in this schema are the template ranges; the budget is enforced by the validator, not by the schema.",
+  "title": "AI-proposed moves for one character (battle spec v4: stackable gauge bars)",
+  "description": "Output of the cloud judge (Claude) when the parent allowed cloud features. The AI only chooses names, flavour, visual effect and a template with parameters; the server/app validator (docs/GAME_DESIGN_V2.md §5.6) clamps every number, enforces slot rules and scales the move down to the slot budget, or rejects it and substitutes the offline move for that slot. The cost of a move in gauge bars (1..5, never above the character's max bars) is derived by the validator from the move's strength; the AI never sets it (there is no spCost / bars field, and either is ignored if sent). Numbers in this schema are the template ranges; the budget is enforced by the validator, not by the schema.",
   "type": "object",
   "additionalProperties": false,
   "required": ["moves"],
@@ -48,11 +48,10 @@
           "enum": ["STR80_AGI20", "STR70_VIT30", "STR60_DEX40", "INT80_DEX20", "INT70_RES30", "INT60_LUK40"],
           "description": "Damage templates only: strike/combo use STR*, blast/barrage use INT*."
         },
-        "power": { "type": "integer", "minimum": 40, "maximum": 200 },
+        "power": { "type": "integer", "minimum": 40, "maximum": 1200, "description": "Big multi-bar moves need big power; the validator shrinks it to the bar budget." },
         "hits": { "type": "integer", "minimum": 1, "maximum": 3 },
         "accuracy": { "type": "integer", "minimum": 60, "maximum": 100 },
         "critBonus": { "type": "integer", "minimum": 0, "maximum": 20 },
-        "spCost": { "type": "integer", "minimum": 0, "maximum": 50 },
         "castTicks": { "type": "integer", "minimum": 0, "maximum": 20 },
         "cooldownTicks": { "type": "integer", "minimum": 0, "maximum": 150 },
         "healPct": { "type": "integer", "minimum": 10, "maximum": 40 },

@@ -288,17 +288,16 @@ class RealtimeSession extends ChangeNotifier {
     _socket?.send(selectMsg(++_selectSeq, slot));
   }
 
-  /// The child's おまかせ switch: while on, the server picks the moves (the
-  /// same AI as the 5 s timeout, 1 s after the gauge fills); off gives the
-  /// child full control again. Needs a rev 2 server; a rev 1 server's
-  /// timeout keeps picking for an idle child instead.
+  /// The child's おまかせ switch: while on, the server picks a random move,
+  /// waits until its bars are there and uses it; off gives the child full
+  /// control again. Needs a rev 2+ server.
   void setOmakase(bool on) {
     omakase = on;
     if (phase == RealtimePhase.battle) _sendOmakase();
   }
 
   void _sendOmakase() {
-    if (serverRev < kRealtimeRevision) return;
+    if (serverRev < kOmakaseRevision) return;
     _socket?.send(omakaseMsg(omakase));
   }
 

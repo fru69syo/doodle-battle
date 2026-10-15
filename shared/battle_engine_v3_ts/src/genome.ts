@@ -12,6 +12,7 @@ import {
   ATTRIBUTE_RULE,
   type Attr,
   idiv,
+  maxBarsFor,
   RAMP_TABLE,
   Stat,
   STATS,
@@ -172,6 +173,24 @@ function distribute(s: V3Spec, budget: number, aff: readonly number[]): number[]
   );
 }
 
+/**
+ * Raises SP to `minLv1Sp`, taking the difference from the other nine stats
+ * in proportion to their values (largest remainder). Total unchanged.
+ */
+function spFloor(s: V3Spec, st: number[]): number[] {
+  const d = s.minLv1Sp - st[Stat.sp]!;
+  if (d <= 0) return st;
+  const others = st.map((_, i) => i).filter((i) => i !== Stat.sp);
+  const take = largestRemainder(
+    d,
+    others.map((i) => st[i]!),
+  );
+  const out = [...st];
+  out[Stat.sp] = s.minLv1Sp;
+  others.forEach((i, k) => (out[i] = out[i]! - take[k]!));
+  return out;
+}
+
 /** Shape → グー / チョキ / パー (ties gu > choki > pa). */
 export function attributeOf(f: FeatureVector): Attr {
   const score = (k: keyof typeof ATTRIBUTE_RULE) =>
@@ -223,7 +242,7 @@ export class Genome {
     const aff = affinities(s, input.features, luck, rj);
     const fullBudget = idiv((s.budgetBase + s.budgetPerKid * kid) * jitterPct, s.budgetDiv);
     const budget = bloomer ? idiv(fullBudget * s.bloomerPreBudgetPct, 100) : fullBudget;
-    const base = distribute(s, budget, aff);
+    const base = spFloor(s, distribute(s, budget, aff));
 
     const rg = new Mulberry32(deriveSeed(seed, 11));
     const raw = aff.map(
@@ -240,7 +259,7 @@ export class Genome {
         idiv((s.budgetBase + s.budgetPerKid * s.rebirthKid) * jitterPct, s.budgetDiv) * s.rebirthBudgetPct,
         100,
       );
-      rebirth = distribute(s, b2, aff2);
+      rebirth = spFloor(s, distribute(s, b2, aff2));
     }
     this.kid = kid;
     this.isBloomer = bloomer;
@@ -256,6 +275,14 @@ export class Genome {
 
   rebornAt(level: number): boolean {
     return this.isBloomer && level >= this.spec.rebirthLevel;
+  }
+
+  /**
+   * Gauge bars (2..5) from the Lv1 base SP; a hidden bloomer uses its Lv50
+   * rebuild's SP from Lv1 on, so the count never changes and reveals nothing.
+   */
+  get maxBars(): number {
+    return maxBarsFor(this.spec, (this.rebirthBase ?? this.base)[Stat.sp]!);
   }
 
   /** Stats at `level`; `preForm` forces a bloomer's pre-rebirth formula. */

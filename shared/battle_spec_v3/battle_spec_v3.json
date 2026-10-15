@@ -1,6 +1,6 @@
 {
-  "specVersion": 3,
-  "release": "v3.0 production (engine v3). Tuned in docs/GAME_DESIGN_V2.md §10, re-run in docs/BATTLE_V3.md",
+  "specVersion": 4,
+  "release": "v4 (engine v3, stackable gauge bars, 2026-10-14). Tuned in docs/GAME_DESIGN_V2.md §10, re-run in docs/BATTLE_V3.md",
   "integerMath": "All values are integers. Every division is floor division of non-negative integers; every intermediate stays below 2^53.",
   "rng": {
     "algorithm": "mulberry32 (same as battle spec v2, docs/BATTLE.md §2)",
@@ -188,6 +188,10 @@
       "perAvg": 5,
       "formula": "maxHp = perHp*HP + perVit*VIT + perAvg*(sum of 10 stats)/10"
     },
+    "minLv1Sp": {
+      "value": 20,
+      "rule": "after the split (and for the bloomer rebirth split): if SP < minLv1Sp, d = minLv1Sp - SP is taken from the other nine stats by largestRemainder(d, their values) and SP = minLv1Sp"
+    },
     "attribute": {
       "gu": [
         "solid",
@@ -221,11 +225,18 @@
     }
   },
   "moves": {
-    "slotBudgets": [
+    "barBudgets": [
       100,
-      100,
-      120,
-      150
+      230,
+      390,
+      580,
+      800
+    ],
+    "slotMaxBars": [
+      1,
+      5,
+      5,
+      5
     ],
     "slotUnlockLevels": [
       1,
@@ -238,21 +249,24 @@
     "bloomerPreMoveFactorPct": 70,
     "legendMoveBonusPct": 5,
     "bloomerRebirthMoveBonusPct": 0,
-    "maxDiscountPct": 50
+    "castDiscountPerTick": 2,
+    "cooldownDiscountDiv": 4,
+    "maxDiscountPct": 25
   },
   "atb": {
     "tickHz": 10,
     "gaugeMax": 10000,
     "gaugeFillPerTick": 280,
     "agiWeightPct": 30,
-    "decisionTicks": 50,
-    "spMaxCenti": 10000,
-    "spStartCenti": 4000,
-    "spRegenCentiPerTick": 25,
-    "spWeightPct": 50
+    "gaugePerBar": 10000,
+    "spPerBar": 10,
+    "minBars": 2,
+    "maxBars": 5,
+    "maxBarsFormula": "clamp(lv1BaseSP / spPerBar, minBars, maxBars) from the Lv1 base stats (Genome.base; a hidden bloomer: its rebirth base from Lv1 on), constant for a character: levels, rebirth, rated sync",
+    "gauge": "0..maxBars*gaugePerBar; fills while not casting and below the cap; a move costs bars*gaugePerBar when selected; no decision timer"
   },
   "damage": {
-    "scalePct": 60,
+    "scalePct": 57,
     "typeAdvantagePct": 150,
     "typeDisadvantagePct": 75,
     "typeStrengthPct": 100,
@@ -313,7 +327,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           1,
@@ -326,10 +340,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -346,7 +356,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           2,
@@ -359,10 +369,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -379,7 +385,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           1,
@@ -392,10 +398,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -412,7 +414,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           2,
@@ -425,10 +427,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -446,10 +444,6 @@
         "healPct": [
           10,
           40
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -471,10 +465,6 @@
         "durationTicks": [
           40,
           120
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -501,10 +491,6 @@
           60,
           100
         ],
-        "spCost": [
-          0,
-          50
-        ],
         "castTicks": [
           0,
           20
@@ -525,10 +511,6 @@
         "accuracy": [
           60,
           100
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -551,10 +533,6 @@
           60,
           100
         ],
-        "spCost": [
-          0,
-          50
-        ],
         "castTicks": [
           0,
           20
@@ -575,10 +553,6 @@
         "durationTicks": [
           20,
           60
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -705,10 +679,13 @@
       "status": "statusValue*chance*accuracy/10000 (poison 120, paralyze 80)",
       "shield": "shieldPct*durationTicks/30"
     },
-    "discount": "spCost*5/4 + castTicks*2 + max(0, cooldownTicks - freeCooldown)/2, capped at value*maxDiscountPct/100; freeCooldown: heal 60, buff/debuff max(20,durationTicks), shield 40, else 20",
-    "cost": "value - discount <= slotBudgets[slot]*moveFactorPct/100",
+    "discount": "castTicks*castDiscountPerTick + max(0, cooldownTicks - freeCooldown)/cooldownDiscountDiv, capped at value*maxDiscountPct/100; freeCooldown: heal 60, buff/debuff max(20,durationTicks), shield 40, else 20",
+    "points": "value - discount",
+    "barBudget": "barBudgets[n-1]*moveFactorPct/100 (n = 1..5 bars)",
+    "bars": "smallest n in 1..5 with points <= barBudget(n); never set by the AI (bars / spCost in AI JSON are ignored)",
+    "slotBudget": "barBudget(min(slotMaxBars[slot], maxBars)); the validator shrinks a move until its points fit, so its bars never exceed the slot cap or the character's max bars",
     "slotRules": [
-      "slot1: damage template, attribute = own, spCost 0, cooldown 0, cast <= 5",
+      "slot1: damage template, attribute = own, 1 bar, cooldown 0, cast <= 5",
       "slot2: attribute != own (support moves: none)",
       "slot3: any template",
       "slot4 (ひっさつ): damage template, attribute none",
@@ -719,7 +696,7 @@
   "ai": {
     "randomPct": {
       "weak": 40,
-      "normal": 10,
+      "normal": 20,
       "strong": 0
     },
     "thinkTicks": {
@@ -727,7 +704,12 @@
       "normal": 10,
       "strong": 4
     },
-    "note": "chooseMove (ai.dart / ai.ts) is normative; the timeout auto-pick, おまかせ and server ghosts use normal; strong scores with scoreMoveStrong"
+    "saveBars": {
+      "weak": 0,
+      "normal": 1,
+      "strong": 5
+    },
+    "note": "aiDecide / chooseMove / bestMove (ai.dart / ai.ts) are normative for CPU and ghosts (ghosts and an away player: normal); strong scores with scoreMoveStrong. おまかせ (the kid switch) is omakasePick: uniform among eligible moves (off cooldown, bars <= maxBars) on the side AI stream, then wait for the bars"
   },
   "progression": {
     "evolutions": {
@@ -784,105 +766,105 @@
       ],
       "aiTier": "stage 1-20 weak, 21-60 normal, 61-100 strong",
       "powerPctTable": [
+        82,
         81,
-        78,
-        86,
-        84,
-        84,
-        90,
-        86,
         88,
+        86,
+        87,
+        90,
+        90,
+        90,
+        94,
+        103,
         93,
         98,
-        87,
-        94,
         101,
-        91,
-        95,
+        97,
+        99,
         104,
-        94,
         99,
-        106,
-        92,
-        83,
+        105,
+        107,
+        98,
+        80,
+        89,
         90,
-        91,
-        86,
+        83,
         91,
         93,
-        88,
+        86,
         94,
-        96,
         95,
-        76,
-        87,
-        81,
-        78,
-        89,
-        84,
-        81,
-        91,
-        85,
-        89,
-        78,
-        91,
-        79,
+        92,
+        77,
+        88,
         82,
+        80,
+        90,
+        83,
+        82,
+        92,
+        85,
+        87,
+        78,
+        89,
+        79,
+        80,
         94,
         82,
+        84,
+        97,
         84,
         99,
-        85,
-        96,
-        82,
-        89,
-        87,
+        83,
         85,
         91,
+        85,
         88,
-        87,
         93,
-        91,
+        87,
+        88,
+        95,
         91,
         75,
-        86,
-        82,
+        83,
+        83,
         77,
-        87,
         86,
-        80,
+        85,
+        78,
+        89,
+        87,
+        89,
+        81,
+        84,
+        93,
+        83,
+        85,
+        95,
+        86,
         90,
-        87,
-        88,
-        80,
-        82,
+        99,
         94,
-        83,
         85,
-        96,
+        85,
         85,
         89,
-        98,
-        92,
-        84,
         86,
-        88,
-        87,
-        89,
-        91,
         89,
         92,
-        94,
-        96,
-        84,
-        82,
-        89,
-        85,
-        83,
         91,
-        88,
-        86,
+        92,
         94,
+        81,
+        83,
+        87,
+        84,
+        85,
+        90,
+        86,
+        88,
+        93,
         88
       ],
       "worldRosters": [
@@ -957,7 +939,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_fire_blob",
           "boss": false,
-          "cpuPowerPct": 81
+          "cpuPowerPct": 82
         },
         {
           "stage": 2,
@@ -968,7 +950,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
-          "cpuPowerPct": 78
+          "cpuPowerPct": 81
         },
         {
           "stage": 3,
@@ -979,7 +961,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 86
+          "cpuPowerPct": 88
         },
         {
           "stage": 4,
@@ -990,7 +972,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_fire_blob",
           "boss": false,
-          "cpuPowerPct": 84
+          "cpuPowerPct": 86
         },
         {
           "stage": 5,
@@ -1001,7 +983,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
-          "cpuPowerPct": 84
+          "cpuPowerPct": 87
         },
         {
           "stage": 6,
@@ -1023,7 +1005,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_fire_blob",
           "boss": false,
-          "cpuPowerPct": 86
+          "cpuPowerPct": 90
         },
         {
           "stage": 8,
@@ -1034,7 +1016,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_leaf_caterpillar",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 90
         },
         {
           "stage": 9,
@@ -1045,7 +1027,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 94
         },
         {
           "stage": 10,
@@ -1056,7 +1038,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_leaf_frog",
           "boss": true,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 103
         },
         {
           "stage": 11,
@@ -1067,7 +1049,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_bear",
           "boss": false,
-          "cpuPowerPct": 87
+          "cpuPowerPct": 93
         },
         {
           "stage": 12,
@@ -1078,7 +1060,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_butterfly",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 98
         },
         {
           "stage": 13,
@@ -1100,7 +1082,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_bear",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 97
         },
         {
           "stage": 15,
@@ -1111,7 +1093,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_butterfly",
           "boss": false,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 99
         },
         {
           "stage": 16,
@@ -1133,7 +1115,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_bear",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 99
         },
         {
           "stage": 18,
@@ -1144,7 +1126,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_butterfly",
           "boss": false,
-          "cpuPowerPct": 99
+          "cpuPowerPct": 105
         },
         {
           "stage": 19,
@@ -1155,7 +1137,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_hedgehog",
           "boss": false,
-          "cpuPowerPct": 106
+          "cpuPowerPct": 107
         },
         {
           "stage": 20,
@@ -1166,7 +1148,7 @@
           "aiTier": "weak",
           "cpuId": "cpu_thunder_bird",
           "boss": true,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 98
         },
         {
           "stage": 21,
@@ -1177,7 +1159,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_fish",
           "boss": false,
-          "cpuPowerPct": 83
+          "cpuPowerPct": 80
         },
         {
           "stage": 22,
@@ -1188,7 +1170,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_octopus",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 89
         },
         {
           "stage": 23,
@@ -1199,7 +1181,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_jellyfish",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 90
         },
         {
           "stage": 24,
@@ -1210,7 +1192,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_fish",
           "boss": false,
-          "cpuPowerPct": 86
+          "cpuPowerPct": 83
         },
         {
           "stage": 25,
@@ -1243,7 +1225,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_fish",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 86
         },
         {
           "stage": 28,
@@ -1265,7 +1247,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_jellyfish",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 95
         },
         {
           "stage": 30,
@@ -1276,7 +1258,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_swordfish",
           "boss": true,
-          "cpuPowerPct": 95
+          "cpuPowerPct": 92
         },
         {
           "stage": 31,
@@ -1287,7 +1269,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rock_golem",
           "boss": false,
-          "cpuPowerPct": 76
+          "cpuPowerPct": 77
         },
         {
           "stage": 32,
@@ -1298,7 +1280,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_flower",
           "boss": false,
-          "cpuPowerPct": 87
+          "cpuPowerPct": 88
         },
         {
           "stage": 33,
@@ -1309,7 +1291,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_fire_spiky",
           "boss": false,
-          "cpuPowerPct": 81
+          "cpuPowerPct": 82
         },
         {
           "stage": 34,
@@ -1320,7 +1302,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rock_golem",
           "boss": false,
-          "cpuPowerPct": 78
+          "cpuPowerPct": 80
         },
         {
           "stage": 35,
@@ -1331,7 +1313,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_flower",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 90
         },
         {
           "stage": 36,
@@ -1342,7 +1324,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_fire_spiky",
           "boss": false,
-          "cpuPowerPct": 84
+          "cpuPowerPct": 83
         },
         {
           "stage": 37,
@@ -1353,7 +1335,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rock_golem",
           "boss": false,
-          "cpuPowerPct": 81
+          "cpuPowerPct": 82
         },
         {
           "stage": 38,
@@ -1364,7 +1346,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_flower",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 92
         },
         {
           "stage": 39,
@@ -1386,7 +1368,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_dino",
           "boss": true,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 87
         },
         {
           "stage": 41,
@@ -1408,7 +1390,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_snowman",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 89
         },
         {
           "stage": 43,
@@ -1430,7 +1412,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_penguin",
           "boss": false,
-          "cpuPowerPct": 82
+          "cpuPowerPct": 80
         },
         {
           "stage": 45,
@@ -1474,7 +1456,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_snowman",
           "boss": false,
-          "cpuPowerPct": 99
+          "cpuPowerPct": 97
         },
         {
           "stage": 49,
@@ -1485,7 +1467,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_water_snake",
           "boss": false,
-          "cpuPowerPct": 85
+          "cpuPowerPct": 84
         },
         {
           "stage": 50,
@@ -1496,7 +1478,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_shadow_ghost",
           "boss": true,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 99
         },
         {
           "stage": 51,
@@ -1507,7 +1489,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_car",
           "boss": false,
-          "cpuPowerPct": 82
+          "cpuPowerPct": 83
         },
         {
           "stage": 52,
@@ -1518,7 +1500,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_train",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 85
         },
         {
           "stage": 53,
@@ -1529,7 +1511,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rainbow_robot",
           "boss": false,
-          "cpuPowerPct": 87
+          "cpuPowerPct": 91
         },
         {
           "stage": 54,
@@ -1551,7 +1533,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_train",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 88
         },
         {
           "stage": 56,
@@ -1562,7 +1544,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rainbow_robot",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 93
         },
         {
           "stage": 57,
@@ -1584,7 +1566,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_train",
           "boss": false,
-          "cpuPowerPct": 93
+          "cpuPowerPct": 88
         },
         {
           "stage": 59,
@@ -1595,7 +1577,7 @@
           "aiTier": "normal",
           "cpuId": "cpu_rainbow_robot",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 95
         },
         {
           "stage": 60,
@@ -1628,7 +1610,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cactus",
           "boss": false,
-          "cpuPowerPct": 86
+          "cpuPowerPct": 83
         },
         {
           "stage": 63,
@@ -1639,7 +1621,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_thunder_star",
           "boss": false,
-          "cpuPowerPct": 82
+          "cpuPowerPct": 83
         },
         {
           "stage": 64,
@@ -1661,7 +1643,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cactus",
           "boss": false,
-          "cpuPowerPct": 87
+          "cpuPowerPct": 86
         },
         {
           "stage": 66,
@@ -1672,7 +1654,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_thunder_star",
           "boss": false,
-          "cpuPowerPct": 86
+          "cpuPowerPct": 85
         },
         {
           "stage": 67,
@@ -1683,7 +1665,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_crab",
           "boss": false,
-          "cpuPowerPct": 80
+          "cpuPowerPct": 78
         },
         {
           "stage": 68,
@@ -1694,7 +1676,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cactus",
           "boss": false,
-          "cpuPowerPct": 90
+          "cpuPowerPct": 89
         },
         {
           "stage": 69,
@@ -1716,7 +1698,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_shadow_bat",
           "boss": true,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 89
         },
         {
           "stage": 71,
@@ -1727,7 +1709,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 80
+          "cpuPowerPct": 81
         },
         {
           "stage": 72,
@@ -1738,7 +1720,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_cat",
           "boss": false,
-          "cpuPowerPct": 82
+          "cpuPowerPct": 84
         },
         {
           "stage": 73,
@@ -1749,7 +1731,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rocket",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 93
         },
         {
           "stage": 74,
@@ -1782,7 +1764,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rocket",
           "boss": false,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 95
         },
         {
           "stage": 77,
@@ -1793,7 +1775,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 85
+          "cpuPowerPct": 86
         },
         {
           "stage": 78,
@@ -1804,7 +1786,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_cat",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 90
         },
         {
           "stage": 79,
@@ -1815,7 +1797,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rocket",
           "boss": false,
-          "cpuPowerPct": 98
+          "cpuPowerPct": 99
         },
         {
           "stage": 80,
@@ -1826,7 +1808,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_castle",
           "boss": true,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 94
         },
         {
           "stage": 81,
@@ -1837,7 +1819,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cloud",
           "boss": false,
-          "cpuPowerPct": 84
+          "cpuPowerPct": 85
         },
         {
           "stage": 82,
@@ -1848,7 +1830,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_bird",
           "boss": false,
-          "cpuPowerPct": 86
+          "cpuPowerPct": 85
         },
         {
           "stage": 83,
@@ -1859,7 +1841,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_kite",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 85
         },
         {
           "stage": 84,
@@ -1870,7 +1852,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cloud",
           "boss": false,
-          "cpuPowerPct": 87
+          "cpuPowerPct": 89
         },
         {
           "stage": 85,
@@ -1881,7 +1863,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_bird",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 86
         },
         {
           "stage": 86,
@@ -1892,7 +1874,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_kite",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 89
         },
         {
           "stage": 87,
@@ -1903,7 +1885,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_cloud",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 92
         },
         {
           "stage": 88,
@@ -1914,7 +1896,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_rainbow_bird",
           "boss": false,
-          "cpuPowerPct": 92
+          "cpuPowerPct": 91
         },
         {
           "stage": 89,
@@ -1925,7 +1907,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_kite",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 92
         },
         {
           "stage": 90,
@@ -1936,7 +1918,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": true,
-          "cpuPowerPct": 96
+          "cpuPowerPct": 94
         },
         {
           "stage": 91,
@@ -1947,7 +1929,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 84
+          "cpuPowerPct": 81
         },
         {
           "stage": 92,
@@ -1958,7 +1940,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 82
+          "cpuPowerPct": 83
         },
         {
           "stage": 93,
@@ -1969,7 +1951,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": false,
-          "cpuPowerPct": 89
+          "cpuPowerPct": 87
         },
         {
           "stage": 94,
@@ -1980,7 +1962,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 85
+          "cpuPowerPct": 84
         },
         {
           "stage": 95,
@@ -1991,7 +1973,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 83
+          "cpuPowerPct": 85
         },
         {
           "stage": 96,
@@ -2002,7 +1984,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": false,
-          "cpuPowerPct": 91
+          "cpuPowerPct": 90
         },
         {
           "stage": 97,
@@ -2013,7 +1995,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_stickman",
           "boss": false,
-          "cpuPowerPct": 88
+          "cpuPowerPct": 86
         },
         {
           "stage": 98,
@@ -2024,7 +2006,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_knight",
           "boss": false,
-          "cpuPowerPct": 86
+          "cpuPowerPct": 88
         },
         {
           "stage": 99,
@@ -2035,7 +2017,7 @@
           "aiTier": "strong",
           "cpuId": "cpu_dragon",
           "boss": false,
-          "cpuPowerPct": 94
+          "cpuPowerPct": 93
         },
         {
           "stage": 100,

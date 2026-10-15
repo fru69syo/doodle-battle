@@ -48,6 +48,7 @@ Battle demoEngine(List<DemoSide> sides, {int seed = 7}) {
         stats: base.stats,
         attr: base.attr,
         moves: base.moves,
+        maxBars: base.maxBars,
         label: s.name,
       ),
     );
@@ -65,7 +66,7 @@ MoveButtonData moveButtonOf(Move m, int slot) => MoveButtonData(
           Attr.pa => MoveTint.pa,
           Attr.none => MoveTint.none,
         },
-  spCost: m.spCost,
+  bars: m.bars,
   icon: moveIconFor(m.vfx),
 );
 
@@ -171,8 +172,8 @@ class DemoBattleScreenState extends State<DemoBattleScreen> {
     return BattleControls(
       moves: [for (final (i, m) in f.moves.indexed) moveButtonOf(m, i)],
       selected: feed.pending,
-      choiceLeft: feed.choiceLeft,
-      decisionSeconds: feed.decisionSeconds,
+      bars: f.bars,
+      full: f.bars >= f.maxBars,
       casting: f.phase == Phase.casting,
       omakase: feed.alwaysAuto,
       onOmakase: (v) => setState(() {
@@ -181,6 +182,7 @@ class DemoBattleScreenState extends State<DemoBattleScreen> {
       }),
       onTap: (i) => setState(() => feed.tap(i)),
       usable: feed.usable,
+      queueable: feed.queueable,
       cooldownSeconds: (i) => f.cooldowns[i] / 10,
     );
   }

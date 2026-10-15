@@ -40,23 +40,31 @@ String _name(Mulberry32 r, Attr a, MoveKind k) {
 
 /// Largest power (multiple of 5) that fits; null if even the minimum does not.
 Move? _maxPower(V3Spec s, Move m, int budget) {
-  for (var p = 200; p >= 40; p -= 5) {
+  for (var p = kMaxPower; p >= 40; p -= 5) {
     final c = m.copyWith(power: p);
-    if (moveCost(s, c) <= budget) return c;
+    if (movePoints(s, c) <= budget) return c;
   }
   return null;
 }
 
 /// Generates the four slot moves (locked slots are generated too — they are
 /// revealed at Lv10 / Lv50). [stream] 12 normally, 14 for the bloomer's
-/// rebirth set.
+/// rebirth set. Each move aims at a cost in bars that grows with the
+/// character's max bars `M` ([maxBars], default the genome's): slot 1: 1;
+/// slot 2: coverage or status damage (M+1)/2, support up to
+/// max(2, (M+1)/2);
+/// slot 3: charged max(2, M−1) or multi-hit max(2, M−2); ひっさつ: M.
 List<Move> generateOfflineMoves(
   V3Spec s,
   Genome g, {
   required int moveFactorPct,
   int stream = 12,
   Attr? attr,
+  int? maxBars,
 }) {
+  final cap = maxBars ?? g.maxBars;
+  int target(int bars) => bars < cap ? bars : cap;
+  int budgetFor(int bars) => barBudget(s, target(bars), moveFactorPct);
   final r = Mulberry32(deriveSeed(g.seed, stream));
   // The rebirth set (stream 14) is shaped by the reborn stats.
   final st = stream == 14 && g.rebirthBase != null ? g.rebirthBase! : g.base;
@@ -75,10 +83,9 @@ List<Move> generateOfflineMoves(
   };
 
   Move damage(
-    int slot,
+    int bars,
     Attr a, {
     bool multi = false,
-    int sp = 0,
     int cast = 0,
     int cd = 0,
     int acc = 100,
@@ -95,57 +102,68 @@ List<Move> generateOfflineMoves(
       power: 40,
       hits: multi ? 2 + r.nextInt(2) : 1,
       accuracy: acc,
-      spCost: sp,
       castTicks: cast,
       cooldownTicks: cd,
       secondary: sec,
       secondaryChance: secChance,
       secondaryStat: physical ? Stat.def : Stat.res,
     );
-    return _maxPower(s, base, slotBudget(s, slot, moveFactorPct)) ??
+    final m =
+        _maxPower(s, base, budgetFor(bars)) ??
         base.copyWith(secondary: SecondaryType.none);
+    return withBars(s, m, moveFactorPct);
   }
 
-  // Slot 1: いつもの わざ.
+  // Slot 1: いつもの わざ (1 bar).
   final roll1 = r.nextInt(100);
   final m0 = roll1 < 30
-      ? damage(0, own, acc: 90)
+      ? damage(1, own, acc: 90)
       : roll1 < 50
-      ? damage(0, own, sec: SecondaryType.debuff, secChance: 20)
-      : damage(0, own);
+      ? damage(1, own, sec: SecondaryType.debuff, secChance: 20)
+      : damage(1, own);
 
   // Slot 2: coverage or support.
   final cover = own.beatenBy!.beatenBy!; // beats what beats me
   final roll2 = r.nextInt(100);
   final Move m1;
+  final half = (cap + 1) ~/ 2;
   if (roll2 < 35) {
-    m1 = damage(1, cover, cd: 30, sp: 10);
+    m1 = damage(half, cover, cd: 30);
   } else if (roll2 < 65) {
     m1 = damage(
-      1,
+      half,
       Attr.none,
       sec: r.nextInt(2) == 0 ? SecondaryType.poison : SecondaryType.paralyze,
       secChance: 30,
-      sp: 10,
     );
   } else {
-    m1 = _support(s, r, st, own, slotBudget(s, 1, moveFactorPct), vfxFor);
+    m1 = withBars(
+      s,
+      _support(
+        s,
+        r,
+        st,
+        own,
+        barBudget(s, half < 2 ? 2 : half, moveFactorPct),
+        vfxFor,
+      ),
+      moveFactorPct,
+    );
   }
 
   // Slot 3 (Lv10): strong move.
   final roll3 = r.nextInt(100);
   final m2 = roll3 < 50
-      ? damage(2, roll3 < 25 ? own : cover, sp: 20, cast: 6, cd: 40)
+      ? damage(cap > 2 ? cap - 1 : 2, roll3 < 25 ? own : cover, cast: 6, cd: 40)
       : damage(
-          2,
+          cap > 4 ? cap - 2 : 2,
           own.beats == m1.attr ? own : Attr.none,
           multi: true,
-          sp: 15,
           cd: 30,
         );
 
-  // Slot 4 (Lv50): ひっさつ.
-  final m3 = damage(3, Attr.none, sp: 40, cast: 12, cd: 80); // ひっさつ: neutral
+  // Slot 4 (Lv50): ひっさつ, neutral, as many bars as the character holds.
+  final m3 = damage(5, Attr.none, cast: 12, cd: 80);
   return [m0, m1, m2, m3];
 }
 
@@ -176,7 +194,6 @@ Move _support(
       template: 'heal',
       attr: Attr.none,
       healPct: 40,
-      spCost: 25,
       cooldownTicks: 100,
     ),
     1 => const Move(
@@ -184,7 +201,6 @@ Move _support(
       attr: Attr.none,
       shieldPct: 60,
       durationTicks: 40,
-      spCost: 10,
       cooldownTicks: 60,
     ),
     2 => Move(
@@ -192,7 +208,6 @@ Move _support(
       attr: own.beats!,
       chance: 100,
       accuracy: 90,
-      spCost: 10,
       cooldownTicks: 60,
     ),
     _ => Move(
@@ -201,7 +216,6 @@ Move _support(
       stat: physical ? Stat.str : Stat.intl,
       stages: 2,
       durationTicks: 120,
-      spCost: 15,
       cooldownTicks: 120,
     ),
   };

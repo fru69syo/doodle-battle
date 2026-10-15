@@ -64,7 +64,7 @@ afterEach(async () => {
   env = null;
 });
 
-const FIGHTER_KEYS = ["attr", "badge", "characterName", "displayName", "imagePath", "isGhost", "level", "maxHp", "moves", "rig", "snapshotId"];
+const FIGHTER_KEYS = ["attr", "badge", "characterName", "displayName", "imagePath", "isGhost", "level", "maxBars", "maxHp", "moves", "rig", "snapshotId"];
 
 function expectNothingHidden(messages: readonly ServerMsg[]): void {
   const leaks = messages.filter((m) => HIDDEN.test(JSON.stringify(m)));
@@ -117,7 +117,7 @@ describe("realtime server with Engine v3 (integration)", () => {
     // Replay = seed + logged inputs through the same adapter.
     const rep = e.store.replays.get(mA.matchId);
     if (!rep) throw new Error("no replay");
-    expect(rep.engineId).toBe("v3.0");
+    expect(rep.engineId).toBe("v3.1");
     const engine = loadEngine("v3");
     const setup = async (id: string) => {
       const s = await e.store.loadSnapshot(id);
@@ -153,7 +153,7 @@ describe("realtime server with Engine v3 (integration)", () => {
     expectNothingHidden(alice.messages);
   });
 
-  it("おまかせ switch: the server plays for the child (no timeout picks); deadline events are exact", async () => {
+  it("おまかせ switch: the server plays for the child; no decision timer anywhere", async () => {
     const e = await start();
     const alice = await client(e, "alice");
     const bob = await client(e, "bob");
@@ -175,10 +175,12 @@ describe("realtime server with Engine v3 (integration)", () => {
     const mine = rep.inputs.filter((x) => x.side === mySide);
     expect(mine.length).toBeGreaterThan(0);
     expect(mine.every((x) => x.src === "omakase")).toBe(true);
-    // Every ready of a child is followed (same tick) by its deadline; bob's picks come before it.
-    const deadlines = evs.filter((x) => x.type === "deadline");
-    expect(deadlines.length).toBeGreaterThan(0);
-    for (const d of deadlines) expect(d.at).toBe(d.tick + 52);
+    // Rev 3: no timer, so no deadline / autoPick / ready events; bars are announced instead.
+    expect(evs.some((x) => x.type === "deadline" || x.type === "autoPick" || x.type === "ready")).toBe(false);
+    expect(evs.some((x) => x.type === "bar" && x.side === mySide)).toBe(true);
+    // おまかせ only ever spends what the side can hold.
+    const me = mA.you === "a" ? mA.a : mA.b;
+    for (const x of evs) if (x.type === "select" && x.side === mySide) expect(x.cost as number).toBeLessThanOrEqual(me.maxBars);
     expect(bob.messages.some((m) => m.t === "omakase")).toBe(false);
     const valid = serverMessageValidator();
     expect([...alice.messages, ...bob.messages].filter((m) => !valid(m))).toEqual([]);

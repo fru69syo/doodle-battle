@@ -1,14 +1,14 @@
 /**
- * Real-time ATB battle at a fixed 10 Hz tick, integer maths only.
- * Bit-exact port of app/lib/domain/battle_v3/engine.dart
- * (docs/GAME_DESIGN_V2.md §6, docs/BATTLE_V3.md).
+ * Real-time battle with stackable gauge bars at a fixed 10 Hz tick, integer
+ * maths only. Bit-exact port of app/lib/domain/battle_v3/engine.dart
+ * (docs/GAME_DESIGN_V2.md §6, docs/BATTLE_V3.md). There is no decision
+ * timer: an idle fighter just stops filling at its max bars.
  *
- * The server (Cloud Run realtime) runs one `Battle` per match: queue each
- * client's `{slot}` with `queueInput`, call `step()` every 100 ms with AI
- * controllers for ghosts / disconnected players, broadcast the returned
- * events and periodically `stateHash()`.
+ * The server (Cloud Run realtime) runs one `Battle` per match through
+ * `RealtimeBattle` (realtime.ts): the server passes each side's input as a
+ * controller answer every tick, broadcasts the returned events and
+ * periodically `stateHash()`.
  */
-import { autoPickNormal } from './ai';
 import { maxHpOf } from './genome';
 import {
   DEBUFF_SECONDARY_TICKS,
@@ -26,40 +26,47 @@ export interface FighterSetup {
   /** Ten stats in Stat order (already at the battle level). */
   stats: number[];
   attr: Attr;
-  /** Unlocked moves only (1..4). */
+  /** Unlocked moves only (1..4). Slot 0 costs 1 bar, no cooldown. */
   moves: Move[];
+  /** Gauge bars this fighter can stack (2..5, from its Lv1 base SP). */
+  maxBars: number;
   label?: string;
 }
 
 export function setupToJson(f: FighterSetup): Record<string, unknown> {
-  return { stats: f.stats, attribute: f.attr, moves: f.moves.map(moveToJson) };
+  return { stats: f.stats, attribute: f.attr, maxBars: f.maxBars, moves: f.moves.map(moveToJson) };
 }
 
 export function setupFromJson(j: Record<string, unknown>): FighterSetup {
   return {
     stats: [...(j.stats as number[])],
     attr: j.attribute as Attr,
+    maxBars: j.maxBars as number,
     moves: (j.moves as Record<string, unknown>[]).map(moveFromJson),
     label: (j.label as string | undefined) ?? '',
   };
 }
 
-export type Phase = 'charging' | 'ready' | 'casting';
-const PHASES: readonly Phase[] = ['charging', 'ready', 'casting'];
+export type Phase = 'charging' | 'casting';
+const PHASES: readonly Phase[] = ['charging', 'casting'];
 
 export class Fighter {
   readonly stats: number[];
   readonly maxHp: number;
   hp: number;
-  /** centi-SP (0..10000). */
-  sp: number;
+  /** Gauge units of one bar (spec.gaugeMax). */
+  readonly gaugePerBar: number;
+  /** 0..maxBars·gaugePerBar. */
   gauge = 0;
   phase: Phase = 'charging';
-  readyTicks = 0;
+  /** Ticks with at least one full bar without acting (the AI's thinking time). */
+  waitTicks = 0;
   castSlot = -1;
   castLeft = 0;
-  /** Pre-selected / submitted move (さきどり). */
+  /** Pre-selected / submitted move (さきどり), used once usable. */
   queued: number | null = null;
+  /** The AI's planned next move (おまかせ / CPU controllers). Not hashed. */
+  aiPlan: number | null = null;
   readonly cooldowns: number[];
   readonly stages: number[] = new Array<number>(10).fill(0);
   readonly stageTicks: number[] = new Array<number>(10).fill(0);
@@ -69,7 +76,6 @@ export class Fighter {
   shieldTicks = 0;
   healUses = 0;
   actions = 0;
-  autoPicks = 0;
 
   constructor(
     s: V3Spec,
@@ -78,7 +84,7 @@ export class Fighter {
     this.stats = [...setup.stats];
     this.maxHp = maxHpOf(s, setup.stats);
     this.hp = this.maxHp;
-    this.sp = s.spStartCenti;
+    this.gaugePerBar = s.gaugeMax;
     this.cooldowns = new Array<number>(setup.moves.length).fill(0);
   }
 
@@ -90,30 +96,49 @@ export class Fighter {
     return this.setup.attr;
   }
 
-  usable(slot: number): boolean {
-    return (
-      Number.isInteger(slot) &&
-      slot >= 0 &&
-      slot < this.moves.length &&
-      this.cooldowns[slot] === 0 &&
-      this.sp >= this.moves[slot]!.spCost * 100
-    );
+  get maxBars(): number {
+    return this.setup.maxBars;
   }
 
-  decisionTicksLeft(s: V3Spec): number {
-    return this.phase === 'ready' ? s.decisionTicks - this.readyTicks : s.decisionTicks;
+  /** Full bars now. */
+  get bars(): number {
+    return idiv(this.gauge, this.gaugePerBar);
+  }
+
+  /** Bars the move of `slot` costs (0 for an invalid slot). */
+  costOf(slot: number): number {
+    return this.validSlot(slot) ? this.moves[slot]!.bars : 0;
+  }
+
+  private validSlot(slot: number): boolean {
+    return Number.isInteger(slot) && slot >= 0 && slot < this.moves.length;
+  }
+
+  /** `slot` can ever be used (valid and cost ≤ max bars): what さきどり may queue. */
+  canQueue(slot: number): boolean {
+    return this.validSlot(slot) && this.moves[slot]!.bars <= this.maxBars;
+  }
+
+  /** Usable right now: enough bars and no cooldown (caller checks casting). */
+  usable(slot: number): boolean {
+    return this.canQueue(slot) && this.cooldowns[slot] === 0 && this.gauge >= this.moves[slot]!.bars * this.gaugePerBar;
+  }
+
+  /** Off cooldown and within max bars (what the AI may plan for). */
+  eligible(slot: number): boolean {
+    return this.canQueue(slot) && this.cooldowns[slot] === 0;
   }
 
   snapshot(): Record<string, unknown> {
     return {
       hp: this.hp,
-      sp: this.sp,
       gauge: this.gauge,
       phase: this.phase,
-      readyTicks: this.readyTicks,
+      waitTicks: this.waitTicks,
       castSlot: this.castSlot,
       castLeft: this.castLeft,
       queued: this.queued,
+      aiPlan: this.aiPlan,
       cooldowns: [...this.cooldowns],
       stages: [...this.stages],
       stageTicks: [...this.stageTicks],
@@ -123,7 +148,6 @@ export class Fighter {
       shieldTicks: this.shieldTicks,
       healUses: this.healUses,
       actions: this.actions,
-      autoPicks: this.autoPicks,
     };
   }
 
@@ -131,13 +155,13 @@ export class Fighter {
     const n = (k: string) => j[k] as number;
     const set = (dst: number[], k: string) => (j[k] as number[]).forEach((v, i) => (dst[i] = v));
     this.hp = n('hp');
-    this.sp = n('sp');
     this.gauge = n('gauge');
     this.phase = j.phase as Phase;
-    this.readyTicks = n('readyTicks');
+    this.waitTicks = n('waitTicks');
     this.castSlot = n('castSlot');
     this.castLeft = n('castLeft');
     this.queued = (j.queued as number | null | undefined) ?? null;
+    this.aiPlan = (j.aiPlan as number | null | undefined) ?? null;
     set(this.cooldowns, 'cooldowns');
     set(this.stages, 'stages');
     set(this.stageTicks, 'stageTicks');
@@ -147,7 +171,6 @@ export class Fighter {
     this.shieldTicks = n('shieldTicks');
     this.healUses = n('healUses');
     this.actions = n('actions');
-    this.autoPicks = n('autoPicks');
   }
 }
 
@@ -170,9 +193,8 @@ export function eventsHash(events: readonly BattleEvent[]): number {
   return fnv1a32(events.map(eventLine).join('\n'));
 }
 
-/** Returns a slot, or null to keep waiting (timeout auto-picks). */
+/** Returns a slot to use now, or null to keep filling (no decision timer). */
 export type Controller = (battle: Battle, side: number) => number | null;
-export type AutoPicker = (battle: Battle, side: number, rng: Mulberry32) => number;
 
 /** Raw triangle multiplier (%) of a move attribute against a defender. */
 export function typeChart(move: Attr, defender: Attr, s: V3Spec): number {
@@ -191,7 +213,6 @@ export class Battle {
   tick = 0;
   winner: number | null = null;
   endReason: string | null = null;
-  readonly autoPick: AutoPicker;
   readonly recordEvents: boolean;
 
   constructor(
@@ -199,15 +220,18 @@ export class Battle {
     a: FighterSetup,
     b: FighterSetup,
     readonly seed: number,
-    opts: { autoPick?: AutoPicker; recordEvents?: boolean } = {},
+    opts: { recordEvents?: boolean } = {},
   ) {
     this.fighters = [new Fighter(spec, a), new Fighter(spec, b)];
     for (const f of this.fighters) {
       if (f.moves.length < 1 || f.moves.length > 4) throw new RangeError('a fighter needs 1..4 moves');
+      if (!Number.isInteger(f.maxBars) || f.maxBars < spec.minBars || f.maxBars > spec.maxBars) {
+        throw new RangeError(`maxBars must be ${spec.minBars}..${spec.maxBars}`);
+      }
+      for (const m of f.moves) if (m.bars < 1 || m.bars > f.maxBars) throw new RangeError('a move costs 1..maxBars bars');
     }
     this.rng = new Mulberry32(deriveSeed(seed, 0));
     this.aiRng = [new Mulberry32(deriveSeed(seed, 1)), new Mulberry32(deriveSeed(seed, 2))];
-    this.autoPick = opts.autoPick ?? autoPickNormal;
     this.recordEvents = opts.recordEvents ?? true;
   }
 
@@ -215,7 +239,11 @@ export class Battle {
     return this.winner !== null;
   }
 
-  /** Submits a move for `side` (used when ready; replaces an older one). */
+  /**
+   * Submits a move for `side` (a tap / さきどり, any time): used on the first
+   * tick it is usable; a newer input replaces it; one that can never be used
+   * is dropped with `inputIgnored`.
+   */
   queueInput(side: number, slot: number): void {
     if (!this.finished) this.fighters[side]!.queued = slot;
   }
@@ -295,26 +323,19 @@ export class Battle {
       }
     }
     if (this.finished) return [...this.tickEvents];
-    // 2. SP regen
-    for (let i = 0; i < 2; i++) {
-      const f = this.fighters[i]!;
-      const r = this.rel(s.spRegenCentiPerTick, f.stats[Stat.sp]!, this.fighters[1 - i]!.stats[Stat.sp]!, s.spWeightPct);
-      const v = f.sp + r;
-      f.sp = v > s.spMaxCenti ? s.spMaxCenti : v;
-    }
-    // 3. gauges
+    // 2. gauges
     for (let i = 0; i < 2; i++) {
       const f = this.fighters[i]!;
       if (f.phase !== 'charging') continue;
-      f.gauge += this.fillRate(i);
-      if (f.gauge >= s.gaugeMax) {
-        f.gauge = s.gaugeMax;
-        f.phase = 'ready';
-        f.readyTicks = 0;
-        this.ev('ready', { side: i });
-      }
+      const cap = f.maxBars * s.gaugeMax;
+      if (f.gauge >= cap) continue;
+      const before = idiv(f.gauge, s.gaugeMax);
+      const g = f.gauge + this.fillRate(i);
+      f.gauge = g > cap ? cap : g;
+      const after = idiv(f.gauge, s.gaugeMax);
+      if (after > before) this.ev('bar', { side: i, bars: after });
     }
-    // 4. decisions
+    // 3. decisions
     const due: number[] = [];
     for (let i = 0; i < 2; i++) {
       const f = this.fighters[i]!;
@@ -322,33 +343,33 @@ export class Battle {
         if (--f.castLeft <= 0) due.push(i);
         continue;
       }
-      if (f.phase !== 'ready') continue;
       let slot: number | null = null;
       const q = f.queued;
       if (q !== null) {
-        f.queued = null;
-        if (f.usable(q)) slot = q;
-        else this.ev('inputIgnored', { side: i, slot: q });
+        if (!f.canQueue(q)) {
+          f.queued = null;
+          this.ev('inputIgnored', { side: i, slot: q });
+        } else if (f.usable(q)) {
+          f.queued = null;
+          slot = q;
+        }
       }
-      if (slot === null) {
+      if (slot === null && f.queued === null) {
         const c = i === 0 ? ca : cb;
         const x = c ? c(this, i) : null;
         if (x !== null && f.usable(x)) slot = x;
       }
-      let auto = 0;
       if (slot === null) {
-        f.readyTicks++;
-        if (f.readyTicks < s.decisionTicks) continue;
-        slot = this.autoPick(this, i, this.aiRng[i]!);
-        f.autoPicks++;
-        auto = 1;
+        f.waitTicks = f.gauge >= s.gaugeMax ? f.waitTicks + 1 : 0;
+        continue;
       }
       const m = f.moves[slot]!;
-      f.sp -= m.spCost * 100;
+      f.gauge -= m.bars * s.gaugeMax;
       f.castSlot = slot;
-      f.readyTicks = 0; // only meaningful while ready
+      f.waitTicks = 0;
+      f.aiPlan = null;
       f.actions++;
-      this.ev('select', { side: i, slot, cast: m.castTicks, auto });
+      this.ev('select', { side: i, slot, cost: m.bars, cast: m.castTicks });
       if (m.castTicks > 0) {
         f.phase = 'casting';
         f.castLeft = m.castTicks;
@@ -356,13 +377,13 @@ export class Battle {
         due.push(i);
       }
     }
-    // 5. resolutions
+    // 4. resolutions
     if (due.length === 2 && this.rng.nextInt(2) === 1) due.reverse();
     for (const i of due) {
       if (this.finished) break;
       this.resolve(i);
     }
-    // 6. hard cap
+    // 5. hard cap
     if (!this.finished && this.tick >= s.hardCapTick) {
       const [fa, fb] = this.fighters;
       const l = fa.hp * fb.maxHp;
@@ -395,7 +416,6 @@ export class Battle {
     const slot = f.castSlot;
     const m = f.moves[slot]!;
     f.phase = 'charging';
-    f.gauge = 0;
     f.castSlot = -1;
     f.cooldowns[slot] = m.cooldownTicks;
     this.ev('moveStart', { side: i, slot, template: m.template, attr: m.attr });
@@ -581,10 +601,9 @@ export class Battle {
       parts.push(
         [
           f.hp,
-          f.sp,
           f.gauge,
           PHASES.indexOf(f.phase),
-          f.readyTicks,
+          f.waitTicks,
           f.castSlot,
           f.castLeft,
           ...f.cooldowns,

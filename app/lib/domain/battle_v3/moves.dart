@@ -1,9 +1,11 @@
-/// Move templates, the numeric budget ("budget points") and the shrink-to-fit
-/// rule. docs/GAME_DESIGN_V2.md §5. Integer maths only.
+/// Move templates, the numeric budget ("budget points"), the cost in gauge
+/// bars and the shrink-to-fit rule. docs/GAME_DESIGN_V2.md §5. Integer maths
+/// only.
 ///
 /// The AI never decides numbers: a move is a template + parameters inside the
-/// template ranges, and its cost must fit the slot budget. Every number a
-/// battle uses is computed here (or clamped / shrunk by `validator.dart`).
+/// template ranges, its points must fit the slot's bar budget, and its cost
+/// in bars is derived from its points ([moveBars]). Every number a battle
+/// uses is computed here (or clamped / shrunk by `validator.dart`).
 library;
 
 import 'spec.dart';
@@ -78,36 +80,35 @@ class MoveTemplate {
   };
 }
 
-const _common = {
-  'spCost': R(0, 50),
-  'castTicks': R(0, 20),
-  'cooldownTicks': R(0, 150),
-};
+/// Largest power of a damage move (a 5-bar ひっさつ needs ~750).
+const int kMaxPower = 1200;
+
+const _common = {'castTicks': R(0, 20), 'cooldownTicks': R(0, 150)};
 
 const Map<String, MoveTemplate> kTemplates = {
   'strike': MoveTemplate('strike', MoveKind.physical, {
-    'power': R(40, 200),
+    'power': R(40, kMaxPower),
     'hits': R(1, 1),
     'accuracy': R(60, 100),
     'critBonus': R(0, 20),
     ..._common,
   }),
   'combo': MoveTemplate('combo', MoveKind.physical, {
-    'power': R(40, 200),
+    'power': R(40, kMaxPower),
     'hits': R(2, 3),
     'accuracy': R(60, 100),
     'critBonus': R(0, 20),
     ..._common,
   }),
   'blast': MoveTemplate('blast', MoveKind.special, {
-    'power': R(40, 200),
+    'power': R(40, kMaxPower),
     'hits': R(1, 1),
     'accuracy': R(60, 100),
     'critBonus': R(0, 20),
     ..._common,
   }),
   'barrage': MoveTemplate('barrage', MoveKind.special, {
-    'power': R(40, 200),
+    'power': R(40, kMaxPower),
     'hits': R(2, 3),
     'accuracy': R(60, 100),
     'critBonus': R(0, 20),
@@ -115,7 +116,6 @@ const Map<String, MoveTemplate> kTemplates = {
   }),
   'heal': MoveTemplate('heal', MoveKind.heal, {
     'healPct': R(10, 40),
-    'spCost': R(0, 50),
     'castTicks': R(0, 20),
     'cooldownTicks': R(60, 150),
   }),
@@ -143,7 +143,6 @@ const Map<String, MoveTemplate> kTemplates = {
   'barrier': MoveTemplate('barrier', MoveKind.shield, {
     'shieldPct': R(20, 60),
     'durationTicks': R(20, 60),
-    'spCost': R(0, 50),
     'castTicks': R(0, 5),
     'cooldownTicks': R(40, 150),
   }),
@@ -180,7 +179,7 @@ class Move {
     this.hits = 1,
     this.accuracy = 100,
     this.critBonus = 0,
-    this.spCost = 0,
+    this.bars = 1,
     this.castTicks = 0,
     this.cooldownTicks = 0,
     this.secondary = SecondaryType.none,
@@ -206,7 +205,10 @@ class Move {
   final int hits;
   final int accuracy;
   final int critBonus;
-  final int spCost;
+
+  /// Cost in gauge bars (1..5), derived from the points by [moveBars] when
+  /// the move is generated or validated (never set by the AI).
+  final int bars;
   final int castTicks;
   final int cooldownTicks;
   final SecondaryType secondary;
@@ -237,7 +239,7 @@ class Move {
     String? colour,
     int? power,
     int? accuracy,
-    int? spCost,
+    int? bars,
     int? castTicks,
     int? cooldownTicks,
     SecondaryType? secondary,
@@ -260,7 +262,7 @@ class Move {
     hits: hits,
     accuracy: accuracy ?? this.accuracy,
     critBonus: critBonus,
-    spCost: spCost ?? this.spCost,
+    bars: bars ?? this.bars,
     castTicks: castTicks ?? this.castTicks,
     cooldownTicks: cooldownTicks ?? this.cooldownTicks,
     secondary: secondary ?? this.secondary,
@@ -311,14 +313,14 @@ class Move {
       'shieldPct': shieldPct,
       'durationTicks': durationTicks,
     },
-    'spCost': spCost,
+    'bars': bars,
     'castTicks': castTicks,
     'cooldownTicks': cooldownTicks,
   };
 
-  /// Inverse of [toJson] for already-validated moves (golden vectors,
-  /// persisted characters). Not a validator: use [validateAiMove] for AI
-  /// output.
+  /// Inverse of [toJson] for already-validated moves (golden vectors).
+  /// Not a validator: use [validateAiMove] for AI output and stored
+  /// proposals (a legacy `spCost` is ignored everywhere).
   factory Move.fromJson(Map<String, Object?> j) {
     int i(String k, [int d = 0]) => (j[k] as int?) ?? d;
     final sec = (j['secondary'] as Map?)?.cast<String, Object?>();
@@ -336,7 +338,7 @@ class Move {
       hits: i('hits', 1),
       accuracy: i('accuracy', 100),
       critBonus: i('critBonus'),
-      spCost: i('spCost'),
+      bars: i('bars', 1),
       castTicks: i('castTicks'),
       cooldownTicks: i('cooldownTicks'),
       secondary: sec == null
@@ -412,30 +414,66 @@ int moveValue(Move m) {
   }
 }
 
-/// Discount for SP cost, cast time and extra cooldown (capped).
+/// Discount for cast time and extra cooldown (capped at
+/// [V3Spec.maxDiscountPct] % of the value). Casting pauses the gauge, so a
+/// cast is a real cost; a cooldown mostly is not (the bars take time to
+/// refill anyway), so it counts a quarter.
 int moveDiscount(V3Spec s, Move m) {
   final free = freeCooldown(m);
   final d =
-      m.spCost * 5 ~/ 4 +
-      m.castTicks * 2 +
-      (m.cooldownTicks > free ? (m.cooldownTicks - free) ~/ 2 : 0);
+      m.castTicks * s.castDiscountPerTick +
+      (m.cooldownTicks > free
+          ? (m.cooldownTicks - free) ~/ s.cooldownDiscountDiv
+          : 0);
   final cap = moveValue(m) * s.maxDiscountPct ~/ 100;
   return d < cap ? d : cap;
 }
 
-/// Net cost in budget points; must be <= [slotBudget].
-int moveCost(V3Spec s, Move m) => moveValue(m) - moveDiscount(s, m);
+/// Net strength in budget points (value − discount).
+int movePoints(V3Spec s, Move m) => moveValue(m) - moveDiscount(s, m);
 
-/// Budget of [slot] (0..3) for a character with [moveFactorPct].
-int slotBudget(V3Spec s, int slot, int moveFactorPct) =>
-    s.slotBudgets[slot] * moveFactorPct ~/ 100;
+/// Budget points a move may be worth for a cost of [bars] (1..5) at
+/// [moveFactorPct].
+int barBudget(V3Spec s, int bars, int moveFactorPct) =>
+    s.barBudgets[bars - 1] * moveFactorPct ~/ 100;
+
+/// Cost in bars of a move worth [points]: the smallest n (1..5) whose
+/// [barBudget] holds it, or 0 when even 5 bars do not.
+int barsForPoints(V3Spec s, int points, int moveFactorPct) {
+  for (var n = 1; n <= s.barBudgets.length; n++) {
+    if (points <= barBudget(s, n, moveFactorPct)) return n;
+  }
+  return 0;
+}
+
+/// Cost in bars of [m] for a character with [moveFactorPct] (0 = too big).
+int moveBars(V3Spec s, Move m, int moveFactorPct) =>
+    barsForPoints(s, movePoints(s, m), moveFactorPct);
+
+/// The most bars the move of [slot] (0..3) may cost for a character with
+/// [maxBars].
+int slotMaxBarsFor(V3Spec s, int slot, int maxBars) {
+  final b = s.slotMaxBars[slot];
+  return b < maxBars ? b : maxBars;
+}
+
+/// Budget (points) of [slot] for a character with [moveFactorPct] and
+/// [maxBars]: the budget of the most bars the slot may cost.
+int slotBudget(V3Spec s, int slot, int moveFactorPct, int maxBars) =>
+    barBudget(s, slotMaxBarsFor(s, slot, maxBars), moveFactorPct);
+
+/// [m] with its [Move.bars] derived from its points.
+Move withBars(V3Spec s, Move m, int moveFactorPct) {
+  final b = moveBars(s, m, moveFactorPct);
+  return m.copyWith(bars: b < 1 ? 1 : b);
+}
 
 /// Shrinks the primary magnitude until the move fits [budget]; null when
 /// impossible. Returns the same instance when it already fits.
 Move? fitToBudget(V3Spec s, Move m0, int budget) {
   var m = m0;
   for (var guard = 0; guard < 400; guard++) {
-    if (moveCost(s, m) <= budget) return m;
+    if (movePoints(s, m) <= budget) return m;
     final r = m.tpl.ranges;
     switch (m.kind) {
       case MoveKind.physical:

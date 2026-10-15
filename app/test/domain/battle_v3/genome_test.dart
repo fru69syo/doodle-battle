@@ -135,4 +135,40 @@ void main() {
       prev = cur;
     }
   });
+
+  test('Lv1 SP >= 20 (both bloomer forms); total budget unchanged', () {
+    final r = Mulberry32(41);
+    for (var i = 0; i < 400; i++) {
+      final g = i.isEven ? randomKid(s, r) : randomBloomer(s, r);
+      expect(g.base[Stat.sp.index], greaterThanOrEqualTo(s.minLv1Sp));
+      expect(g.base.fold<int>(0, (a, b) => a + b), g.budget);
+      expect(g.base.every((v) => v >= 1), isTrue);
+      final rb = g.rebirthBase;
+      if (rb != null) expect(rb[Stat.sp.index], greaterThanOrEqualTo(20));
+    }
+  });
+
+  test('max bars never change and do not reveal a hidden bloomer', () {
+    final r = Mulberry32(42);
+    final kid = List.filled(6, 0), bloomer = List.filled(6, 0);
+    for (var i = 0; i < 2000; i++) {
+      final k = randomKid(s, r);
+      final b = randomBloomer(s, r);
+      kid[k.maxBars]++;
+      bloomer[b.maxBars]++;
+      if (i < 50) {
+        final bars = {
+          for (final lv in [1, 49, 50, 100]) setupAt(s, b, lv).maxBars,
+          for (final lv in [5, 49, 60])
+            ratedSetup(s, b, actualLevel: lv).maxBars,
+          familySetup(s, b, actualLevel: 30, battleLevel: 60).maxBars,
+        };
+        expect(bars, {b.maxBars});
+      }
+    }
+    // Same shape of distribution (within a few points per bar count).
+    for (var n = 2; n <= 5; n++) {
+      expect((kid[n] - bloomer[n]).abs(), lessThan(160), reason: '$n bars');
+    }
+  });
 }

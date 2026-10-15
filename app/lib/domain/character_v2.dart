@@ -176,6 +176,10 @@ class CharacterV2 {
     return [for (final m in moves) stale ? null : m.name];
   }
 
+  /// Gauge bars this character can stack in battle (2..5, from its Lv1
+  /// SP; see [Genome.maxBars]).
+  int maxBars({V3Spec s = const V3Spec()}) => genome(s).maxBars;
+
   /// All four slot moves at the current level (locked ones included; the
   /// first [unlockedSlotCount] are usable). [ngCheck] re-checks AI names.
   List<Move> allMoves({

@@ -90,7 +90,6 @@ export function fakeAi() {
     hits: 1,
     accuracy: 100,
     critBonus: 0,
-    spCost: 10,
     castTicks: 0,
     cooldownTicks: 0,
   }));

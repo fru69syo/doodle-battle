@@ -66,6 +66,10 @@ export interface MovePromptContext {
   attribute: string;
   /** Budget points per slot (already × the move factor). */
   slotBudgets: number[];
+  /** Gauge bars the character can stack (2..5). */
+  maxBars: number;
+  /** Points a move may be worth for a cost of n bars (index n − 1, up to maxBars; × the move factor). */
+  barBudgets: number[];
 }
 
 export interface JudgeOptions {
@@ -92,6 +96,10 @@ export interface MoveSlotContext {
   slot: number;
   /** Budget points of this slot (already × the move factor). */
   budget: number;
+  /** Gauge bars the character can stack (2..5). */
+  maxBars: number;
+  /** Points a move may be worth for a cost of n bars (index n − 1, up to maxBars). */
+  barBudgets: number[];
   /** Kana names of the character's other moves (validated by the caller). */
   otherNames: readonly string[];
 }

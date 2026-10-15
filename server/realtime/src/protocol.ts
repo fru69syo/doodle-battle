@@ -1,17 +1,23 @@
 /**
- * WebSocket protocol v1, revision 2 (docs/REALTIME_PROTOCOL.md is the human-readable version;
+ * WebSocket protocol v1, revision 3 (docs/REALTIME_PROTOCOL.md is the human-readable version;
  * keep both in sync). JSON text frames, one message per frame, discriminated by `t`.
  *
- * `proto` (major) changes only for breaking changes. `rev` (sent in `welcome`) counts additive
- * revisions: rev 2 added `omakase`, `FighterInfo.snapshotId` and the `deadline` event.
+ * `proto` (major) changes only for breaking changes. `rev` (sent in `welcome`) counts
+ * revisions: rev 2 added `omakase`, `FighterInfo.snapshotId` and the `deadline` event; rev 3
+ * (stackable gauge bars) added `FighterInfo.maxBars`, `MovePublic.bars`, `SideView.bars` /
+ * `maxBars` and the `bar` event, and removed the 5 s timer (`deadline`, `autoPick`,
+ * `match.decisionTicks`, `MovePublic.spCost`, `SideView.sp` / `ready`).
  */
 import { z } from "zod";
 import type { BadgeId } from "./rating";
 import type { BattleEvent, MovePublic, SideView } from "./engine";
 
 export const PROTOCOL_VERSION = 1;
-/** Additive revision of protocol v1 (welcome.rev). 1 = the original v1, 2 = omakase + deadline + snapshotId. */
-export const PROTOCOL_REVISION = 2;
+/**
+ * Revision of protocol v1 (welcome.rev). 1 = the original v1, 2 = omakase + deadline +
+ * snapshotId, 3 = stackable gauge bars (no decision timer).
+ */
+export const PROTOCOL_REVISION = 3;
 export const PATH = "/v2";
 
 /** Max size of the first message (tokens are ~1–2 KB each) and of every later message. */
@@ -81,6 +87,8 @@ export interface FighterInfo {
   attr: string;
   moves: readonly MovePublic[];
   maxHp: number;
+  /** (rev 3) Gauge bars this fighter can stack (2..5); every move costs 1..maxBars bars. */
+  maxBars: number;
   /** Rated play is always at Lv50 (GAME_DESIGN_V2 §8). */
   level: number;
   badge: BadgeId;
@@ -96,7 +104,6 @@ export type ServerMsg =
       matchId: string;
       you: "a" | "b";
       tickHz: number;
-      decisionTicks: number;
       a: FighterInfo;
       b: FighterInfo;
       resumed: boolean;

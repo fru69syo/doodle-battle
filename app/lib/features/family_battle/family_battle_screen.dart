@@ -44,13 +44,13 @@ class _FamilyBattleScreenState extends ConsumerState<FamilyBattleScreen> {
     _c.setup(FamilySide.b),
     seed: _seed,
   );
-  final _auto = aiController();
+  final _auto = omakaseController();
 
   /// おまかせ for あお (the feed's own flag is あか's).
   bool _autoB = false;
   late final BattleV3Feed _feed = BattleV3Feed(
     _engine,
-    // Side b is a person too: no CPU; null = wait (5 s → おまかせ).
+    // Side b is a person too: no CPU; null = keep filling (no timer).
     cpu: (b, side) => _autoB ? _auto(b, side) : null,
   );
   late final AtbFeed _atb = AtbFeed(
@@ -114,13 +114,6 @@ class _FamilyBattleScreenState extends ConsumerState<FamilyBattleScreen> {
     });
   }
 
-  double? _choiceLeft(int side) {
-    final f = _engine.fighters[side];
-    final auto = side == 0 ? _feed.alwaysAuto : _autoB;
-    if (f.phase != Phase.ready || auto || _engine.finished) return null;
-    return f.decisionTicksLeft(_spec) / _spec.tickHz;
-  }
-
   void _tap(int side, int slot) {
     if (side == 0) {
       setState(() => _feed.tap(slot));
@@ -128,6 +121,7 @@ class _FamilyBattleScreenState extends ConsumerState<FamilyBattleScreen> {
     }
     final f = _engine.fighters[1];
     if (_engine.finished || _autoB || f.phase == Phase.casting) return;
+    if (!f.canQueue(slot)) return;
     setState(() => _engine.queueInput(1, slot));
   }
 
@@ -138,6 +132,7 @@ class _FamilyBattleScreenState extends ConsumerState<FamilyBattleScreen> {
     } else {
       _autoB = on;
       _engine.clearInput(1);
+      _engine.fighters[1].aiPlan = null;
     }
   });
 
@@ -154,7 +149,6 @@ class _FamilyBattleScreenState extends ConsumerState<FamilyBattleScreen> {
       engine: _engine,
       side: side,
       selected: _engine.fighters[side].queued,
-      choiceLeft: _choiceLeft(side),
       omakase: side == 0 ? _feed.alwaysAuto : _autoB,
       onOmakase: (on) => _omakase(side, on),
       onTap: (slot) => _tap(side, slot),
