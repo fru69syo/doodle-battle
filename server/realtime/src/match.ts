@@ -1,16 +1,17 @@
 /**
  * One server-authoritative match: drives the engine at 10 Hz and owns everything time-based
- * that the children experience (GAME_DESIGN_V2 §6.3, §6.7):
+ * that the children experience (GAME_DESIGN_V2 §6.3, §6.7). Stackable gauge bars (spec v4):
  *
- *   さきどり    a move picked while the gauge fills is queued and used the tick the gauge is full
- *   5 s timer  50 ticks after the gauge filled (+3 ticks network grace) おまかせ picks for the child
- *   ghosts     the おまかせ AI ("normal", thinks 10 ticks = 1 s) plays the ghost
- *   おまかせ   the child's switch (`omakase` message): the same AI plays that side, 1 s after
- *              the gauge filled; switching it off gives the child full control again
- *   deadline   when a child's gauge fills, a `deadline` event tells the exact tick of the 5 s
- *              timeout pick, so the app's ring does not have to guess from 2 Hz snapshots
- *   disconnect after 10 s away おまかせ plays for the child; after 30 s the child loses (XP 0);
- *              if both sides are away for 30 s the match is aborted (no rating change)
+ *   さきどり    a picked move is kept and used in the tick enough bars are there (and it is off
+ *              cooldown); a newer `select` replaces it. A move costing more than the side's max
+ *              bars is refused (`unusable`). There is no decision timer: an idle child just caps
+ *              at max bars.
+ *   ghosts     the tiered AI ("normal", 1 s thinking time) plays the ghost
+ *   おまかせ   the child's switch (`omakase` message): the server picks a random move the side
+ *              can afford within its max bars, waits until the bars are there, uses it, picks
+ *              again; switching it off gives the child full control again
+ *   disconnect after 10 s away the AI ("normal") plays for the child; after 30 s the child loses
+ *              (XP 0); if both sides are away for 30 s the match is aborted (no rating change)
  *
  * The match never touches the network or Firestore itself: it calls `send` callbacks and
  * reports its summary to the hub, which keeps it unit-testable tick by tick.
@@ -20,8 +21,6 @@ import { sideName, type FighterInfo, type ServerMsg } from "./protocol";
 import type { EndReason, InputRecord, MatchSummary } from "./results";
 
 export interface MatchTiming {
-  decisionTicks: number;
-  graceTicks: number;
   aiThinkTicks: number;
   autoAfterDisconnectTicks: number;
   forfeitAfterDisconnectTicks: number;
@@ -29,8 +28,6 @@ export interface MatchTiming {
 }
 
 export const DEFAULT_TIMING: MatchTiming = {
-  decisionTicks: 50,
-  graceTicks: 3,
   aiThinkTicks: 10,
   autoAfterDisconnectTicks: 100,
   forfeitAfterDisconnectTicks: 300,
@@ -56,7 +53,8 @@ interface SideState extends MatchSide {
   lastSeq: number;
   /** The child's おまかせ switch (protocol rev 2). */
   omakase: boolean;
-  readyAt: number | null;
+  /** Who chose for this side in the last tick (an AI plan is dropped when it changes). */
+  control: InputRecord["src"] | null;
   disconnectedAt: number | null;
 }
 
@@ -81,7 +79,7 @@ export class Match {
     readonly startedAtMs: number,
     private readonly timing: MatchTiming = DEFAULT_TIMING,
   ) {
-    const mk = (x: MatchSide): SideState => ({ ...x, send: null, queued: null, queuedSeq: -1, lastSeq: -1, omakase: false, readyAt: null, disconnectedAt: null });
+    const mk = (x: MatchSide): SideState => ({ ...x, send: null, queued: null, queuedSeq: -1, lastSeq: -1, omakase: false, control: null, disconnectedAt: null });
     this.s = [mk(sides[0]), mk(sides[1])];
   }
 
@@ -129,17 +127,18 @@ export class Match {
     const st = this.s[side];
     if (this.done || seq <= st.lastSeq) return { t: "sel", seq, slot, accepted: false, queued: false, reason: "stale" };
     st.lastSeq = seq;
-    if (slot >= st.info.moves.length) return { t: "sel", seq, slot, accepted: false, queued: false, reason: "unusable" };
+    // A move that can never be paid for (cost > max bars) or does not exist.
+    if (!this.sim.canQueue(side, slot)) return { t: "sel", seq, slot, accepted: false, queued: false, reason: "unusable" };
     st.queued = slot;
     st.queuedSeq = seq;
-    // queued=true: it will be used when the gauge is full (さきどり) or on the next tick if ready.
-    return { t: "sel", seq, slot, accepted: true, queued: !this.sim.isReady(side) };
+    // queued=true: kept until enough bars are there (さきどり); false: used in the next tick.
+    return { t: "sel", seq, slot, accepted: true, queued: !this.sim.canUse(side, slot) };
   }
 
   /**
-   * The child's おまかせ switch. On: the server's AI (ふつう, like the timeout) picks for this
-   * side 1 s after its gauge fills; a pending さきどり is dropped. Off: full control again.
-   * Private ack (the opponent never learns about it).
+   * The child's おまかせ switch. On: the server picks a random affordable move for this side
+   * and uses it once its bars are there, then picks again; a pending さきどり is dropped.
+   * Off: full control again. Private ack (the opponent never learns about it).
    */
   setOmakase(side: Side, on: boolean): ServerMsg {
     const st = this.s[side];
@@ -150,14 +149,8 @@ export class Match {
     return { t: "omakase", on: st.omakase };
   }
 
-  /** Tick at which the 5 s timeout picks for a side whose gauge filled at `readyAt`. */
-  deadlineOf(readyAt: number): number {
-    // The ready tick counts as the first waiting tick (like the engine's own timer).
-    return readyAt + this.timing.decisionTicks + this.timing.graceTicks - 1;
-  }
-
   private aiControlled(st: SideState): boolean {
-    if (st.kind === "ghost" || st.omakase) return true;
+    if (st.kind === "ghost") return true;
     return st.disconnectedAt !== null && this.sim.tick - st.disconnectedAt >= this.timing.autoAfterDisconnectTicks;
   }
 
@@ -166,30 +159,23 @@ export class Match {
     if (this.done) return;
     if (this.checkDisconnects()) return;
 
-    const next = this.sim.tick + 1;
     const inputs: [number | null, number | null] = [null, null];
     const srcs: [InputRecord["src"] | null, InputRecord["src"] | null] = [null, null];
     for (const side of [0, 1] as const) {
       const st = this.s[side];
-      const ready = this.sim.isReady(side);
-      if (this.aiControlled(st)) {
-        if (ready && st.readyAt !== null && next - st.readyAt >= this.timing.aiThinkTicks) {
-          inputs[side] = this.sim.chooseMove(side, st.aiTier ?? "normal");
-          srcs[side] = st.kind === "player" && st.omakase && st.disconnectedAt === null ? "omakase" : "ai";
-        }
-        continue;
+      const control: InputRecord["src"] = this.aiControlled(st) ? "ai" : st.omakase ? "omakase" : "player";
+      if (control !== st.control) {
+        this.sim.clearPlan(side);
+        st.control = control;
       }
-      if (ready && st.queued !== null && !this.sim.canUse(side, st.queued)) {
-        st.send?.({ t: "sel", seq: st.queuedSeq, slot: st.queued, accepted: false, queued: false, reason: "unusable" });
-        st.queued = null;
-      }
-      if (st.queued !== null) {
+      if (control === "ai") {
+        inputs[side] = this.sim.aiInput(side, st.aiTier ?? "normal", this.timing.aiThinkTicks);
+      } else if (control === "omakase") {
+        inputs[side] = this.sim.omakaseInput(side);
+      } else {
         inputs[side] = st.queued;
-        srcs[side] = "player";
-      } else if (ready && st.readyAt !== null && next >= this.deadlineOf(st.readyAt)) {
-        inputs[side] = this.sim.chooseMove(side, "normal");
-        srcs[side] = "auto";
       }
+      if (inputs[side] !== null) srcs[side] = control;
     }
 
     const res = this.sim.step(inputs);
@@ -200,14 +186,7 @@ export class Match {
       const slot = inputs[side];
       if (res.acted[side] && src !== null && slot !== null) {
         this.inputs.push({ tick: this.sim.tick, side, slot, src });
-        if (src === "auto") events.unshift({ tick: this.sim.tick, type: "autoPick", side, slot });
         if (src === "player") st.queued = null;
-        st.readyAt = null;
-      }
-      if (this.sim.isReady(side) && st.readyAt === null) {
-        st.readyAt = this.sim.tick;
-        // The exact tick of the 5 s おまかせ pick (children only; ghosts never wait).
-        if (st.kind === "player") events.push({ tick: this.sim.tick, type: "deadline", side, at: this.deadlineOf(st.readyAt) });
       }
     }
 
@@ -295,7 +274,6 @@ export class Match {
       matchId: this.matchId,
       you: sideName(side),
       tickHz: this.engineMeta.tickHz,
-      decisionTicks: this.timing.decisionTicks,
       a: this.s[0].info,
       b: this.s[1].info,
       resumed,

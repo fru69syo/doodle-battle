@@ -1,8 +1,10 @@
 import type { AiTier, BattleEngine, BattleEvent, BattleSim, FighterSetup, FighterSource, Side, SideView, StepResult } from "../../src/engine";
 
 /**
- * Scripted engine for timer tests: a side's gauge fills in `fillTicks` ticks, then it is ready
- * until an input arrives. Every action removes `damage` HP from the foe. Fully predictable.
+ * Scripted engine for timing tests (stackable bars): a side gains one bar every `fillTicks`
+ * ticks up to `maxBars`; move `slot` costs `costs[slot]` bars. Every action removes `damage` HP
+ * from the foe. The AI waits `thinkTicks` after its first bar, then uses `aiChoice` once
+ * affordable; おまかせ uses `omakaseChoice` once affordable. Fully predictable.
  */
 export class FakeSim implements BattleSim {
   tick = 0;
@@ -10,17 +12,25 @@ export class FakeSim implements BattleSim {
   endReason: "ko" | "timeout" | null = null;
   readonly inputsSeen: { tick: number; side: Side; slot: number }[] = [];
   readonly hp: [number, number];
-  readonly gauge: [number, number] = [0, 0];
-  readonly ready: [boolean, boolean] = [false, false];
+  /** Ticks of filling toward the next bar, and full bars. */
+  readonly fill: [number, number] = [0, 0];
+  readonly bars: [number, number] = [0, 0];
+  readonly waited: [number, number] = [0, 0];
+  readonly plans: [number | null, number | null] = [null, null];
   unusable = new Set<string>();
   aiChoice = 1;
+  omakaseChoice = 1;
   aiCalls = 0;
+  omakaseCalls = 0;
+  cleared = 0;
 
   constructor(
     readonly fillTicks: [number, number] = [10, 10],
     readonly damage = 10,
     maxHp = 100,
     readonly hardCap = 1800,
+    readonly maxBars = 3,
+    readonly costs: readonly number[] = [1, 2, 3],
   ) {
     this.hp = [maxHp, maxHp];
   }
@@ -29,21 +39,35 @@ export class FakeSim implements BattleSim {
     return this.winner !== null;
   }
 
-  isReady(side: Side): boolean {
-    return this.ready[side];
+  canQueue(_side: Side, slot: number): boolean {
+    const c = this.costs[slot];
+    return c !== undefined && c <= this.maxBars;
   }
 
   canUse(side: Side, slot: number): boolean {
-    return !this.unusable.has(`${side}:${slot}`);
+    return this.canQueue(side, slot) && !this.unusable.has(`${side}:${slot}`) && this.bars[side] >= (this.costs[slot] ?? 99);
   }
 
-  chooseMove(_side: Side, _tier: AiTier): number {
+  aiInput(side: Side, _tier: AiTier, thinkTicks: number): number | null {
     this.aiCalls++;
-    return this.aiChoice;
+    if (this.bars[side] < 1 || this.waited[side] < thinkTicks) return null;
+    this.plans[side] ??= this.aiChoice;
+    return this.canUse(side, this.plans[side]) ? this.plans[side] : null;
+  }
+
+  omakaseInput(side: Side): number | null {
+    this.omakaseCalls++;
+    this.plans[side] ??= this.omakaseChoice;
+    return this.canUse(side, this.plans[side]) ? this.plans[side] : null;
+  }
+
+  clearPlan(side: Side): void {
+    this.cleared++;
+    this.plans[side] = null;
   }
 
   view(side: Side): SideView {
-    return { hp: this.hp[side], maxHp: 100, sp: 0, gauge: this.gauge[side], ready: this.ready[side], casting: false };
+    return { hp: this.hp[side], maxHp: 100, gauge: this.bars[side] * 10_000, bars: this.bars[side], maxBars: this.maxBars, casting: false };
   }
 
   stateHash(): string {
@@ -56,24 +80,27 @@ export class FakeSim implements BattleSim {
     if (this.winner !== null) return { events, acted };
     this.tick++;
     for (const s of [0, 1] as const) {
-      if (!this.ready[s]) {
-        this.gauge[s]++;
-        if (this.gauge[s] >= this.fillTicks[s]) {
-          this.ready[s] = true;
-          events.push({ tick: this.tick, type: "ready", side: s });
-        }
+      if (this.bars[s] >= this.maxBars) continue;
+      if (++this.fill[s] >= this.fillTicks[s]) {
+        this.fill[s] = 0;
+        this.bars[s]++;
+        events.push({ tick: this.tick, type: "bar", side: s, bars: this.bars[s] });
       }
     }
     for (const s of [0, 1] as const) {
       const slot = inputs[s];
-      if (!this.ready[s] || slot === null || !this.canUse(s, slot) || this.winner !== null) continue;
+      if (slot === null || !this.canUse(s, slot) || this.winner !== null) {
+        this.waited[s] = this.bars[s] >= 1 ? this.waited[s] + 1 : 0;
+        continue;
+      }
       acted[s] = true;
-      this.ready[s] = false;
-      this.gauge[s] = 0;
+      this.bars[s] -= this.costs[slot] ?? 0;
+      this.waited[s] = 0;
+      this.plans[s] = null;
       this.inputsSeen.push({ tick: this.tick, side: s, slot });
       const foe: Side = s === 0 ? 1 : 0;
       this.hp[foe] = Math.max(0, this.hp[foe] - this.damage);
-      events.push({ tick: this.tick, type: "act", side: s, slot });
+      events.push({ tick: this.tick, type: "select", side: s, slot, cost: this.costs[slot] ?? 0 });
       if (this.hp[foe] === 0) {
         this.winner = s;
         this.endReason = "ko";
@@ -91,8 +118,9 @@ export function fakeSetup(): FighterSetup {
   return {
     attr: "gu",
     maxHp: 100,
+    maxBars: 3,
     engineData: null,
-    moves: [0, 1, 2].map((slot) => ({ slot, name: `m${slot}`, templateId: "strike", attr: "gu", spCost: 0 })),
+    moves: [0, 1, 2].map((slot) => ({ slot, name: `m${slot}`, templateId: "strike", attr: "gu", bars: slot + 1 })),
   };
 }
 

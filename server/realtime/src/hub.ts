@@ -272,8 +272,9 @@ export class Hub {
       ...(src.display.rig !== undefined ? { rig: src.display.rig } : {}),
       attr: setup.attr,
       // Only the public part of each move (engines may carry more fields).
-      moves: setup.moves.map((m) => ({ slot: m.slot, name: m.name, templateId: m.templateId, attr: m.attr, spCost: m.spCost })),
+      moves: setup.moves.map((m) => ({ slot: m.slot, name: m.name, templateId: m.templateId, attr: m.attr, bars: m.bars })),
       maxHp: setup.maxHp,
+      maxBars: setup.maxBars,
       level: RATED_SYNC_LEVEL,
       badge,
       isGhost,

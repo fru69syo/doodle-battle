@@ -162,9 +162,11 @@
         "attr": {
           "type": "string"
         },
-        "spCost": {
+        "bars": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 1,
+          "maximum": 5,
+          "description": "rev 3: cost in gauge bars (never above the fighter's maxBars)"
         }
       },
       "required": [
@@ -172,7 +174,7 @@
         "name",
         "templateId",
         "attr",
-        "spCost"
+        "bars"
       ],
       "additionalProperties": false
     },
@@ -216,6 +218,12 @@
           "type": "integer",
           "minimum": 1
         },
+        "maxBars": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 5,
+          "description": "rev 3: gauge bars this fighter can stack"
+        },
         "level": {
           "type": "integer",
           "const": 50
@@ -235,6 +243,7 @@
         "attr",
         "moves",
         "maxHp",
+        "maxBars",
         "level",
         "badge",
         "isGhost"
@@ -266,18 +275,22 @@
           "type": "integer",
           "minimum": 1
         },
-        "sp": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 10000
-        },
         "gauge": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 10000
+          "maximum": 50000,
+          "description": "0..maxBars*10000 (one bar = 10000, partial fill included)"
         },
-        "ready": {
-          "type": "boolean"
+        "bars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "full bars now"
+        },
+        "maxBars": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 5
         },
         "casting": {
           "type": "boolean"
@@ -286,9 +299,9 @@
       "required": [
         "hp",
         "maxHp",
-        "sp",
         "gauge",
-        "ready",
+        "bars",
+        "maxBars",
         "casting"
       ],
       "additionalProperties": false
@@ -302,7 +315,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Engine v3 types (ready, inputIgnored, select, moveStart, effective, hit, miss, dot, heal, stage, status, statusFail, shield, expire, heatUp, faint, end) plus the server's autoPick, forfeit and (rev 2) deadline {side, at}; clients ignore unknown types and fields"
+          "description": "Engine v3 types (bar {side, bars}, inputIgnored, select {slot, cost, cast}, moveStart, effective, hit, miss, dot, heal, stage, status, statusFail, shield, expire, heatUp, faint, end) plus the server's forfeit; rev 3 removed ready, deadline and autoPick (no decision timer); clients ignore unknown types and fields"
         },
         "side": {
           "type": "integer",
@@ -329,7 +342,7 @@
         "rev": {
           "type": "integer",
           "minimum": 1,
-          "description": "Additive revision of protocol v1: 2 = omakase, deadline event, FighterInfo.snapshotId"
+          "description": "Revision of protocol v1: 2 = omakase, deadline event, FighterInfo.snapshotId; 3 = stackable gauge bars (maxBars, move bars, bar event; no decision timer: deadline / autoPick / decisionTicks removed)"
         },
         "serverTimeMs": {
           "type": "integer",
@@ -399,10 +412,6 @@
           "type": "integer",
           "const": 10
         },
-        "decisionTicks": {
-          "type": "integer",
-          "minimum": 1
-        },
         "a": {
           "$ref": "#/$defs/FighterInfo"
         },
@@ -418,7 +427,6 @@
         "matchId",
         "you",
         "tickHz",
-        "decisionTicks",
         "a",
         "b",
         "resumed"

@@ -29,7 +29,7 @@ PORT=8081 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCP_PROJECT_ID=demo-doodle-batt
 | `src/server.ts` | HTTP `/healthz`, WebSocket upgrade, hello/auth, size + rate limits, keep-alive |
 | `src/hub.ts` | connections (one per uid), queue, match creation (PvP / ghost / mirror), settlement, SIGTERM drain |
 | `src/matchmaker.ts` | rating band, ghost timing from cost mode, same-pair cooldown |
-| `src/match.ts` | one match: さきどり, 5 s (+3 tick) おまかせ, ghost AI, disconnect rules, event log |
+| `src/match.ts` | one match: さきどり (fires when its bars are there), おまかせ switch (random move, wait for bars), ghost AI, disconnect rules, event log; no decision timer |
 | `src/rating.ts` / `src/results.ts` | Elo, badges, XP cap; pure settlement |
 | `src/engine.ts` | engine interface; `src/engines/v3Engine.ts` adapts the shared Engine v3 (protocol §9); `src/engines/devEngine.ts` is a local-only stand-in (refused with `NODE_ENV=production`) |
 | `src/firestoreStore.ts` | users, snapshots, ghosts, `rtMatches`, `replays` (Admin SDK) |

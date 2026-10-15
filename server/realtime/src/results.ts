@@ -11,8 +11,8 @@ export interface InputRecord {
   tick: number;
   side: Side;
   slot: number;
-  /** player = the child chose; auto = 5 s timeout おまかせ; omakase = the child's おまかせ switch; ai = ghost / disconnected side */
-  src: "player" | "auto" | "omakase" | "ai";
+  /** player = the child chose (incl. さきどり); omakase = the child's おまかせ switch (random, wait for bars); ai = ghost / disconnected side */
+  src: "player" | "omakase" | "ai";
 }
 
 export interface SideSummary {
