@@ -2,7 +2,7 @@ import '../../../domain/battle_v3/battle_v3.dart';
 import '../stage_events.dart';
 
 /// [StageFeed] over the battle engine v3 (`domain/battle_v3`): steps it at
-/// 10 Hz in real time and translates its renderer events (ready, select,
+/// 10 Hz in real time and translates its renderer events (bar, select,
 /// moveStart, effective, hit, miss, dot, heal, stage, status, shield,
 /// expire, heatUp, faint, end — docs/BATTLE_V3.md) into stage events.
 ///
@@ -11,38 +11,40 @@ import '../stage_events.dart';
 /// stepping a local engine.
 ///
 /// Also owns the player's input for local battles: [tap] (さきどり is the
-/// engine's own queued input), [alwaysAuto] (おまかせ), [choiceLeft] (the
-/// 5 s ring).
+/// engine's own queued input: it fires once its bars are there) and
+/// [alwaysAuto] (おまかせ: a random move, then wait for its bars). There is
+/// no decision timer: an idle player just stops at max bars.
 class BattleV3Feed implements StageFeed {
-  BattleV3Feed(this.engine, {this.alwaysAuto = false, Controller? cpu})
-    : _cpu = cpu ?? aiController();
+  BattleV3Feed(this.engine, {bool alwaysAuto = false, Controller? cpu})
+    : _cpu = cpu ?? aiController() {
+    _alwaysAuto = alwaysAuto;
+  }
 
   final Battle engine;
-
-  /// おまかせ for the player.
-  bool alwaysAuto;
-
+  bool _alwaysAuto = false;
   double _acc = 0;
   int _seen = 0;
   final Controller _cpu;
-  final _auto = aiController();
+  final _auto = omakaseController();
+
+  /// おまかせ for the player. Switching drops a pending tap and the old
+  /// plan.
+  bool get alwaysAuto => _alwaysAuto;
+  set alwaysAuto(bool on) {
+    if (on == _alwaysAuto) return;
+    _alwaysAuto = on;
+    engine.clearInput(0);
+    engine.fighters[0].aiPlan = null;
+  }
 
   /// Move tapped by the player and not used yet (さきどり / chosen).
   int? get pending => engine.fighters[0].queued;
 
-  /// Seconds left to choose (only while the player's gauge is full).
-  double? get choiceLeft {
-    final f = engine.fighters[0];
-    if (f.phase != Phase.ready || alwaysAuto || engine.finished) return null;
-    return f.decisionTicksLeft(engine.spec) / engine.spec.tickHz;
-  }
-
-  double get decisionSeconds => engine.spec.decisionTicks / engine.spec.tickHz;
-
-  /// The player taps move [slot]; false when it can not be queued now.
+  /// The player taps move [slot]; false when it can never be used (its cost
+  /// is above the max bars) or the player can not tap now.
   bool tap(int slot) {
     final f = engine.fighters[0];
-    if (engine.finished || slot < 0 || slot >= f.moves.length) return false;
+    if (engine.finished || !f.canQueue(slot)) return false;
     if (f.phase == Phase.casting || alwaysAuto) return false;
     engine.queueInput(0, slot);
     return true;
@@ -50,7 +52,11 @@ class BattleV3Feed implements StageFeed {
 
   void cancelTap() => engine.clearInput(0);
 
+  /// [slot] can be used right now (enough bars, no cooldown).
   bool usable(int slot) => engine.fighters[0].usable(slot);
+
+  /// [slot] may be tapped (さきどり): its cost fits the max bars.
+  bool queueable(int slot) => engine.fighters[0].canQueue(slot);
 
   @override
   List<StageEvent> advance(double dt) {
@@ -82,14 +88,13 @@ StageFighterState fighterState(Battle b, int side) {
   return StageFighterState(
     maxHp: f.maxHp,
     gauge: f.gauge / b.spec.gaugeMax,
-    ready: f.phase == Phase.ready,
+    maxBars: f.maxBars,
     casting: f.phase == Phase.casting,
     poisoned: f.poisonTicks > 0,
     paralyzed: f.paralyzeTicks > 0,
     shield: f.shieldTicks > 0 ? f.shieldPct / 100 : 0,
     statUp: up,
     statDown: down,
-    sp: f.sp ~/ 100,
   );
 }
 
@@ -105,14 +110,14 @@ List<StageEvent> translate(
   for (var k = 0; k < ev.length; k++) {
     final e = ev[k];
     switch (e.type) {
-      case 'ready':
-        out.add(StageReady(e.i('side')!));
+      case 'bar':
+        out.add(StageReady(e.i('side')!, bars: e.i('bars') ?? 1));
       case 'select':
         out.add(
           StageChoose(
             e.i('side')!,
             castSeconds: (e.i('cast') ?? 0) / tickHz,
-            auto: e.i('auto') == 1,
+            cost: e.i('cost') ?? 1,
           ),
         );
       case 'moveStart':

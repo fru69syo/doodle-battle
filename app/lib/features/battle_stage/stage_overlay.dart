@@ -27,12 +27,14 @@ class MoveButtonData {
   const MoveButtonData({
     required this.name,
     required this.tint,
-    this.spCost = 0,
+    this.bars = 1,
     this.icon,
   });
   final String name;
   final MoveTint tint;
-  final int spCost;
+
+  /// Cost in gauge bars (shown as pips).
+  final int bars;
 
   /// Optional icon for pre-readers (fist, beam, heart...).
   final IconData? icon;
@@ -91,22 +93,76 @@ class StageBar extends StatelessWidget {
   );
 }
 
-/// ATB gauge: purple while filling, glowing orange when full.
+/// The gauge: [maxBars] segments, each filling in turn (partial fill
+/// shown). Full segments turn orange; all full = glow (it stopped filling).
+/// Plain rectangles only, cheap on old Android.
 class AtbGauge extends StatelessWidget {
-  const AtbGauge({super.key, required this.value, required this.ready});
-  final double value;
-  final bool ready;
+  const AtbGauge({super.key, required this.bars, required this.maxBars});
+
+  /// 0..[maxBars] (2.4 = two full bars and 40 % of the third).
+  final double bars;
+  final int maxBars;
+
+  @override
+  Widget build(BuildContext context) {
+    final full = bars.floor().clamp(0, maxBars);
+    final all = full >= maxBars;
+    return Semantics(
+      label: all ? 'ゲージ まんたん' : 'ゲージ',
+      value: '$full/$maxBars',
+      child: Row(
+        key: const Key('atb-gauge'),
+        children: [
+          for (var i = 0; i < maxBars; i++) ...[
+            if (i > 0) const SizedBox(width: 3),
+            Expanded(
+              child: StageBar(
+                key: Key('atb-bar-$i'),
+                value: (bars - i).clamp(0.0, 1.0),
+                color: i < full
+                    ? const Color(0xFFFF9A2E)
+                    : const Color(0xFF8E44FF),
+                height: 10,
+                glow: all,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Small bar pips: the cost of a move in bars.
+class BarPips extends StatelessWidget {
+  const BarPips({
+    super.key,
+    required this.count,
+    this.color = Colors.white,
+    this.size = 9,
+  });
+  final int count;
+  final Color color;
+  final double size;
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: ready ? 'ゲージ まんたん' : 'ゲージ',
-    value: '${(value * 100).round()}%',
-    child: StageBar(
-      key: const Key('atb-gauge'),
-      value: value,
-      color: ready ? const Color(0xFFFF9A2E) : const Color(0xFF8E44FF),
-      height: 10,
-      glow: ready,
+    label: 'ゲージ $count',
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < count; i++)
+          Container(
+            width: size * 1.5,
+            height: size,
+            margin: const EdgeInsets.only(right: 2),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(size / 3),
+              border: Border.all(color: const Color(0x55000000)),
+            ),
+          ),
+      ],
     ),
   );
 }
@@ -183,7 +239,7 @@ class FighterStatusPanel extends StatelessWidget {
             child: StageBar(value: frac, color: hpColor),
           ),
           const SizedBox(height: 5),
-          AtbGauge(value: state.gauge, ready: state.ready),
+          AtbGauge(bars: state.gauge, maxBars: state.maxBars),
           StatusIcons(state: state),
         ],
       ),
@@ -231,47 +287,6 @@ class StatusIcons extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The 5-second ring shown while the player's gauge is full.
-class DecisionTimerRing extends StatelessWidget {
-  const DecisionTimerRing({
-    super.key,
-    required this.fraction,
-    required this.secondsLeft,
-    this.size = 40,
-  });
-  final double fraction;
-  final double secondsLeft;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    key: const Key('decision-ring'),
-    width: size,
-    height: size,
-    child: Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox.expand(
-          child: CircularProgressIndicator(
-            value: fraction.clamp(0.0, 1.0),
-            strokeWidth: size / 7,
-            color: const Color(0xFFFF6B35),
-            backgroundColor: const Color(0x22000000),
-          ),
-        ),
-        Text(
-          '${secondsLeft.ceil()}',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: size * 0.42,
-            color: _ink,
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 /// おまかせ switch (big, with a robot icon).
@@ -324,33 +339,36 @@ class OmakaseToggle extends StatelessWidget {
   );
 }
 
-/// One move button. [selected]: tapped (さきどり while the gauge fills —
-/// yellow frame and 「つぎ！」; 「これ！」 when the gauge is full).
+/// One move button with its cost as bar pips. [selected]: tapped (さきどり
+/// — yellow frame and 「つぎ！」 until its bars are there). [affordable]:
+/// enough bars and no cooldown right now; an unaffordable move is dimmed
+/// but can still be tapped (it fires once the bars are there).
 class MoveButton extends StatelessWidget {
   const MoveButton({
     super.key,
     required this.data,
     required this.onTap,
     this.enabled = true,
+    this.affordable = true,
     this.selected = false,
-    this.ready = false,
     this.cooldownSeconds = 0,
   });
 
   final MoveButtonData data;
   final VoidCallback? onTap;
-  final bool enabled, selected, ready;
+  final bool enabled, affordable, selected;
   final double cooldownSeconds;
 
   @override
   Widget build(BuildContext context) {
     final col = data.tint.color;
     final on = enabled && onTap != null;
+    final bright = on && affordable;
     return Semantics(
       button: true,
       enabled: on,
       selected: selected,
-      label: data.name,
+      label: '${data.name} ゲージ${data.bars}',
       child: GestureDetector(
         onTap: on ? onTap : null,
         child: AnimatedScale(
@@ -359,14 +377,16 @@ class MoveButton extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 60),
             decoration: BoxDecoration(
-              color: on ? col : const Color(0xFFBDBDBD),
+              color: !on
+                  ? const Color(0xFFBDBDBD)
+                  : (bright ? col : Color.lerp(col, Colors.white, 0.45)),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: selected ? const Color(0xFFFFD83A) : Colors.white,
                 width: selected ? 5 : 2,
               ),
               boxShadow: [
-                if (ready && on)
+                if (bright)
                   BoxShadow(color: col.withValues(alpha: 0.6), blurRadius: 10),
               ],
             ),
@@ -406,9 +426,12 @@ class MoveButton extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _tag(data.tint.label),
+                                BarPips(
+                                  key: const Key('move-pips'),
+                                  count: data.bars,
+                                ),
                                 const SizedBox(width: 4),
-                                if (data.spCost > 0) _tag('SP${data.spCost}'),
+                                _tag(data.tint.label),
                               ],
                             ),
                           ),
@@ -421,11 +444,7 @@ class MoveButton extends StatelessWidget {
                   Positioned(
                     right: -6,
                     top: -16,
-                    child: _tag(
-                      ready ? 'これ！' : 'つぎ！',
-                      bg: const Color(0xFFFFD83A),
-                      fg: _ink,
-                    ),
+                    child: _tag('つぎ！', bg: const Color(0xFFFFD83A), fg: _ink),
                   ),
                 if (cooldownSeconds > 0)
                   Positioned(
@@ -503,9 +522,9 @@ class MovePad extends StatelessWidget {
     required this.moves,
     required this.onTap,
     this.selected,
-    this.ready = false,
     this.enabled = true,
     this.usable,
+    this.queueable,
     this.cooldownSeconds,
   });
 
@@ -515,13 +534,13 @@ class MovePad extends StatelessWidget {
 
   /// Slot tapped (さきどり / chosen), if any.
   final int? selected;
-
-  /// The gauge is full (buttons glow).
-  final bool ready;
   final bool enabled;
 
-  /// Per slot: SP / cooldown allow it now.
+  /// Per slot: enough bars and no cooldown now (else dimmed).
   final bool Function(int slot)? usable;
+
+  /// Per slot: may be tapped for さきどり (its cost fits the max bars).
+  final bool Function(int slot)? queueable;
   final double Function(int slot)? cooldownSeconds;
 
   static const unlockLevels = [1, 1, 10, 50];
@@ -540,9 +559,9 @@ class MovePad extends StatelessWidget {
             ? MoveButton(
                 key: Key('move-$i'),
                 data: moves[i],
-                enabled: enabled && (usable?.call(i) ?? true),
+                enabled: enabled && (queueable?.call(i) ?? true),
+                affordable: usable?.call(i) ?? true,
                 selected: selected == i,
-                ready: ready,
                 cooldownSeconds: cooldownSeconds?.call(i) ?? 0,
                 onTap: () => onTap(i),
               )
@@ -551,8 +570,9 @@ class MovePad extends StatelessWidget {
   );
 }
 
-/// The bottom panel: prompt, 5 s ring, おまかせ and the move pad — the
-/// spike's layout as one convenience widget.
+/// The bottom panel: prompt, おまかせ and the move pad — one convenience
+/// widget. There is no countdown: the gauge just stops when every bar is
+/// full.
 class BattleControls extends StatelessWidget {
   const BattleControls({
     super.key,
@@ -561,10 +581,11 @@ class BattleControls extends StatelessWidget {
     required this.omakase,
     required this.onOmakase,
     this.selected,
-    this.choiceLeft,
-    this.decisionSeconds = 5,
+    this.bars = 0,
+    this.full = false,
     this.casting = false,
     this.usable,
+    this.queueable,
     this.cooldownSeconds,
   });
 
@@ -574,27 +595,29 @@ class BattleControls extends StatelessWidget {
   final ValueChanged<bool> onOmakase;
   final int? selected;
 
-  /// Seconds left while the gauge is full (null otherwise).
-  final double? choiceLeft;
-  final double decisionSeconds;
+  /// The player's full bars now, and whether every bar is full.
+  final int bars;
+  final bool full;
   final bool casting;
   final bool Function(int slot)? usable;
+  final bool Function(int slot)? queueable;
   final double Function(int slot)? cooldownSeconds;
 
   @override
   Widget build(BuildContext context) {
-    final left = choiceLeft;
     final String prompt;
     if (omakase) {
       prompt = 'おまかせで たたかうよ';
-    } else if (left != null) {
-      prompt = 'わざを えらんでね！';
-    } else if (selected != null) {
-      prompt = 'たまったら すぐ だすよ';
     } else if (casting) {
       prompt = 'ためているよ…';
+    } else if (selected != null) {
+      prompt = 'たまったら すぐ だすよ';
+    } else if (full) {
+      prompt = 'ゲージ まんたん！ わざを えらんでね';
+    } else if (bars > 0) {
+      prompt = 'わざを えらんでね！';
     } else {
-      prompt = 'つぎの わざを えらべるよ';
+      prompt = 'ゲージを ためているよ';
     }
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
@@ -614,13 +637,6 @@ class BattleControls extends StatelessWidget {
         children: [
           Row(
             children: [
-              if (left != null) ...[
-                DecisionTimerRing(
-                  fraction: left / decisionSeconds,
-                  secondsLeft: left,
-                ),
-                const SizedBox(width: 8),
-              ],
               Expanded(
                 child: Text(
                   prompt,
@@ -640,9 +656,9 @@ class BattleControls extends StatelessWidget {
             moves: moves,
             onTap: onTap,
             selected: selected,
-            ready: left != null,
             enabled: !omakase && !casting,
             usable: usable,
+            queueable: queueable,
             cooldownSeconds: cooldownSeconds,
           ),
         ],

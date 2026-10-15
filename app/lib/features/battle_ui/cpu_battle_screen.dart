@@ -257,7 +257,6 @@ class _CpuBattleViewState extends ConsumerState<CpuBattleView> {
                 engine: _engine,
                 side: 0,
                 selected: _feed.pending,
-                choiceLeft: _feed.choiceLeft,
                 omakase: _feed.alwaysAuto,
                 onOmakase: _setOmakase,
                 onTap: (i) => setState(() => _feed.tap(i)),

@@ -351,19 +351,21 @@ class _OnlineBattleScreenState extends ConsumerState<OnlineBattleScreen> {
   Widget _controls() {
     final feed = _feed!;
     final v = feed.view(0);
-    // The ring: exact server deadline (protocol rev 2), real time.
-    final left = _omakase ? null : feed.choiceLeft;
+    final me = feed.fighter(0);
     final moves = feed.moves[0];
     return BattleControls(
       moves: [for (final (i, mv) in moves.indexed) moveButtonData(mv, i)],
       selected: _pending,
-      choiceLeft: left,
-      decisionSeconds: feed.decisionSeconds,
+      bars: me.bars,
+      full: me.full,
       casting: v?.casting ?? false,
       omakase: _omakase,
       onOmakase: _setOmakase,
       onTap: _select,
-      usable: (i) => v == null || v.sp >= moves[i].spCost * 100,
+      // Dimmed until the bars are there (the server keeps the さきどり);
+      // a move above the max bars can never be picked.
+      usable: (i) => me.bars >= moves[i].bars,
+      queueable: (i) => moves[i].bars <= me.maxBars,
     );
   }
 }

@@ -82,17 +82,18 @@ Map<String, Object?> fighterInfo(
       'name': '$nameパンチ',
       'templateId': 'strike',
       'attr': 'gu',
-      'spCost': 0,
+      'bars': 1,
     },
     {
       'slot': 1,
       'name': 'ふわふわ',
       'templateId': 'heal',
       'attr': 'none',
-      'spCost': 20,
+      'bars': 2,
     },
   ],
   'maxHp': maxHp,
+  'maxBars': 3,
   'level': 50,
   'badge': 'rabbit',
   'isGhost': ghost,
@@ -109,7 +110,6 @@ Map<String, Object?> matchMsg({
   'matchId': 'm1',
   'you': you,
   'tickHz': 10,
-  'decisionTicks': 50,
   'a': fighterInfo(
     'ねこまる',
     displayName: 'げんきな うさぎ',
@@ -119,15 +119,11 @@ Map<String, Object?> matchMsg({
   'resumed': resumed,
 };
 
-Map<String, Object?> sideView({
-  int hp = 900,
-  int gauge = 0,
-  bool ready = false,
-}) => {
+Map<String, Object?> sideView({int hp = 900, int gauge = 0}) => {
   'hp': hp,
   'maxHp': 900,
-  'sp': 4000,
   'gauge': gauge,
-  'ready': ready,
+  'bars': gauge ~/ 10000,
+  'maxBars': 3,
   'casting': false,
 };

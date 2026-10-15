@@ -1,4 +1,4 @@
-/// Messages of the realtime battle protocol v1, revision 2
+/// Messages of the realtime battle protocol v1, revision 3
 /// (docs/REALTIME_PROTOCOL.md, `server/realtime/protocol.schema.json`). JSON
 /// text frames, one object per frame, discriminated by `t`. Unknown fields
 /// and event types are ignored (§10: additive changes keep `proto: 1` and
@@ -9,9 +9,13 @@ import 'dart:convert';
 
 const int kRealtimeProto = 1;
 
-/// The protocol revision this app speaks: `omakase`, the `deadline` event
-/// and `FighterInfo.snapshotId` need a server with `welcome.rev >= 2`.
-const int kRealtimeRevision = 2;
+/// The protocol revision this app speaks: rev 3 = stackable gauge bars
+/// (`maxBars`, move `bars`, the `bar` event; no 5 s timer).
+const int kRealtimeRevision = 3;
+
+/// `omakase` and `FighterInfo.snapshotId` need a server with
+/// `welcome.rev >= 2`.
+const int kOmakaseRevision = 2;
 
 // --- client → server ------------------------------------------------------------
 
@@ -58,7 +62,7 @@ class PublicMove {
     required this.name,
     required this.template,
     required this.attr,
-    required this.spCost,
+    this.bars = 1,
     this.vfx,
     this.colour,
     this.hits = 1,
@@ -68,7 +72,9 @@ class PublicMove {
   final String name;
   final String template;
   final String attr;
-  final int spCost;
+
+  /// Cost in gauge bars (rev 3).
+  final int bars;
   final String? vfx;
   final String? colour;
   final int hits;
@@ -78,7 +84,7 @@ class PublicMove {
     name: _str(j['name']),
     template: _str(j['templateId'], 'strike'),
     attr: _str(j['attr'], 'none'),
-    spCost: _int(j['spCost']),
+    bars: _int(j['bars'], 1).clamp(1, 5),
     vfx: j['vfx'] as String?,
     colour: j['colour'] as String?,
     hits: _int(j['hits'], 1).clamp(1, 3),
@@ -98,6 +104,7 @@ class FighterInfo {
     required this.level,
     required this.badge,
     required this.isGhost,
+    this.maxBars = 2,
     this.snapshotId,
   });
 
@@ -113,6 +120,9 @@ class FighterInfo {
   final String attr;
   final List<PublicMove> moves;
   final int maxHp;
+
+  /// Gauge bars this fighter can stack (rev 3, 2..5).
+  final int maxBars;
   final int level;
   final String badge;
   final bool isGhost;
@@ -128,6 +138,7 @@ class FighterInfo {
         if (m is Map) PublicMove.fromJson(m.cast<String, Object?>()),
     ]..sort((a, b) => a.slot.compareTo(b.slot)),
     maxHp: _int(j['maxHp'], 1),
+    maxBars: _int(j['maxBars'], 2).clamp(2, 5),
     level: _int(j['level'], 50),
     badge: _str(j['badge'], 'egg'),
     isGhost: j['isGhost'] == true,
@@ -135,32 +146,32 @@ class FighterInfo {
   );
 }
 
-/// `SideView`.
+/// `SideView` (rev 3).
 class SideView {
   const SideView({
     required this.hp,
     required this.maxHp,
-    required this.sp,
     required this.gauge,
-    required this.ready,
+    required this.bars,
+    required this.maxBars,
     required this.casting,
   });
 
   final int hp, maxHp;
 
-  /// 1/100 SP (0..10000).
-  final int sp;
-
-  /// 0..10000.
+  /// 0..maxBars·10000 (one bar = 10000, partial fill included).
   final int gauge;
-  final bool ready, casting;
+
+  /// Full bars now, and how many the fighter can stack.
+  final int bars, maxBars;
+  final bool casting;
 
   factory SideView.fromJson(Map<String, Object?> j) => SideView(
     hp: _int(j['hp']),
     maxHp: _int(j['maxHp'], 1),
-    sp: _int(j['sp']),
     gauge: _int(j['gauge']),
-    ready: j['ready'] == true,
+    bars: _int(j['bars']),
+    maxBars: _int(j['maxBars'], 2).clamp(2, 5),
     casting: j['casting'] == true,
   );
 }
@@ -189,7 +200,6 @@ sealed class ServerMsg {
         matchId: _str(j['matchId']),
         you: sideIndex(j['you']) ?? 0,
         tickHz: _int(j['tickHz'], 10),
-        decisionTicks: _int(j['decisionTicks'], 50),
         fighters: [
           FighterInfo.fromJson(_map(j['a'])),
           FighterInfo.fromJson(_map(j['b'])),
@@ -260,7 +270,6 @@ class MatchMsg extends ServerMsg {
     required this.matchId,
     required this.you,
     required this.tickHz,
-    required this.decisionTicks,
     required this.fighters,
     required this.resumed,
   });
@@ -268,7 +277,7 @@ class MatchMsg extends ServerMsg {
 
   /// 0 = a, 1 = b.
   final int you;
-  final int tickHz, decisionTicks;
+  final int tickHz;
   final List<FighterInfo> fighters;
   final bool resumed;
 }
