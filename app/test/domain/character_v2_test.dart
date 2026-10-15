@@ -175,6 +175,7 @@ void main() {
         },
         own: _fresh(skill: 90).attribute(),
         moveFactorPct: 70,
+        maxBars: _fresh(skill: 90).maxBars(),
       ),
     );
     expect(c.allMoves().first.name, 'ぴょんパンチ');
@@ -209,6 +210,7 @@ void main() {
         },
         own: own,
         moveFactorPct: c0.genome().moveFactorPct(1),
+        maxBars: c0.maxBars(),
       ),
     );
     for (final m in c.allMoves()) {
@@ -216,10 +218,46 @@ void main() {
     }
     final m0 = c.allMoves().first;
     expect(m0.name, 'ぴょんパンチ');
+    expect(m0.bars, 1);
     expect(
-      moveCost(s, m0),
-      lessThanOrEqualTo(slotBudget(s, 0, c.genome().moveFactorPct(1))),
+      movePoints(s, m0),
+      lessThanOrEqualTo(
+        slotBudget(s, 0, c.genome().moveFactorPct(1), c.maxBars()),
+      ),
     );
+  });
+
+  test('stored pre-gauge proposals with spCost still load', () {
+    final c0 = _fresh();
+    final own = c0.attribute();
+    final legacy = {
+      'template': 'blast',
+      'attribute': 'none',
+      'name': 'おおきなビーム',
+      'atkFormula': 'INT80_DEX20',
+      'power': 200,
+      'hits': 1,
+      'accuracy': 100,
+      'critBonus': 0,
+      'spCost': 40,
+      'castTicks': 12,
+      'cooldownTicks': 80,
+    };
+    final j = c0.toJson()
+      ..['moves'] = [
+        {
+          'proposal': {..._legacyStrike(own), 'spCost': 0},
+        },
+        <String, Object?>{},
+        <String, Object?>{},
+        {'proposal': legacy},
+      ];
+    final c = CharacterV2.fromJson(j).copyWith(level: 60);
+    final ms = c.allMoves();
+    expect(ms[3].name, 'おおきなビーム');
+    expect(ms[3].bars, inInclusiveRange(1, c.maxBars()));
+    expect(ms[3].toJson().containsKey('spCost'), isFalse);
+    expect(c.battleSetup().maxBars, c.maxBars());
   });
 
   test('rig blob validation', () {
@@ -244,3 +282,12 @@ void main() {
     expect(_fresh().copyWith(rig: () => {'v': 1}).rig, isNull);
   });
 }
+
+Map<String, Object?> _legacyStrike(Attr own) => {
+  'template': 'strike',
+  'attribute': own.name,
+  'name': 'ぴょんパンチ',
+  'power': 100,
+  'hits': 1,
+  'accuracy': 100,
+};

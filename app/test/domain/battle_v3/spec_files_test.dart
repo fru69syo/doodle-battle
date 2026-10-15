@@ -64,6 +64,7 @@ void main() {
       expect(gn.base, e['base']);
       expect(gn.growthMille, e['growthMille']);
       expect(gn.rebirthBase, e['rebirthBase']);
+      expect(gn.maxBars, e['maxBars']);
       expect(gn.attr.name, e['attribute']);
       for (final l in [1, 10, 49, 50, 75, 100]) {
         expect(gn.statsAt(l), (e['statsAt']! as Map)['$l']);
@@ -79,6 +80,7 @@ void main() {
         slot: v['slot']! as int,
         own: Attr.values.byName(v['own']! as String),
         moveFactorPct: v['moveFactorPct']! as int,
+        maxBars: v['maxBars']! as int,
         ngCheck: goldenNgCheck,
       );
       final e = (v['expected']! as Map).cast<String, Object?>();

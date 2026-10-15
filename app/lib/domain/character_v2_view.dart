@@ -162,6 +162,7 @@ CharacterV2 newCharacterV2({
       {'moves': cloudMoves},
       own: g.attr,
       moveFactorPct: g.moveFactorPct(1),
+      maxBars: g.maxBars,
       ngCheck: ngCheck,
     ),
   );

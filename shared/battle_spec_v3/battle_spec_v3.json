@@ -1,6 +1,6 @@
 {
-  "specVersion": 3,
-  "release": "v3.0 production (engine v3). Tuned in docs/GAME_DESIGN_V2.md §10, re-run in docs/BATTLE_V3.md",
+  "specVersion": 4,
+  "release": "v4 (engine v3, stackable gauge bars, 2026-10-14). Tuned in docs/GAME_DESIGN_V2.md §10, re-run in docs/BATTLE_V3.md",
   "integerMath": "All values are integers. Every division is floor division of non-negative integers; every intermediate stays below 2^53.",
   "rng": {
     "algorithm": "mulberry32 (same as battle spec v2, docs/BATTLE.md §2)",
@@ -188,6 +188,10 @@
       "perAvg": 5,
       "formula": "maxHp = perHp*HP + perVit*VIT + perAvg*(sum of 10 stats)/10"
     },
+    "minLv1Sp": {
+      "value": 20,
+      "rule": "after the split (and for the bloomer rebirth split): if SP < minLv1Sp, d = minLv1Sp - SP is taken from the other nine stats by largestRemainder(d, their values) and SP = minLv1Sp"
+    },
     "attribute": {
       "gu": [
         "solid",
@@ -221,11 +225,18 @@
     }
   },
   "moves": {
-    "slotBudgets": [
+    "barBudgets": [
       100,
-      100,
-      120,
-      150
+      230,
+      390,
+      580,
+      800
+    ],
+    "slotMaxBars": [
+      1,
+      5,
+      5,
+      5
     ],
     "slotUnlockLevels": [
       1,
@@ -238,21 +249,24 @@
     "bloomerPreMoveFactorPct": 70,
     "legendMoveBonusPct": 5,
     "bloomerRebirthMoveBonusPct": 0,
-    "maxDiscountPct": 50
+    "castDiscountPerTick": 2,
+    "cooldownDiscountDiv": 4,
+    "maxDiscountPct": 25
   },
   "atb": {
     "tickHz": 10,
     "gaugeMax": 10000,
     "gaugeFillPerTick": 280,
     "agiWeightPct": 30,
-    "decisionTicks": 50,
-    "spMaxCenti": 10000,
-    "spStartCenti": 4000,
-    "spRegenCentiPerTick": 25,
-    "spWeightPct": 50
+    "gaugePerBar": 10000,
+    "spPerBar": 10,
+    "minBars": 2,
+    "maxBars": 5,
+    "maxBarsFormula": "clamp(lv1BaseSP / spPerBar, minBars, maxBars) from the Lv1 base stats (Genome.base), stable across levels, rebirth and rated sync",
+    "gauge": "0..maxBars*gaugePerBar; fills while not casting and below the cap; a move costs bars*gaugePerBar when selected; no decision timer"
   },
   "damage": {
-    "scalePct": 60,
+    "scalePct": 57,
     "typeAdvantagePct": 150,
     "typeDisadvantagePct": 75,
     "typeStrengthPct": 100,
@@ -313,7 +327,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           1,
@@ -326,10 +340,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -346,7 +356,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           2,
@@ -359,10 +369,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -379,7 +385,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           1,
@@ -392,10 +398,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -412,7 +414,7 @@
       "ranges": {
         "power": [
           40,
-          200
+          1200
         ],
         "hits": [
           2,
@@ -425,10 +427,6 @@
         "critBonus": [
           0,
           20
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -446,10 +444,6 @@
         "healPct": [
           10,
           40
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -471,10 +465,6 @@
         "durationTicks": [
           40,
           120
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -501,10 +491,6 @@
           60,
           100
         ],
-        "spCost": [
-          0,
-          50
-        ],
         "castTicks": [
           0,
           20
@@ -525,10 +511,6 @@
         "accuracy": [
           60,
           100
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -551,10 +533,6 @@
           60,
           100
         ],
-        "spCost": [
-          0,
-          50
-        ],
         "castTicks": [
           0,
           20
@@ -575,10 +553,6 @@
         "durationTicks": [
           20,
           60
-        ],
-        "spCost": [
-          0,
-          50
         ],
         "castTicks": [
           0,
@@ -705,10 +679,13 @@
       "status": "statusValue*chance*accuracy/10000 (poison 120, paralyze 80)",
       "shield": "shieldPct*durationTicks/30"
     },
-    "discount": "spCost*5/4 + castTicks*2 + max(0, cooldownTicks - freeCooldown)/2, capped at value*maxDiscountPct/100; freeCooldown: heal 60, buff/debuff max(20,durationTicks), shield 40, else 20",
-    "cost": "value - discount <= slotBudgets[slot]*moveFactorPct/100",
+    "discount": "castTicks*castDiscountPerTick + max(0, cooldownTicks - freeCooldown)/cooldownDiscountDiv, capped at value*maxDiscountPct/100; freeCooldown: heal 60, buff/debuff max(20,durationTicks), shield 40, else 20",
+    "points": "value - discount",
+    "barBudget": "barBudgets[n-1]*moveFactorPct/100 (n = 1..5 bars)",
+    "bars": "smallest n in 1..5 with points <= barBudget(n); never set by the AI (bars / spCost in AI JSON are ignored)",
+    "slotBudget": "barBudget(min(slotMaxBars[slot], maxBars)); the validator shrinks a move until its points fit, so its bars never exceed the slot cap or the character's max bars",
     "slotRules": [
-      "slot1: damage template, attribute = own, spCost 0, cooldown 0, cast <= 5",
+      "slot1: damage template, attribute = own, 1 bar, cooldown 0, cast <= 5",
       "slot2: attribute != own (support moves: none)",
       "slot3: any template",
       "slot4 (ひっさつ): damage template, attribute none",
@@ -719,7 +696,7 @@
   "ai": {
     "randomPct": {
       "weak": 40,
-      "normal": 10,
+      "normal": 25,
       "strong": 0
     },
     "thinkTicks": {
@@ -727,7 +704,7 @@
       "normal": 10,
       "strong": 4
     },
-    "note": "chooseMove (ai.dart / ai.ts) is normative; the timeout auto-pick, おまかせ and server ghosts use normal; strong scores with scoreMoveStrong"
+    "note": "aiDecide / chooseMove / bestMove (ai.dart / ai.ts) are normative for CPU and ghosts (ghosts and an away player: normal); strong scores with scoreMoveStrong. おまかせ (the kid switch) is omakasePick: uniform among eligible moves (off cooldown, bars <= maxBars) on the side AI stream, then wait for the bars"
   },
   "progression": {
     "evolutions": {
