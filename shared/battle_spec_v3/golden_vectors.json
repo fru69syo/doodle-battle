@@ -573,7 +573,7 @@
           28,
           42
         ],
-        "maxBars": 2,
+        "maxBars": 3,
         "statsAt": {
           "1": [
             21,
@@ -890,7 +890,7 @@
           36,
           54
         ],
-        "maxBars": 2,
+        "maxBars": 3,
         "statsAt": {
           "1": [
             18,
@@ -1207,7 +1207,7 @@
           42,
           38
         ],
-        "maxBars": 2,
+        "maxBars": 4,
         "statsAt": {
           "1": [
             18,
@@ -1830,7 +1830,7 @@
           51,
           34
         ],
-        "maxBars": 2,
+        "maxBars": 4,
         "statsAt": {
           "1": [
             19,
@@ -1994,7 +1994,7 @@
           26,
           35
         ],
-        "maxBars": 2,
+        "maxBars": 3,
         "statsAt": {
           "1": [
             25,
@@ -2158,7 +2158,7 @@
           47,
           37
         ],
-        "maxBars": 2,
+        "maxBars": 4,
         "statsAt": {
           "1": [
             20,
@@ -2322,7 +2322,7 @@
           55,
           36
         ],
-        "maxBars": 2,
+        "maxBars": 3,
         "statsAt": {
           "1": [
             19,
@@ -2624,7 +2624,7 @@
           42,
           46
         ],
-        "maxBars": 2,
+        "maxBars": 3,
         "statsAt": {
           "1": [
             16,
@@ -3159,17 +3159,18 @@
           "vfx": "sparks",
           "colour": "yellow",
           "atkFormula": "INT70_RES30",
-          "power": 40,
+          "power": 125,
           "hits": 1,
           "accuracy": 100,
           "critBonus": 0,
           "secondary": {
-            "type": "none"
+            "type": "poison",
+            "chance": 30
           },
-          "bars": 1,
+          "bars": 2,
           "castTicks": 0,
           "cooldownTicks": 0,
-          "points": 40
+          "points": 161
         },
         {
           "template": "barrage",
@@ -3199,17 +3200,17 @@
           "vfx": "beam",
           "colour": "yellow",
           "atkFormula": "INT70_RES30",
-          "power": 200,
+          "power": 310,
           "hits": 1,
           "accuracy": 100,
           "critBonus": 0,
           "secondary": {
             "type": "none"
           },
-          "bars": 2,
+          "bars": 3,
           "castTicks": 12,
           "cooldownTicks": 80,
-          "points": 161
+          "points": 271
         }
       ]
     },
@@ -3370,17 +3371,17 @@
           "vfx": "sparks",
           "colour": "white",
           "atkFormula": "INT70_RES30",
-          "power": 200,
+          "power": 310,
           "hits": 1,
           "accuracy": 100,
           "critBonus": 0,
           "secondary": {
             "type": "none"
           },
-          "bars": 2,
+          "bars": 3,
           "castTicks": 12,
           "cooldownTicks": 80,
-          "points": 161
+          "points": 271
         }
       ]
     },
@@ -5822,7 +5823,7 @@
             26
           ],
           "attribute": "gu",
-          "maxBars": 2,
+          "maxBars": 3,
           "moves": [
             {
               "template": "blast",
@@ -5853,14 +5854,15 @@
               "vfx": "sparks",
               "colour": "yellow",
               "atkFormula": "INT70_RES30",
-              "power": 40,
+              "power": 125,
               "hits": 1,
               "accuracy": 100,
               "critBonus": 0,
               "secondary": {
-                "type": "none"
+                "type": "poison",
+                "chance": 30
               },
-              "bars": 1,
+              "bars": 2,
               "castTicks": 0,
               "cooldownTicks": 0
             },
@@ -5902,7 +5904,7 @@
         "endReason": "ko",
         "ticks": 168,
         "hp": [
-          550,
+          482,
           0
         ],
         "maxHp": [
@@ -5911,20 +5913,15 @@
         ],
         "actions": [
           5,
-          3
+          2
         ],
-        "eventCount": 43,
-        "eventsFnv1a": 2697786924,
-        "stateHash": 4220808254,
+        "eventCount": 48,
+        "eventsFnv1a": 3120093006,
+        "stateHash": 3707191075,
         "inputLog": [
           [
             42,
             0,
-            0
-          ],
-          [
-            52,
-            1,
             0
           ],
           [
@@ -5933,9 +5930,9 @@
             0
           ],
           [
-            93,
+            83,
             1,
-            0
+            1
           ],
           [
             105,
@@ -5965,41 +5962,46 @@
           "42 moveStart attr=pa,side=0,slot=0,template=strike",
           "42 effective pct=150,side=0,target=1",
           "42 hit amount=59,crit=0,hp=211,n=0,pct=150,side=0,target=1",
-          "52 select cast=0,cost=1,side=1,slot=0",
-          "52 moveStart attr=gu,side=1,slot=0,template=blast",
-          "52 effective pct=75,side=1,target=0",
-          "52 hit amount=4,crit=0,hp=558,n=0,pct=75,side=1,target=0",
           "63 bar bars=1,side=0",
           "73 select cast=0,cost=1,side=0,slot=0",
           "73 moveStart attr=pa,side=0,slot=0,template=strike",
           "73 effective pct=150,side=0,target=1",
-          "73 hit amount=86,crit=1,hp=125,n=0,pct=150,side=0,target=1",
-          "83 bar bars=1,side=1",
-          "93 select cast=0,cost=1,side=1,slot=0",
-          "93 moveStart attr=gu,side=1,slot=0,template=blast",
-          "93 effective pct=75,side=1,target=0",
-          "93 hit amount=4,crit=0,hp=554,n=0,pct=75,side=1,target=0",
+          "73 hit amount=61,crit=0,hp=150,n=0,pct=150,side=0,target=1",
+          "83 bar bars=2,side=1",
+          "83 select cast=0,cost=2,side=1,slot=1",
+          "83 moveStart attr=none,side=1,slot=1,template=blast",
+          "83 hit amount=12,crit=0,hp=550,n=0,pct=100,side=1,target=0",
+          "83 status status=poison,target=0,ticks=80",
+          "93 dot amount=8,hp=542,target=0",
           "95 bar bars=1,side=0",
+          "103 dot amount=8,hp=534,target=0",
           "105 select cast=0,cost=1,side=0,slot=0",
           "105 moveStart attr=pa,side=0,slot=0,template=strike",
           "105 effective pct=150,side=0,target=1",
-          "105 hit amount=58,crit=0,hp=67,n=0,pct=150,side=0,target=1",
+          "105 hit amount=56,crit=0,hp=94,n=0,pct=150,side=0,target=1",
+          "113 dot amount=8,hp=526,target=0",
+          "123 dot amount=8,hp=518,target=0",
           "125 bar bars=1,side=1",
           "126 bar bars=1,side=0",
+          "133 dot amount=8,hp=510,target=0",
           "135 select cast=0,cost=1,side=1,slot=0",
           "135 moveStart attr=gu,side=1,slot=0,template=blast",
           "135 effective pct=75,side=1,target=0",
-          "135 hit amount=4,crit=0,hp=550,n=0,pct=75,side=1,target=0",
+          "135 hit amount=4,crit=0,hp=506,n=0,pct=75,side=1,target=0",
           "136 select cast=0,cost=1,side=0,slot=0",
           "136 moveStart attr=pa,side=0,slot=0,template=strike",
           "136 effective pct=150,side=0,target=1",
-          "136 hit amount=56,crit=0,hp=11,n=0,pct=150,side=0,target=1",
+          "136 hit amount=62,crit=0,hp=32,n=0,pct=150,side=0,target=1",
+          "143 dot amount=8,hp=498,target=0",
+          "153 dot amount=8,hp=490,target=0",
           "158 bar bars=1,side=0",
+          "163 dot amount=8,hp=482,target=0",
+          "163 expire kind=poison,side=0",
           "166 bar bars=1,side=1",
           "168 select cast=0,cost=1,side=0,slot=0",
           "168 moveStart attr=pa,side=0,slot=0,template=strike",
           "168 effective pct=150,side=0,target=1",
-          "168 hit amount=61,crit=0,hp=0,n=0,pct=150,side=0,target=1",
+          "168 hit amount=62,crit=0,hp=0,n=0,pct=150,side=0,target=1",
           "168 faint side=1",
           "168 end reason=ko,winner=0"
         ]
@@ -8906,7 +8908,7 @@
             58
           ],
           "attribute": "gu",
-          "maxBars": 2,
+          "maxBars": 3,
           "moves": [
             {
               "template": "blast",
@@ -8937,14 +8939,15 @@
               "vfx": "sparks",
               "colour": "yellow",
               "atkFormula": "INT70_RES30",
-              "power": 40,
+              "power": 125,
               "hits": 1,
               "accuracy": 100,
               "critBonus": 0,
               "secondary": {
-                "type": "none"
+                "type": "poison",
+                "chance": 30
               },
-              "bars": 1,
+              "bars": 2,
               "castTicks": 0,
               "cooldownTicks": 0
             },
@@ -9043,19 +9046,19 @@
         "ticks": 162,
         "hp": [
           0,
-          1256
+          1271
         ],
         "maxHp": [
           605,
           1304
         ],
         "actions": [
-          2,
+          1,
           4
         ],
-        "eventCount": 34,
-        "eventsFnv1a": 664940010,
-        "stateHash": 1306510184,
+        "eventCount": 30,
+        "eventsFnv1a": 913014538,
+        "stateHash": 1776489737,
         "inputLog": [
           [
             61,
@@ -9075,11 +9078,6 @@
           [
             132,
             1,
-            0
-          ],
-          [
-            142,
-            0,
             0
           ],
           [
@@ -9474,7 +9472,7 @@
             71
           ],
           "attribute": "choki",
-          "maxBars": 2,
+          "maxBars": 4,
           "moves": [
             {
               "template": "strike",
@@ -9536,14 +9534,14 @@
               "vfx": "punch",
               "colour": "pink",
               "atkFormula": "STR80_AGI20",
-              "power": 200,
+              "power": 445,
               "hits": 1,
               "accuracy": 100,
               "critBonus": 0,
               "secondary": {
                 "type": "none"
               },
-              "bars": 2,
+              "bars": 4,
               "castTicks": 12,
               "cooldownTicks": 80
             }
@@ -9673,7 +9671,7 @@
         ],
         "eventCount": 24,
         "eventsFnv1a": 3155929031,
-        "stateHash": 3218678809,
+        "stateHash": 828501882,
         "inputLog": [
           [
             70,
@@ -11810,7 +11808,7 @@
           58
         ],
         "attribute": "gu",
-        "maxBars": 2,
+        "maxBars": 3,
         "moves": [
           {
             "template": "blast",
@@ -11841,14 +11839,15 @@
             "vfx": "sparks",
             "colour": "yellow",
             "atkFormula": "INT70_RES30",
-            "power": 40,
+            "power": 125,
             "hits": 1,
             "accuracy": 100,
             "critBonus": 0,
             "secondary": {
-              "type": "none"
+              "type": "poison",
+              "chance": 30
             },
-            "bars": 1,
+            "bars": 2,
             "castTicks": 0,
             "cooldownTicks": 0
           }
@@ -11872,7 +11871,7 @@
           58
         ],
         "attribute": "gu",
-        "maxBars": 2,
+        "maxBars": 3,
         "moves": [
           {
             "template": "blast",
@@ -11903,14 +11902,15 @@
             "vfx": "sparks",
             "colour": "yellow",
             "atkFormula": "INT70_RES30",
-            "power": 40,
+            "power": 125,
             "hits": 1,
             "accuracy": 100,
             "critBonus": 0,
             "secondary": {
-              "type": "none"
+              "type": "poison",
+              "chance": 30
             },
-            "bars": 1,
+            "bars": 2,
             "castTicks": 0,
             "cooldownTicks": 0
           },
@@ -12139,7 +12139,7 @@
           65
         ],
         "attribute": "pa",
-        "maxBars": 2,
+        "maxBars": 4,
         "moves": [
           {
             "template": "blast",
@@ -12193,7 +12193,7 @@
           65
         ],
         "attribute": "pa",
-        "maxBars": 2,
+        "maxBars": 4,
         "moves": [
           {
             "template": "blast",
@@ -12235,14 +12235,14 @@
             "vfx": "stars",
             "colour": "blue",
             "atkFormula": "INT60_LUK40",
-            "power": 175,
+            "power": 290,
             "hits": 1,
             "accuracy": 100,
             "critBonus": 0,
             "secondary": {
               "type": "none"
             },
-            "bars": 2,
+            "bars": 3,
             "castTicks": 6,
             "cooldownTicks": 40
           }
@@ -12464,7 +12464,7 @@
           62
         ],
         "attribute": "choki",
-        "maxBars": 2,
+        "maxBars": 4,
         "moves": [
           {
             "template": "strike",
@@ -12519,7 +12519,7 @@
           62
         ],
         "attribute": "choki",
-        "maxBars": 2,
+        "maxBars": 4,
         "moves": [
           {
             "template": "strike",

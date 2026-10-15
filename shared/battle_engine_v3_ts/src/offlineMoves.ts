@@ -86,7 +86,7 @@ export function generateOfflineMoves(
   opts: { moveFactorPct: number; stream?: number; attr?: Attr | null; maxBars?: number | null },
 ): Move[] {
   const stream = opts.stream ?? 12;
-  const cap = opts.maxBars ?? (stream === 14 ? g.maxBarsAt(s.rebirthLevel) : g.maxBarsAt(1));
+  const cap = opts.maxBars ?? g.maxBars;
   const target = (bars: number) => (bars < cap ? bars : cap);
   const r = new Mulberry32(deriveSeed(g.seed, stream));
   const st = stream === 14 && g.rebirthBase !== null ? g.rebirthBase : g.base;

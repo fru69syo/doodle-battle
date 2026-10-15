@@ -66,7 +66,7 @@ void main() {
       final g = i % 5 == 0 ? randomBloomer(s, r) : randomKid(s, r);
       for (final lv in [1, 50]) {
         final f = g.moveFactorPct(lv);
-        final mb = g.maxBarsAt(lv);
+        final mb = g.maxBars;
         final ms = generateOfflineMoves(
           s,
           g,

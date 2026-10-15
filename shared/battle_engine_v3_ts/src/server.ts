@@ -137,7 +137,7 @@ export function validateCharacterClaimV2(
       moveLog.push(`${slot}:stale`);
       return null;
     }
-    const v = validateAiMove(s, p, { slot, own: g.attr, moveFactorPct: factor, maxBars: g.maxBarsAt(lv), ...(opts.ngCheck ? { ngCheck: opts.ngCheck } : {}) });
+    const v = validateAiMove(s, p, { slot, own: g.attr, moveFactorPct: factor, maxBars: g.maxBars, ...(opts.ngCheck ? { ngCheck: opts.ngCheck } : {}) });
     if (v.rejected) {
       moveLog.push(`${slot}:rejected:${v.reason}`);
       return null;
@@ -209,7 +209,7 @@ export function moveContextOf(
   });
   const lv = opts.level ?? 1;
   const factor = g.moveFactorPct(lv);
-  const maxBars = g.maxBarsAt(lv);
+  const maxBars = g.maxBars;
   const slotMax = [0, 1, 2, 3].map((slot) => slotMaxBarsFor(s, slot, maxBars));
   return {
     attribute: g.attr,

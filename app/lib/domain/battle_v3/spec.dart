@@ -444,7 +444,8 @@ class V3Spec {
       'maxBars': maxBars,
       'maxBarsFormula':
           'clamp(lv1BaseSP / spPerBar, minBars, maxBars) from the Lv1 base '
-          'stats (Genome.base), stable across levels, rebirth and rated sync',
+          'stats (Genome.base; a hidden bloomer: its rebirth base from Lv1 '
+          'on), constant for a character: levels, rebirth, rated sync',
       'gauge':
           '0..maxBars*gaugePerBar; fills while not casting and below the '
           'cap; a move costs bars*gaugePerBar when selected; no decision '

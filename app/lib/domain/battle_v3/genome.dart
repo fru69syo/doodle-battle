@@ -167,18 +167,12 @@ class Genome {
 
   bool rebornAt(int level) => isBloomer && level >= spec.rebirthLevel;
 
-  /// How many gauge bars this character can stack (2..5), from the Lv1
-  /// base SP of its form ([base]; [rebirthBase] once a hidden bloomer is
-  /// reborn at Lv50, when its whole move set is rebuilt too). Never changes
-  /// with the level otherwise, nor with the rated Lv50 sync ([preForm]
-  /// keeps a bloomer's pre-rebirth form, as [statsAt] does).
-  int maxBarsAt(int level, {bool preForm = false}) {
-    final st = rebornAt(level) && !preForm ? rebirthBase! : base;
-    return spec.maxBarsFor(st[Stat.sp.index]);
-  }
-
-  /// Max bars of the Lv1 form ([maxBarsAt] below the rebirth level).
-  int get maxBars => maxBarsAt(1);
+  /// How many gauge bars this character can stack (2..5): its Lv1 base SP
+  /// / spPerBar. For a hidden bloomer this is the SP of its Lv50 rebuild
+  /// ([rebirthBase]) from Lv1 on, so the count never changes (not at the
+  /// rebirth, not with the rated sync) and is distributed like a child
+  /// drawing's: the bar count reveals nothing.
+  int get maxBars => spec.maxBarsFor((rebirthBase ?? base)[Stat.sp.index]);
 
   /// Rated play (§8): stats re-computed at the sync level (Lv50). A bloomer
   /// whose real level is below the rebirth level keeps its pre-rebirth form

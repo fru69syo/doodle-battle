@@ -29,7 +29,7 @@ export function movesAt(s: V3Spec, g: Genome, level: number, o: MoveOptions = {}
   const factor = o.preForm ? s.bloomerPreMoveFactorPct : g.moveFactorPct(level);
   const stream = o.preForm ? 12 : moveStreamAt(g, level);
   const own = o.attr ?? g.attr;
-  const bars = o.maxBars ?? g.maxBarsAt(level, o.preForm ?? false);
+  const bars = o.maxBars ?? g.maxBars;
   const offline = generateOfflineMoves(s, g, { moveFactorPct: factor, stream, attr: own, maxBars: bars });
   return offline.map((m0, i) => {
     let m = m0;
@@ -55,7 +55,7 @@ export function setupAt(
   return {
     stats: g.statsAt(level).map((v) => idiv(v * pct, 100)),
     attr: o.attr ?? g.attr,
-    maxBars: o.maxBars ?? g.maxBarsAt(level),
+    maxBars: o.maxBars ?? g.maxBars,
     moves: moves.slice(0, unlockedSlots(s, level)),
     label: o.label ?? '',
   };
@@ -68,7 +68,7 @@ export function ratedSetup(s: V3Spec, g: Genome, actualLevel: number, o: MoveOpt
   return {
     stats: g.statsAt(r.statLevel, r.preForm),
     attr: g.attr,
-    maxBars: g.maxBarsAt(r.statLevel, r.preForm),
+    maxBars: g.maxBars,
     moves: moves.slice(0, r.slotCount),
     label: o.label ?? '',
   };
@@ -87,7 +87,7 @@ export function familySetup(
   return {
     stats: g.statsAt(battleLevel, pre),
     attr: g.attr,
-    maxBars: g.maxBarsAt(battleLevel, pre),
+    maxBars: g.maxBars,
     moves: moves.slice(0, unlockedSlots(s, battleLevel)),
     label: o.label ?? '',
   };

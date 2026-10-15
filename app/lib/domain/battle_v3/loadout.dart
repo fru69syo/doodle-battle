@@ -23,7 +23,7 @@ int moveStreamAt(Genome g, int level) => g.rebornAt(level) ? 14 : 12;
 /// re-validated against the slot budget at this level, and a rejected one
 /// falls back to the offline move. [nameOverrides] (index = slot) rename a
 /// move without touching its numbers (legacy v1 move names). Every move
-/// costs at most the character's max bars ([Genome.maxBarsAt]; [maxBars]
+/// costs at most the character's max bars ([Genome.maxBars]; [maxBars]
 /// overrides it for the simulator).
 List<Move> movesAt(
   V3Spec s,
@@ -39,7 +39,7 @@ List<Move> movesAt(
   final factor = preForm ? s.bloomerPreMoveFactorPct : g.moveFactorPct(level);
   final stream = preForm ? 12 : moveStreamAt(g, level);
   final own = attr ?? g.attr;
-  final bars = maxBars ?? g.maxBarsAt(level, preForm: preForm);
+  final bars = maxBars ?? g.maxBars;
   final offline = generateOfflineMoves(
     s,
     g,
@@ -97,7 +97,7 @@ FighterSetup setupAt(
   return FighterSetup(
     stats: [for (final v in stats) v * powerPct ~/ 100],
     attr: attr ?? g.attr,
-    maxBars: maxBars ?? g.maxBarsAt(level),
+    maxBars: maxBars ?? g.maxBars,
     moves: moves.sublist(0, unlockedSlots(s, level)),
     label: label,
   );
@@ -127,7 +127,7 @@ FighterSetup ratedSetup(
   return FighterSetup(
     stats: stats,
     attr: g.attr,
-    maxBars: g.maxBarsAt(r.statLevel, preForm: r.preForm),
+    maxBars: g.maxBars,
     moves: moves.sublist(0, r.slotCount),
     label: label,
   );
@@ -158,7 +158,7 @@ FighterSetup familySetup(
   return FighterSetup(
     stats: stats,
     attr: g.attr,
-    maxBars: g.maxBarsAt(battleLevel, preForm: pre),
+    maxBars: g.maxBars,
     moves: moves.sublist(0, unlockedSlots(s, battleLevel)),
     label: label,
   );

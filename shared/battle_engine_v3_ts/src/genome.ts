@@ -278,17 +278,11 @@ export class Genome {
   }
 
   /**
-   * Gauge bars (2..5) from the Lv1 base SP of the active form (the rebirth
-   * form once a hidden bloomer is reborn; `preForm` keeps the first form).
+   * Gauge bars (2..5) from the Lv1 base SP; a hidden bloomer uses its Lv50
+   * rebuild's SP from Lv1 on, so the count never changes and reveals nothing.
    */
-  maxBarsAt(level: number, preForm = false): number {
-    const st = this.rebornAt(level) && !preForm ? this.rebirthBase! : this.base;
-    return maxBarsFor(this.spec, st[Stat.sp]!);
-  }
-
-  /** Max bars of the Lv1 form. */
   get maxBars(): number {
-    return this.maxBarsAt(1);
+    return maxBarsFor(this.spec, (this.rebirthBase ?? this.base)[Stat.sp]!);
   }
 
   /** Stats at `level`; `preForm` forces a bloomer's pre-rebirth formula. */
