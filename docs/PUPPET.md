@@ -58,8 +58,8 @@ Stack(children: [
   BattleStage(controller: c, fighters: [specA, specB], drawnEffects: {0: uiImage}),
   // オーバーレイ部品（値だけを受け取る）
   FighterStatusPanel(name:, level:, hp: c.shownHp(i), state: c.state(i), isPlayer:),
-  BattleControls(moves:, onTap:, selected: /*さきどり*/, choiceLeft:, omakase:, onOmakase:),
-  // 単品: AtbGauge, MovePad, MoveButton, LockedMoveSlot, DecisionTimerRing, OmakaseToggle, StatusIcons
+  BattleControls(moves:, onTap:, selected: /*さきどり*/, bars:, full:, omakase:, onOmakase:, usable:, queueable:),
+  // 単品: AtbGauge(bars:, maxBars:)（最大本数ぶんの区切り）, BarPips（技の本数）, MovePad, MoveButton, LockedMoveSlot, OmakaseToggle, StatusIcons
 ]);
 c.over / c.winner / c.log                             // 結果画面へ
 
@@ -68,8 +68,9 @@ final drawing = await Navigator.push<StrokeDrawing>(... DrawCanvasScreen());
 final outcome = await ref.read(drawFlowProvider).processCanvas(drawing);   // DrawReady(PendingBirth(strokesJson: ...))
 ```
 
-- `StageEvent`（`stage_events.dart`）: `StageReady` / `StageChoose(castSeconds, auto)` / `StageAction(side, slot, StageMove, hits[StageHit(amount, hpAfter, crit, effectiveness)], outcomes[Healed/Status/StatChange/ShieldUp])` / `StagePoisonTick` / `StageEnd`。`StageMove` は名前・`StageMoveKind`（physical/ranged/self）・`vfx`・`colour`・hits・ひっさつ・描いたわざの絵を使うか。**画面の HP は当たった瞬間に減る**（`shownHp`）。
-- `BattleV3Feed` がエンジン v3 の描画イベント（ready, select, moveStart, effective, hit, miss, dot, heal, stage, status, shield, expire, heatUp, faint, end）を `StageEvent` に変換する。`moveStart` と同じ tick の結果（hit/miss/heal/stage/status/shield、hit の `pct` で「ばつぐん／いまひとつ」）をまとめて 1 つの `StageAction` にする。`dot` は `StagePoisonTick`、`heatUp` は「ヒートアップ！」、`expire` は毎フレームの状態（`fighterState`）で反映、`faint` は最後の K.O. 演出で見せる。さきどりはエンジンの `queueInput`。オンラインはサーバーのイベント列を 150〜250 ms 遅らせて `translate()` に渡すだけ。
+- `StageEvent`（`stage_events.dart`）: `StageReady(bars)`（1 本たまった）/ `StageChoose(castSeconds, cost)` / `StageAction(side, slot, StageMove, hits[StageHit(amount, hpAfter, crit, effectiveness)], outcomes[Healed/Status/StatChange/ShieldUp])` / `StagePoisonTick` / `StageEnd`。`StageMove` は名前・`StageMoveKind`（physical/ranged/self）・`vfx`・`colour`・hits・ひっさつ・描いたわざの絵を使うか。**画面の HP は当たった瞬間に減る**（`shownHp`）。
+- `StageFighterState.gauge` は本数（0..`maxBars`、たまりかけ込み）。`bars` / `ready`（1 本以上）/ `full`（全部たまって止まっている。キャラが跳ねる）
+- `BattleV3Feed` がエンジン v3 の描画イベント（bar, select, moveStart, effective, hit, miss, dot, heal, stage, status, shield, expire, heatUp, faint, end）を `StageEvent` に変換する。`moveStart` と同じ tick の結果（hit/miss/heal/stage/status/shield、hit の `pct` で「ばつぐん／いまひとつ」）をまとめて 1 つの `StageAction` にする。`dot` は `StagePoisonTick`、`heatUp` は「ヒートアップ！」、`expire` は毎フレームの状態（`fighterState`）で反映、`faint` は最後の K.O. 演出で見せる。さきどりはエンジンの `queueInput`。オンラインはサーバーのイベント列を 150〜250 ms 遅らせて `translate()` に渡すだけ。
 - `DemoBattleScreen`（`debug/demo_battle.dart`）が部品を組み合わせた完全な画面の例。
 
 ## 2. 自動リグの精度（Meta Amateur Drawings, MIT, 手元のみ）

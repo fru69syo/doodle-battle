@@ -1,4 +1,7 @@
-# Realtime battle protocol v1, revision 2 (online rated play)
+# Realtime battle protocol v1, revision 3 (online rated play)
+
+Revision 3 (2026-10-15) follows the owner's stackable-gauge decision (SPEC §15, 2026-10-14):
+fighters stack 2–5 gauge bars, moves cost 1–5 bars, and **there is no decision timer** any more.
 
 Owner: GCP team (`server/realtime/`). Audience: the client team (Flutter / Puppet), the Engine
 team, and whoever operates the server. Product rules come from `docs/SPEC.md` §12 and
@@ -38,8 +41,8 @@ app                                   server
  │ ◄──────────────────── queued ──────── │
  │        … matchmaking: PvP within the rating band, else a ghost after N s …
  │ ◄──── match {matchId, you, a, b} ──── │
- │ ◄──── snap (2 Hz) / ev (on events) ── │  10 Hz server-authoritative ATB
- │ ── select {seq, slot} ──────────────► │  (any time: while charging = さきどり)
+ │ ◄──── snap (2 Hz) / ev (on events) ── │  10 Hz server-authoritative, stackable bars
+ │ ── select {seq, slot} ──────────────► │  (any time: kept until its bars are there = さきどり)
  │ ◄──── sel {seq, accepted, queued} ─── │  private ack, the opponent never sees it
  │ ── omakase {on} ────────────────────► │  (rev 2) おまかせ switch: the server plays for the child
  │ ◄──────────────────── omakase {on} ── │  private ack
@@ -82,25 +85,31 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
 - `slot` 0–3 = move slot as listed in `match.you.moves`.
 - `seq`: per-match counter, strictly increasing (start at 1 after every `match`). Stale or duplicate
   `seq` values are answered with `sel {accepted:false, reason:"stale"}`.
-- May be sent **at any time**: while the gauge is filling it is stored (さきどり) and used in the
-  very tick the gauge becomes full; a later `select` replaces it. When the gauge is full it is used
-  in the next tick (≤ 100 ms).
+- May be sent **at any time**. The server keeps it (さきどり) and uses it in the very tick the side
+  has enough full bars for it and the move is off cooldown; a later `select` replaces it. If the
+  bars are already there it is used in the next tick (≤ 100 ms).
+- A move whose cost (`MovePublic.bars`) is above the side's `maxBars`, or a slot that does not
+  exist, is refused at once (`sel {accepted:false, reason:"unusable"}`). Every move the server
+  sends satisfies `bars ≤ maxBars`, so this only happens on a client bug.
 
 ### `omakase` (rev 2)
 ```json
 { "t": "omakase", "on": true }
 ```
-- The child's おまかせ switch (SPEC §6.1). While `on`, the server picks for this side with the
-  same AI as the 5 s timeout (`chooseMove`, ふつう), **10 ticks (1 s) after the gauge fills**
-  (SPEC §6.1: おまかせ thinks 1 s, so it is never the strongest way to play). Switching it on drops
-  a pending さきどり; `select`s sent while it is on are stored and used only after it goes off.
-- `on: false` gives the child full control again (さきどり, 5 s timer) from the next tick.
+- The child's おまかせ switch (SPEC §6.1). While `on`, the server plays this side with the
+  **random-wait rule** (rev 3): it picks one move uniformly at random among the moves that are off
+  cooldown and cost at most `maxBars` (the side's AI random stream), waits until enough bars are
+  there, uses it, and picks again. Switching it on drops a pending さきどり; `select`s sent while it
+  is on are stored and used only after it goes off.
+- `on: false` gives the child full control again (さきどり) from the next tick. An idle child is
+  never played for: the gauge just stops at `maxBars`.
 - Only inside a match (`NOT_IN_MATCH` otherwise). The state lasts for the match, also across a
   reconnect; apps re-send their switch after every `match` anyway. Answered with a private
   `omakase {on}`; the opponent never learns about it (no `autoPick` event for these picks; the
   replay logs them as `src: "omakase"`).
-- Send it only when `welcome.rev >= 2`; a rev 1 server answers `error BAD_MESSAGE` (harmless)
-  and its 5 s timeout keeps picking for an idle child.
+- Send it only when `welcome.rev >= 2`; a rev 1 server answers `error BAD_MESSAGE` (harmless).
+  A rev 2 server still runs the 5 s timer and picks with its ふつう AI; a rev 3 app should treat a
+  rev < 3 server as outdated (it draws bars only from rev 3 snapshots).
 
 ### `ping`
 ```json
@@ -111,13 +120,13 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
 
 | `t` | Fields | Meaning |
 |---|---|---|
-| `welcome` | `proto`, `rev`, `serverTimeMs`, `inMatch` | Handshake accepted. `rev` = additive revision of v1 (2 = `omakase`, `deadline`, `FighterInfo.snapshotId`; absent = 1). `inMatch:true` means a `match` (+ missed events) follows: the child was reconnected to the running match. |
+| `welcome` | `proto`, `rev`, `serverTimeMs`, `inMatch` | Handshake accepted. `rev` = revision of v1 (2 = `omakase`, `deadline`, `FighterInfo.snapshotId`; 3 = stackable bars, no timer; absent = 1). `inMatch:true` means a `match` (+ missed events) follows: the child was reconnected to the running match. |
 | `queued` | `snapshotId` | In the queue. Show 「あいてを さがしているよ」. |
 | `cancelled` | – | Left the queue. |
-| `match` | `matchId`, `you` (`"a"`/`"b"`), `tickHz` (10), `decisionTicks` (50), `a`, `b` (`FighterInfo`), `resumed` | Battle starts (or resumes). |
+| `match` | `matchId`, `you` (`"a"`/`"b"`), `tickHz` (10), `a`, `b` (`FighterInfo`), `resumed` | Battle starts (or resumes). (rev 3 removed `decisionTicks`.) |
 | `ev` | `seq`, `tick`, `events[]` | Things that happened in one tick, in order. `seq` increases by 1 per message. |
-| `snap` | `tick`, `a`, `b` (`SideView`), `hash` | State every 5 ticks (2 Hz) and at the end. Interpolate gauges between snaps. |
-| `sel` | `seq`, `slot`, `accepted`, `queued`, `reason?` | Private answer to `select`. `queued:true` = stored for さきどり. `accepted:false, reason:"unusable"` = the move cannot be used now (SP/cooldown): let the child pick again. |
+| `snap` | `tick`, `a`, `b` (`SideView`), `hash` | State every 5 ticks (2 Hz) and at the end. Interpolate the gauge between snaps (≈ 280 per tick at equal AGI, up to `maxBars`·10000). |
+| `sel` | `seq`, `slot`, `accepted`, `queued`, `reason?` | Private answer to `select`. `queued:true` = kept until its bars are there (さきどり). `accepted:false, reason:"unusable"` = the move can never be used (cost > `maxBars`, or no such slot). |
 | `end` | `matchId`, `winner`, `reason`, `you {outcome, xp, badge, badgeUp}` | Final result, already persisted. `reason`: `ko`, `timeout` (3 min, HP ratio), `forfeit` (a side was away 30 s), `aborted` (server restart: no rating/XP change). `xp` is added to the local character by the app. |
 | `omakase` | `on` | (rev 2) Private answer to `omakase`: the switch as the server now has it. |
 | `pong` | `serverTimeMs` | Answer to `ping`. |
@@ -133,8 +142,9 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
   "imagePath": "snapshotImages/Abc123/image.png",
   "rig": { "...": "puppet rig as saved by the owner (opaque)" },
   "attr": "gu",                          // gu / choki / pa
-  "moves": [{ "slot": 0, "name": "ぱんち", "templateId": "strike", "attr": "gu", "spCost": 0 }],
+  "moves": [{ "slot": 0, "name": "ぱんち", "templateId": "strike", "attr": "gu", "bars": 1 }],  // (rev 3) bars = cost in gauge bars
   "maxHp": 944,
+  "maxBars": 4,                          // (rev 3) gauge bars this fighter can stack, 2..5
   "level": 50,                           // rated play is always Lv50 (GAME_DESIGN_V2 §8)
   "badge": "rabbit",                     // best badge ever; never goes down
   "isGhost": false
@@ -144,24 +154,24 @@ Leaves the queue (answered with `cancelled`). Has no effect on a running match.
 ghost carries the child's own id, which the app must not offer to report: `CANNOT_REPORT_SELF`).
 It is random and says nothing about the character; the no-leak tests cover it.
 
-`SideView`: `{ "hp", "maxHp", "sp" (1/100 SP, 0–10000), "gauge" (0–10000), "ready", "casting" }`.
+`SideView` (rev 3): `{ "hp", "maxHp", "gauge" (0–maxBars·10000; one bar = 10000, partial fill
+included), "bars" (full bars now), "maxBars", "casting" }`.
+
+`maxBars` and the move costs come from the character's Lv1 SP and move strength; they are the
+same for every viewer and say nothing hidden (a hidden late bloomer uses its rebuilt form's SP from
+Lv1, so its bar count is distributed like a child drawing's and never changes).
 
 Battle events (`ev.events[]`) always have `tick` and `type`, most have `side` (0 = a, 1 = b).
-Engine v3 types (docs/BATTLE_V3.md §2, all fields integers unless noted): `ready`,
-`inputIgnored {slot}`, `select {slot, cast, auto}` (`auto` is always 0 online: the server's
-timeout is the separate `autoPick`), `moveStart {slot, template, attr}` (strings),
-`effective {target, pct}`, `hit {target, n, amount, hp, crit, pct}`, `miss {target, n}`,
-`dot {target, amount, hp}`, `heal {amount, hp, source}`, `stage {stat, stage, ticks}`,
-`status` / `statusFail {target, status[, ticks]}`, `shield {pct, ticks}`, `expire {kind}`,
-`heatUp`, `faint`, `end {winner, reason: ko|timeUp}`. Added by the server: `autoPick {slot}`
-(5 s timeout, sent right before that tick's `select`), `forfeit`, and (rev 2)
-`deadline {side, at}`: sent in the tick a **child's** gauge fills (right after the engine's
-`ready`), `at` = the tick at which the 5 s timeout will pick (`ready tick + decisionTicks +
-grace − 1`, today `+ 52`). The app draws the 5 s ring from it: seconds left = `(at −
-estimated server tick) / tickHz`, where the server tick is extrapolated from the newest `ev` /
-`snap` tick with the local clock. Not sent for ghosts, nor when さきどり fires in the ready tick. **Ignore unknown types and
-fields.** (The local dev stand-in engine sends `act`, `cast`, `hit {dmg, hp, typePct}`, `ko`
-instead; it never runs on Cloud Run.)
+Engine v3 types (docs/BATTLE_V3.md §2, all fields integers unless noted): `bar {bars}` (rev 3: one
+more bar became full), `inputIgnored {slot}`, `select {slot, cost, cast}` (`cost` = bars spent),
+`moveStart {slot, template, attr}` (strings), `effective {target, pct}`,
+`hit {target, n, amount, hp, crit, pct}`, `miss {target, n}`, `dot {target, amount, hp}`,
+`heal {amount, hp, source}`, `stage {stat, stage, ticks}`, `status` / `statusFail {target,
+status[, ticks]}`, `shield {pct, ticks}`, `expire {kind}`, `heatUp`, `faint`,
+`end {winner, reason: ko|timeUp}`. Added by the server: `forfeit`. **Rev 3 removed** `ready`,
+`autoPick` and `deadline` (there is no timer). **Ignore unknown types and fields.** (The local dev
+stand-in engine sends `bar`, `act {slot, cost}`, `cast`, `hit {dmg, hp, typePct}`, `ko` instead; it
+never runs on Cloud Run.)
 
 Badge ids → names: `egg` たまご, `chick` ひよこ, `rabbit` うさぎ, `fox` きつね, `bear` くま,
 `lion` ライオン, `dragon` ドラゴン, `legend` でんせつ. The rating number is never sent.
@@ -171,11 +181,12 @@ Badge ids → names: `egg` たまご, `chick` ひよこ, `rabbit` うさぎ, `fo
 | Rule | Value | Source |
 |---|---|---|
 | Tick | 100 ms (10 Hz), integer state | GAME_DESIGN_V2 §6.1 |
-| Decision timeout | 50 ticks after the gauge filled **+ 3 ticks network grace** (the ready tick counts as the first) → おまかせ picks (`autoPick` event); announced by `deadline {at}` | §6.3, §6.7 |
-| おまかせ switch | `omakase {on:true}`: the AI picks 10 ticks after ready, every time | SPEC §6.1 |
-| さきどり | a queued `select` is used in the tick the gauge fills | §6.3 |
-| Ghost / away AI | おまかせ "normal", thinks 10 ticks after ready | §6.6 |
-| Disconnect | after 10 s away おまかせ plays for the child; back within 30 s = full control again; 30 s away = loss, XP 0 (rating counts as a loss) | §6.7 |
+| Gauge | 2–5 bars (`maxBars`), each fills by the AGI ratio (≈ 3.6 s at equal AGI); filling stops at `maxBars` and while casting; the opponent never pauses | §6.1–6.2 |
+| Decision timeout | **none** (rev 3): an idle child just caps at `maxBars` | SPEC §6.1 |
+| おまかせ switch | `omakase {on:true}`: random affordable move, used once its bars are there, then a new pick | SPEC §6.1 |
+| さきどり | a queued `select` is used in the tick its bars are there (and it is off cooldown) | §6.3 |
+| Ghost / away AI | tiered AI "normal" (`aiDecide`): thinks 10 ticks once it holds a bar, saves at most one bar ahead | §6.6 |
+| Disconnect | after 10 s away the AI ("normal") plays for the child; back within 30 s = full control again; 30 s away = loss, XP 0 (rating counts as a loss) | §6.7 |
 | Both away 30 s | match aborted, nothing saved | server |
 | Hard cap | 1800 ticks (3 min), decided by HP ratio | §6.1 |
 
@@ -251,20 +262,21 @@ What was done (all four steps):
      `ratedSetup` at the real level (own growth, Lv50 stat sync, moves unlocked at the real level:
      2 / 3 at Lv10 / 4 at Lv50). Only `schema: 2` snapshots (written by the v2 `registerCharacter`)
      are accepted; anything else → `UnsupportedFighterError` → `NOT_FOUND`.
-   - `createBattle(a, b, {seed})` → `RealtimeBattle` (decision timer disabled: the server owns the
-     5 s timer and passes the おまかせ choice as an input).
-   - `step`, `isReady`, `canUse`, `chooseMove(side, tier)` (side's AI stream only), `view`,
-     `stateHash()` (FNV-1a of the canonical state, 8 hex digits) are pass-throughs.
+   - `createBattle(a, b, {seed})` → `RealtimeBattle` (engine id `v3.1` since rev 3; no timer).
+   - `step`, `canUse`, `canQueue`, `aiInput(side, tier, think)` and `omakaseInput(side)` (side's AI
+     stream only), `clearPlan`, `view`, `stateHash()` (FNV-1a of the canonical state, 8 hex digits)
+     are pass-throughs.
    - **Hidden state**: `snapshot.engine.trust` and the late-bloomer form are engine input only.
-     Clients get `attr`, the public move fields (`slot, name, templateId, attr, spCost`), `maxHp`,
+     Clients get `attr`, the public move fields (`slot, name, templateId, attr, bars`), `maxHp`,
+     `maxBars`,
      engine events and side views — none of them names the verdict or the form. Tested in
      `test/unit/v3Engine.test.ts` and over real WebSockets in `test/integration/v3.test.ts` (every
      message of PvP and ghost matches with hidden-form characters is checked for any trace of it).
 3. ✅ `loadEngine("v3")` returns `V3Engine`. `test/unit/v3Engine.test.ts` replays all `battles` of
    `shared/battle_spec_v3/golden_vectors.json` through the adapter (`expected.inputLog` inputs at
-   their ticks, timers disabled) and compares winner, end reason, tick, HP, max HP, event count,
-   **event hash** (timeout picks re-marked `auto: 1`, as the engine's own timer would) and state
-   hash; it also checks `ratedSetups` from v2 snapshot data. Replays of stored matches
+   their ticks) and compares winner, end reason, tick, HP, max HP, event count, **event hash** (or
+   the full event list, minus a さきどり the engine dropped as impossible, which the server refuses
+   at `select`) and state hash; it also checks `ratedSetups` from v2 snapshot data. Replays of stored matches
    (`replays/{id}` = seed + inputs) reproduce `finalHash`.
 4. ✅ Terraform: dev `realtime_battle_engine = "v3"` (prod already was). Deploy: see
    `docs/LEARN_GCP.md` §4.9.
@@ -280,3 +292,4 @@ high enough.
 |---|---|
 | 1 | the original v1 (`welcome` has no `rev`) |
 | 2 | `FighterInfo.snapshotId`, client `omakase {on}` + private ack, `deadline {side, at}` event, `welcome.rev` |
+| 3 | Stackable gauge bars (2026-10-15): `FighterInfo.maxBars`, `MovePublic.bars` (replaces `spCost`), `SideView.bars` / `maxBars` (replace `sp` / `ready`; `gauge` now 0–maxBars·10000), `bar` event, `select.cost`. **No decision timer**: `deadline`, `autoPick`, `ready` and `match.decisionTicks` are gone; おまかせ uses the random-wait rule. Not purely additive (a rev 2 app would draw one gauge and wait for a timeout that never comes), so ship the app and the server together |
