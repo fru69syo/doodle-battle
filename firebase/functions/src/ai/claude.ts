@@ -57,7 +57,6 @@ const AiMoveSchema = z.object({
   hits: Num,
   accuracy: Num,
   critBonus: Num,
-  spCost: Num,
   castTicks: Num,
   cooldownTicks: Num,
   healPct: Num,
@@ -111,7 +110,7 @@ export class ClaudeAiService implements AiService {
 
   async judgeDrawing(png: Buffer, opts: JudgeOptions = {}): Promise<DrawingJudgement> {
     if (opts.moves) {
-      const text = `${JUDGE_USER_TEXT}\n\n${movesUserText(opts.moves.attribute, opts.moves.slotBudgets)}`;
+      const text = `${JUDGE_USER_TEXT}\n\n${movesUserText(opts.moves)}`;
       const out = await this.call(
         JUDGE_SYSTEM_PROMPT,
         [imageBlock(png), { type: "text", text }],
@@ -147,7 +146,7 @@ export class ClaudeAiService implements AiService {
   async generateMove(png: Buffer, ctx: MoveSlotContext): Promise<Record<string, unknown>> {
     const out = await this.call(
       MOVE_SYSTEM_PROMPT,
-      [imageBlock(png), { type: "text", text: moveSlotUserText(ctx.attribute, ctx.slot, ctx.budget, ctx.otherNames) }],
+      [imageBlock(png), { type: "text", text: moveSlotUserText(ctx) }],
       AiMoveSchema,
       "low",
     );

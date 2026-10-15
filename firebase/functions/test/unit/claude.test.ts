@@ -181,7 +181,6 @@ describe("ClaudeAiService.generateMove", () => {
     hits: 1,
     accuracy: 95,
     critBonus: 5,
-    spCost: 20,
     castTicks: 5,
     cooldownTicks: 40,
     healPct: null,
@@ -195,20 +194,20 @@ describe("ClaudeAiService.generateMove", () => {
 
   it("sends the picture, the slot prompt and a JSON schema; returns the raw proposal", async () => {
     const { client, parse } = fakeClient(message(move));
-    const ctx = { attribute: "gu", slot: 3, budget: 150, otherNames: ["ぱんち"] };
+    const ctx = { attribute: "gu", slot: 3, budget: 580, maxBars: 4, barBudgets: [100, 230, 390, 580], otherNames: ["ぱんち"] };
     const out = await new ClaudeAiService({ client, model: MODEL }).generateMove(png, ctx);
     expect(out).toEqual(move);
     const req = parse.mock.calls[0]![0] as Record<string, any>;
     expect(req.model).toBe(MODEL);
     expect(req.system).toBe(MOVE_SYSTEM_PROMPT);
     expect(req.messages[0].content[0]).toMatchObject({ type: "image", source: { media_type: "image/png" } });
-    expect(req.messages[0].content[1].text).toBe(moveSlotUserText("gu", 3, 150, ["ぱんち"]));
+    expect(req.messages[0].content[1].text).toBe(moveSlotUserText(ctx));
     expect(req.output_config.format.type).toBe("json_schema");
     expect(req.output_config.format.schema.properties).toHaveProperty("template");
   });
 
   it("maps refusals and truncation like the other calls", async () => {
-    const ctx = { attribute: "gu", slot: 2, budget: 120, otherNames: [] };
+    const ctx = { attribute: "gu", slot: 2, budget: 390, maxBars: 3, barBudgets: [100, 230, 390], otherNames: [] };
     const refused = fakeClient(message(null, "refusal"));
     await expect(new ClaudeAiService({ client: refused.client, model: MODEL }).generateMove(png, ctx)).rejects.toBeInstanceOf(AiRefusalError);
     const cut = fakeClient(message(null, "max_tokens"));

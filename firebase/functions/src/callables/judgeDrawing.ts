@@ -95,7 +95,9 @@ export async function judgeDrawingHandler(req: CallableRequest<unknown>): Promis
   try {
     const j = await getAiService().judgeDrawing(
       png.bytes,
-      ctx ? { moves: { attribute: ctx.attribute, slotBudgets: ctx.slotBudgets } } : {},
+      ctx
+        ? { moves: { attribute: ctx.attribute, slotBudgets: ctx.slotBudgets, maxBars: ctx.maxBars, barBudgets: ctx.barBudgets } }
+        : {},
     );
     // v2.0 (GAME_DESIGN_V2 §1): AI-generated / digital pictures are accepted
     // (internally weaker); only a confident photo/print/screen verdict refuses.
@@ -129,6 +131,7 @@ export async function judgeDrawingHandler(req: CallableRequest<unknown>): Promis
         ? validateAiMoveSet(DEFAULT_SPEC, { moves: j.moves ?? [] }, {
             own: c2.attribute,
             moveFactorPct: c2.moveFactorPct,
+            maxBars: c2.maxBars,
             ngCheck: (x) => !isClean(x),
           })
         : [];

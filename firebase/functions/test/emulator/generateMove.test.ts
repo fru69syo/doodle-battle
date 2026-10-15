@@ -3,11 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AiUnavailableError } from "../../src/ai";
 import { generateMoveHandler } from "../../src/callables/generateMove";
+import { seedImageHash } from "../../src/callables/registerCharacterV2";
 import { aiUsageDocId } from "../../src/cost/aiUsage";
 import { resetCostModeCacheForTesting } from "../../src/cost/costMode";
 import { clock } from "../../src/lib/clock";
 import { db } from "../../src/lib/firebase";
-import { DEFAULT_SPEC, moveContextOf } from "../../src/vendor/battle_engine_v3";
+import { DEFAULT_SPEC, moveContextOf, moveFromJson, movePoints } from "../../src/vendor/battle_engine_v3";
 import { errorCode, okVerdict, req, seedUser, useEmulatorEnv } from "../helpers/emulator";
 import { makePng, pngBase64 } from "../helpers/png";
 
@@ -17,6 +18,8 @@ const golden = JSON.parse(
 ) as { genomes: { input: { features: Record<string, number>; energy10: number; skill10: number } }[] };
 const g0 = golden.genomes[0]!.input;
 const character = { features: g0.features, energy10: g0.energy10, skill10: g0.skill10 };
+/** The server derives the image seed from the uploaded PNG (max bars depend on it). */
+const imageHash = seedImageHash(Buffer.from(pngBase64(), "base64"));
 
 const input = (over: Record<string, unknown> = {}) => ({
   imageBase64: pngBase64(),
@@ -38,13 +41,19 @@ describe("generateMove (Lv10 / Lv50 AI move naming)", () => {
     await seedUser("kid");
     const res = await generate();
     expect(res).toMatchObject({ slot: 2, source: "ai", proposal: { template: "strike", name: "きらきらスター", flavor: "ほしが きらきら ふってくる" } });
-    // The AI asked for power 300: the validator clamps it to the template range / slot budget.
-    expect((res.proposal as { power: number }).power).toBeLessThanOrEqual(200);
-    const ctx = moveContextOf({ ...character, imageHash: "x" }, { level: 10 })!;
+    // The validator fits the move to the slot's bar budget and derives its cost in bars.
+    const ctx = moveContextOf({ ...character, imageHash }, { level: 10 })!;
+    const fitted = moveFromJson(res.proposal as Record<string, unknown>);
+    expect(movePoints(DEFAULT_SPEC, fitted)).toBeLessThanOrEqual(ctx.slotBudgets[2]!);
+    expect(fitted.bars).toBeGreaterThanOrEqual(1);
+    expect(fitted.bars).toBeLessThanOrEqual(ctx.maxBars);
+    expect(res.proposal).not.toHaveProperty("spCost");
     expect(env.ai.generateMove).toHaveBeenCalledWith(expect.any(Buffer), {
       attribute: ctx.attribute,
       slot: 2,
       budget: ctx.slotBudgets[2],
+      maxBars: ctx.maxBars,
+      barBudgets: ctx.barBudgets,
       otherNames: ["ねこパンチ"],
     });
     expect(env.ai.moderateCharacter).toHaveBeenCalledWith(expect.any(Buffer), ["きらきらスター", "ほしが きらきら ふってくる"]);
@@ -69,11 +78,13 @@ describe("generateMove (Lv10 / Lv50 AI move naming)", () => {
         expect(res.slot).toBe(slot);
         // Same response shape whatever the verdict: slot, source, proposal (+ reason).
         shapes.push(Object.keys(res).sort().join(","));
-        const ctx = moveContextOf({ ...character, imageHash: "x", verdict: verdict ?? null }, { level: 50 })!;
+        const ctx = moveContextOf({ ...character, imageHash, verdict: verdict ?? null }, { level: 50 })!;
         expect(env.ai.generateMove).toHaveBeenLastCalledWith(expect.any(Buffer), {
           attribute: ctx.attribute,
           slot,
           budget: ctx.slotBudgets[slot],
+          maxBars: ctx.maxBars,
+          barBudgets: ctx.barBudgets,
           otherNames: [],
         });
       }
@@ -152,8 +163,9 @@ describe("generateMove (Lv10 / Lv50 AI move naming)", () => {
   it("budgets come from the device's data only (no server verdict leaks into the answer)", async () => {
     await seedUser("kid");
     await generate({ verdict: "digital" });
-    const ctx = moveContextOf({ ...character, imageHash: "x", verdict: "digital" }, { level: 10 })!;
+    const ctx = moveContextOf({ ...character, imageHash, verdict: "digital" }, { level: 10 })!;
     expect(env.ai.generateMove.mock.calls[0]![1].budget).toBe(ctx.slotBudgets[2]);
-    expect(DEFAULT_SPEC.slotBudgets).toHaveLength(4);
+    expect(env.ai.generateMove.mock.calls[0]![1].maxBars).toBe(ctx.maxBars);
+    expect(DEFAULT_SPEC.slotMaxBars).toHaveLength(4);
   });
 });

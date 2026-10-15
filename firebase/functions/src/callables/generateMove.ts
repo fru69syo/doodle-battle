@@ -96,6 +96,8 @@ export async function generateMoveHandler(req: CallableRequest<unknown>): Promis
       attribute: ctx.attribute,
       slot,
       budget: ctx.slotBudgets[slot] ?? 0,
+      maxBars: ctx.maxBars,
+      barBudgets: ctx.barBudgets,
       otherNames: input.otherNames,
     });
   } catch (err) {
@@ -103,7 +105,7 @@ export async function generateMoveHandler(req: CallableRequest<unknown>): Promis
     return template("ai_unavailable");
   }
 
-  const v = validateAiMove(DEFAULT_SPEC, raw, { slot, own: ctx.attribute, moveFactorPct: ctx.moveFactorPct, ngCheck });
+  const v = validateAiMove(DEFAULT_SPEC, raw, { slot, own: ctx.attribute, moveFactorPct: ctx.moveFactorPct, maxBars: ctx.maxBars, ngCheck });
   if (v.rejected || !v.move) {
     logger.info("generateMove rejected", { uid, slot, reason: v.reason });
     return template("rejected");
